@@ -1,7 +1,6 @@
 -- acasa's kiosk session on the nuc: taycann's ~/.xmonad/xmonad.hs (copied 2026-11-21), changed only where marked "acasa:".
---   acasa: the dashboard (Chrome on the acasa page) lives on workspace 1.con; every other new window opens on
---   2.dev, so nothing takes the focus from the page (win-2 goes there, win-1 comes back).
---   acasa: win-shift-r opens the dashboard again.
+--   acasa: at login, one Chrome window with two tabs: the Home Assistant dashboard and Nina's streams
+--   panel (kiosk/kiosk.sh); win-shift-r opens them again. No kiosk rules: windows go where xmonad puts them.
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Main (main) where
@@ -24,7 +23,6 @@ import XMonad.Layout.SimpleFloat
 import XMonad.Layout.Tabbed
 import XMonad.Layout.WindowArranger
 import XMonad.Layout.ThreeColumns
-import XMonad.Layout.PerWorkspace (onWorkspace)   -- acasa
 import XMonad.Prompt
 import XMonad.Prompt.Shell
 import XMonad.Prompt.Ssh
@@ -43,10 +41,9 @@ main = do
                                 map show [6 .. 9 :: Int]
          , logHook            = myDynLog xmobar -- REMOVE this line if you do not have xmobar installed!
          , modMask            = mod4Mask
-         , startupHook        = setWMName "LG3D" <+> spawnOnce kiosk   -- acasa: the service and the dashboard
+         , startupHook        = setWMName "LG3D" <+> spawnOnce kiosk   -- acasa: the dashboard and the streams panel
          , manageHook         = myManageHooks
          , layoutHook         = avoidStrutsOn [U,L] $
-                                onWorkspace "1.con" kioskLay $   -- acasa: the dashboard and the streams side by side
                                 mytabs        |||
                                 -- noBorders mytabs |||
                                 otherLays
@@ -62,7 +59,6 @@ main = do
       mytabs    =       tabbed shrinkText (theme smallClean)
       -- decorated = simpleFloat' shrinkText (theme smallClean)
       tiled     = Tall 1 (3/100) (1/2)
-      kioskLay  = noBorders (Tall 1 (3/100) (70/100)) ||| mytabs   -- acasa: dashboard 70 %, streams 30 %
       otherLays = windowArrange   $
                   --  magnifier tiled |||
                   --                  noBorders Full  -- |||
@@ -72,9 +68,7 @@ main = do
       -- ||| Accordion
 
       myManageHooks = composeAll
-                      [ isDashboard --> doShift "1.con"            -- acasa: the page is workspace 1's, wherever you are
-                      , fmap not isDashboard --> doShift "2.dev"   -- acasa: everything else opens on 2: the page keeps the focus
-                      , className =? "Do"      --> doFloat
+                      [ className =? "Do"      --> doFloat
                       , className =? "Gimp"      --> doFloat
                       , className =? "XTerm"      --> doFloat
                       , className =? "Xmessage"  --> doFloat
@@ -91,9 +85,8 @@ main = do
                       , className =? "Rhythmbox" --> doShift "8:rth"
                       ]
 
-      -- acasa: the kiosk script and the windows that are the dashboard's (Chrome's own: the page, its dialogs)
+      -- acasa: the script that opens the dashboard and the streams panel
       kiosk       = "$HOME/repo/acasa/kiosk/kiosk.sh"
-      isDashboard = className =? "Google-chrome"
 
       -- xmobar
       myDynLog    h = dynamicLogWithPP def
@@ -122,7 +115,7 @@ main = do
 --          [(shiftMask .|. modMask x, k) | k <- [xK_1 .. xK_9]]
       -- These are my personal key bindings
       toAdd x   =
-          [ ((modMask x .|. shiftMask, xK_r     ), spawn (kiosk ++ " restart"))   -- acasa: the dashboard again
+          [ ((modMask x .|. shiftMask, xK_r     ), spawn (kiosk ++ " open"))   -- acasa: the dashboard and the streams panel again
           , ((modMask x              , xK_F12   ), xmonadPrompt      def     )
           , ((modMask x              , xK_F3    ), shellPrompt       def     )
           , ((modMask x              , xK_F4    ), sshPrompt         def     )

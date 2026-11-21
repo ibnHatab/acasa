@@ -19,21 +19,19 @@ recognition (fsttm-web).
 | `web/` | the page: metis-worlds' world page template (`world.html`, `world.js`, `vendor/`: copies), with `home.js` (the device tiles) where the map stands; `home.json` is the page's map file and world card |
 | `serve.py`, `run.sh` | the entry to metis-agent's service (py backend): the thread count of this machine, the one domain as a set of one |
 
-## The kiosk (xmonad)
+## The desktop (xmonad)
 
-Since 2026-11-21 the kiosk shows the **Home Assistant dashboard** (left, 70 %) and **Nina's
-streams panel** (right: the ENVIRONMENT, the REASONING and the CONVERSATION as they run,
-FSTTM's StreamPanel on http://127.0.0.1:8767/), tiled on workspace `1.con`. Each window has its
-own Chrome profile and comes back when closed; log in to Home Assistant once in the left one
-("keep me logged in"). The voice is no longer this repo's Gemma service: it is FSTTM
-(`~/repo/FSTTM`, branch `cloud-llm`, Gemini) with the Home Assistant feed, as systemd user
-services `fsttm` and `fsttm-hass` (`systemctl --user status fsttm fsttm-hass`).
+At login (xmonad, GDM's automatic login) `kiosk/kiosk.sh` opens one ordinary Chrome window with
+two tabs: the **Home Assistant dashboard** and **Nina's streams panel** (the ENVIRONMENT, the
+REASONING and the CONVERSATION as they run, FSTTM's StreamPanel on http://127.0.0.1:8767/). Not
+full screen, not a kiosk (the user, 2026-11-21). The voice is FSTTM (`~/repo/FSTTM`, branch
+`cloud-llm`, Gemini) with the Home Assistant feed, as systemd user services `fsttm` and
+`fsttm-hass` (`systemctl --user status fsttm fsttm-hass`).
 
 `kiosk/xmonad.hs` is taycann's `~/.xmonad/xmonad.hs` (its keys, tabbed layout and xmobar),
-changed only where marked `acasa:`: every Chrome window opens on `1.con`, everything else on
-`2.dev` (win-2 / win-1 to switch); `1.con` is a 70/30 Tall (win-space: the tabbed layout);
-win-shift-r opens the kiosk windows again; two prompt calls renamed for xmonad-contrib 0.18.
-`bash kiosk/setup.sh` installs it; `bash kiosk/setup.sh undo` gives GNOME back.
+changed only where marked `acasa:` (the startup tabs, win-shift-r to open them again, one
+screen for xmobar, two prompt calls renamed for xmonad-contrib 0.18). `bash kiosk/setup.sh`
+installs it; `bash kiosk/setup.sh undo` gives GNOME back.
 
 ## Connecting the real devices
 
