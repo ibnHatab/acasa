@@ -8,8 +8,8 @@
 set -u
 HA="http://localhost:8123/"
 PANEL="http://127.0.0.1:8767/"
-PROFILE="$HOME/.config/acasa/chrome"     # logged in to Home Assistant
 xset s off -dpms s noblank 2>/dev/null || true
 for _ in $(seq 1 60); do curl -s -o /dev/null -m 2 "$HA" && break; sleep 2; done
-exec google-chrome --no-first-run --no-default-browser-check --password-store=basic \
-  --user-data-dir="$PROFILE" "$HA" "$PANEL"
+# your own Chrome profile (~/.config/google-chrome): signed in, your extensions; if Chrome is already
+# running the two tabs open in it
+exec google-chrome --no-first-run --no-default-browser-check "$HA" "$PANEL"
