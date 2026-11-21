@@ -21,15 +21,19 @@ recognition (fsttm-web).
 
 ## The kiosk (xmonad)
 
-`bash kiosk/setup.sh` installs Chrome, Xorg, xmonad, xmobar and terminator, allows the page the
-microphone by Chrome policy, and makes xmonad the session of GDM's automatic login. At login the
-service starts and Chrome opens full screen: the loading page while the model loads (about two
-minutes), then the dashboard. No screen blanking. `bash kiosk/setup.sh undo` gives GNOME back.
+Since 2026-11-21 the kiosk shows the **Home Assistant dashboard** (left, 70 %) and **Nina's
+streams panel** (right: the ENVIRONMENT, the REASONING and the CONVERSATION as they run,
+FSTTM's StreamPanel on http://127.0.0.1:8767/), tiled on workspace `1.con`. Each window has its
+own Chrome profile and comes back when closed; log in to Home Assistant once in the left one
+("keep me logged in"). The voice is no longer this repo's Gemma service: it is FSTTM
+(`~/repo/FSTTM`, branch `cloud-llm`, Gemini) with the Home Assistant feed, as systemd user
+services `fsttm` and `fsttm-hass` (`systemctl --user status fsttm fsttm-hass`).
 
-`kiosk/xmonad.hs` is taycann's `~/.xmonad/xmonad.hs` (its keys, tabbed layout and xmobar), changed
-only where marked `acasa:`: the dashboard always opens on workspace `1.con`, every other window on
-`2.dev`, so nothing takes the focus from the page (win-2 / win-1 to switch); win-shift-r opens the
-dashboard again; two prompt calls renamed for xmonad-contrib 0.18.
+`kiosk/xmonad.hs` is taycann's `~/.xmonad/xmonad.hs` (its keys, tabbed layout and xmobar),
+changed only where marked `acasa:`: every Chrome window opens on `1.con`, everything else on
+`2.dev` (win-2 / win-1 to switch); `1.con` is a 70/30 Tall (win-space: the tabbed layout);
+win-shift-r opens the kiosk windows again; two prompt calls renamed for xmonad-contrib 0.18.
+`bash kiosk/setup.sh` installs it; `bash kiosk/setup.sh undo` gives GNOME back.
 
 ## Connecting the real devices
 

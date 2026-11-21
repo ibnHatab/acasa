@@ -24,6 +24,7 @@ import XMonad.Layout.SimpleFloat
 import XMonad.Layout.Tabbed
 import XMonad.Layout.WindowArranger
 import XMonad.Layout.ThreeColumns
+import XMonad.Layout.PerWorkspace (onWorkspace)   -- acasa
 import XMonad.Prompt
 import XMonad.Prompt.Shell
 import XMonad.Prompt.Ssh
@@ -45,6 +46,7 @@ main = do
          , startupHook        = setWMName "LG3D" <+> spawnOnce kiosk   -- acasa: the service and the dashboard
          , manageHook         = myManageHooks
          , layoutHook         = avoidStrutsOn [U,L] $
+                                onWorkspace "1.con" kioskLay $   -- acasa: the dashboard and the streams side by side
                                 mytabs        |||
                                 -- noBorders mytabs |||
                                 otherLays
@@ -60,6 +62,7 @@ main = do
       mytabs    =       tabbed shrinkText (theme smallClean)
       -- decorated = simpleFloat' shrinkText (theme smallClean)
       tiled     = Tall 1 (3/100) (1/2)
+      kioskLay  = noBorders (Tall 1 (3/100) (70/100)) ||| mytabs   -- acasa: dashboard 70 %, streams 30 %
       otherLays = windowArrange   $
                   --  magnifier tiled |||
                   --                  noBorders Full  -- |||
