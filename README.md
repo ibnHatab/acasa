@@ -19,6 +19,15 @@ recognition (fsttm-web).
 | `web/` | the page: metis-worlds' world page template (`world.html`, `world.js`, `vendor/`: copies), with `home.js` (the device tiles) where the map stands; `home.json` is the page's map file and world card |
 | `serve.py`, `run.sh` | the entry to metis-agent's service (py backend): the thread count of this machine, the one domain as a set of one |
 
+## The kiosk (xmonad)
+
+`bash kiosk/setup.sh` (asks for sudo once) installs Chrome, Xorg and xmonad and makes xmonad the
+session of the automatic login; after a reboot the service starts and Chrome opens the page full
+screen, with no screen blanking. `kiosk/xmonad.hs`: workspace 1 holds the dashboard alone, every
+other window opens on workspace 2 so nothing takes the focus (Super-2 / Super-1 to switch,
+Super-Shift-Enter a terminal, Super-Shift-R the dashboard again). `bash kiosk/setup.sh undo` gives
+GNOME back.
+
 ## Connecting the real devices
 
 1. Finish Home Assistant's onboarding (http://nuc.local:8123) and add the devices there.
