@@ -1,0 +1,36 @@
+{"ports": {}, "id": "p0"}
+{"clock": "beat"}
+{"id": "c1", "domain": "home", "verb": "SWITCH", "args": {"action": "TURN_ON", "target": {"type": "DEVICE", "description": "light"}}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"id": "c2", "domain": "home", "verb": "SWITCH", "args": {"action": "TURN_ON", "target": {"type": "DEVICE", "description": "lamp"}}}
+{"clock": "beat"}
+{"id": "c3", "domain": "home", "verb": "SWITCH", "args": {"action": "TURN_ON", "target": {"type": "DEVICE", "description": "heating"}}}
+{"clock": "beat"}
+{"id": "c4", "domain": "home", "verb": "QUERY", "args": {"target": {"type": "DEVICE", "description": "tv"}}}
+{"clock": "beat"}
+{"world": ["+unreachable(tv)"], "id": "w1"}
+{"clock": "beat"}
+{"id": "c5", "domain": "home", "verb": "SWITCH", "args": {"action": "TURN_ON", "target": {"type": "DEVICE", "description": "television"}}}
+{"clock": "beat"}
+{"world": ["+reachable(tv)"], "id": "w2"}
+{"clock": "beat"}
+{"id": "c6", "domain": "home", "verb": "SWITCH", "args": {"action": "TURN_ON", "target": {"type": "DEVICE", "description": "tv"}}}
+{"clock": "beat"}
+{"id": "c7", "domain": "home", "verb": "SWITCH", "args": {"action": "TURN_ON", "target": {"type": "DEVICE", "description": "bedroom ventilation"}}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"world": ["+off(light)"], "id": "w3"}
+{"clock": "beat"}
+{"clock": "beat"}
+{"tool": "state", "args": {}}
+{"id": "c8", "domain": "home", "verb": "SCENE", "args": {"scene": "NIGHT"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"tool": "state", "args": {}}
+{"id": "c9", "domain": "home", "verb": "SCENE", "args": {"scene": "AWAY"}}
+{"clock": "beat"}
+{"clock": "beat"}
+{"tool": "events", "args": {}}

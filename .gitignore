@@ -1,0 +1,6 @@
+.run/
+.metis/
+__pycache__/
+records/
+*.pyc
+domains/*/build/
