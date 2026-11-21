@@ -323,17 +323,19 @@ assistant's view, not the screen's.
 
 ---
 
-## 9. Open questions for the user
+## 9. Decisions (the user, 2026-11-21)
 
-1. **Reports**: may a person's report ever change a belief when the device cannot be read (unreachable),
-   or does it always stay a report beside the reading?
-2. **Auto-apply**: may vocabulary-only changes (`intent.yaml` handles/examples) apply after the gate
-   without your approval, with rule changes always waiting for you?
-3. **The observer's cost**: a second Gemini call per relevant user turn (free tier, rate limits). Run
-   it on every relevant turn, or only on turns where the main model made no tool call?
-4. **Music**: which service (HA `media_player` on what device, Spotify Connect on the Echo, a local
-   player on the NUC)?
-5. **Approval channel**: `git merge` by you, a button on the HA dashboard, or a spoken "apply it" with
-   a confirmation?
-6. **Tool result timing**: wait up to ~1.5 s for `done` before Gemini speaks (honest, slower), or let
-   Gemini say "turning it on" at `accepted` and narrate a refusal afterwards?
+- **Device state comes from Home Assistant.** The LLM is given the home's state as Home
+  Assistant reports it, continuously, as the ENVIRONMENT stream; a person's report does not
+  stand in for a reading.
+- **Rule changes:** Claude Code works on a branch; the user merges.
+- **Three parallel streams, told to the model.** The conversation, the environment and the
+  rule engine's reasoning are separate processes running in parallel. The LLM answers only
+  the conversation; ENVIRONMENT (Home Assistant) and REASONING (Metis's conclusions) reach it
+  as context with their times, never as turns, and it is told so in its system prompt. A home
+  request is decided by the rule engine while the LLM speaks: the LLM says it is on it, and
+  reports the outcome (or a refusal) once it is in REASONING. Built in FSTTM `cloud-llm`
+  (fsttm/cloud.py STREAMS_PROMPT, fsttm/streams.py: a local port the HA bridge and the Metis
+  sidecar write JSON lines to); probed on Gemini 3.1 Flash-Lite with scripts/streams_probe.py.
+  This supersedes the "wait ~1.5 s for done" question of §1.1's sync path.
+- **Music:** not chosen yet.
