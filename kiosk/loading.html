@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Acasă</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #0b0e13; color: #c9d1d9; font: 16px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+  body { display: grid; place-items: center; }
+  main { text-align: center; } h1 { font-size: 28px; letter-spacing: .2em; color: #39c5cf; margin: 0 0 12px; }
+  p { margin: 4px 0; } #t { color: #8b949e; }
+</style></head>
+<body><main><h1>ACASĂ</h1><p id="s">the home is waking up: loading the model…</p><p id="t"></p></main>
+<script>
+  // how long it has been (about two minutes is normal); kiosk.sh replaces this window with the dashboard when the service answers
+  const t0 = Date.now();
+  setInterval(() => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    document.getElementById('t').textContent = `${s} s` + (s > 300 ? ' — this is taking long: from another machine, ssh nuc.local and run ~/repo/acasa/run.sh log' : '');
+  }, 1000);
+</script></body></html>

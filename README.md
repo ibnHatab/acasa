@@ -21,12 +21,15 @@ recognition (fsttm-web).
 
 ## The kiosk (xmonad)
 
-`bash kiosk/setup.sh` (asks for sudo once) installs Chrome, Xorg and xmonad and makes xmonad the
-session of the automatic login; after a reboot the service starts and Chrome opens the page full
-screen, with no screen blanking. `kiosk/xmonad.hs`: workspace 1 holds the dashboard alone, every
-other window opens on workspace 2 so nothing takes the focus (Super-2 / Super-1 to switch,
-Super-Shift-Enter a terminal, Super-Shift-R the dashboard again). `bash kiosk/setup.sh undo` gives
-GNOME back.
+`bash kiosk/setup.sh` installs Chrome, Xorg, xmonad, xmobar and terminator, allows the page the
+microphone by Chrome policy, and makes xmonad the session of GDM's automatic login. At login the
+service starts and Chrome opens full screen: the loading page while the model loads (about two
+minutes), then the dashboard. No screen blanking. `bash kiosk/setup.sh undo` gives GNOME back.
+
+`kiosk/xmonad.hs` is taycann's `~/.xmonad/xmonad.hs` (its keys, tabbed layout and xmobar), changed
+only where marked `acasa:`: the dashboard always opens on workspace `1.con`, every other window on
+`2.dev`, so nothing takes the focus from the page (win-2 / win-1 to switch); win-shift-r opens the
+dashboard again; two prompt calls renamed for xmonad-contrib 0.18.
 
 ## Connecting the real devices
 
