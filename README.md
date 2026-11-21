@@ -53,6 +53,7 @@ installed for this directory. After a change to `home.llp` or `intent.yaml`:
 
 - On and off only: no brightness, volume, ventilation speed or night mode yet.
 - The device names `vent_bedroom` / `vent_lab` are guesses from the Prana units' Bluetooth names.
-- The service is metis-agent's py backend. The Go backend (llama.cpp over cgo) is built at
-  `~/metis/metis-agent/go/bin` but its console does not relay a host's `world/*` frames, which the tiles need.
+- The service is metis-agent's py backend. The Go backend (llama.cpp over cgo, `~/metis/metis-agent/go/bin`) was
+  measured on this NUC on 2026-11-21 at the same speed (the time is the CPU's token rate, not the language), and its
+  console does not relay a host's `world/*` frames, which the tiles need.
 - `serve.py` wraps the single domain in a `Domains` set: metis-agent's `world_frames()` skips a bare agent.

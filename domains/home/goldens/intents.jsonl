@@ -1,9 +1,9 @@
-{"args": {"action": "TURN_ON", "target": {"type": "DEVICE", "description": "light"}}, "verb": "SWITCH"}
-{"args": {"action": "TURN_OFF", "target": {"type": "DEVICE", "description": "lab fan"}}, "verb": "SWITCH"}
-{"args": {"action": "TURN_OFF", "target": {"type": "DEVICE", "description": "oven"}}, "verb": "SWITCH"}
-{"args": {"scene": "NIGHT"}, "verb": "SCENE"}
-{"args": {"scene": "AWAY"}, "verb": "SCENE"}
-{"args": {"target": {"type": "DEVICE", "description": "bedroom ventilation"}}, "verb": "QUERY"}
+{"args": {"device": "light"}, "verb": "ON"}
+{"args": {"device": "lab fan"}, "verb": "OFF"}
+{"args": {"device": "oven"}, "verb": "OFF"}
+{"args": {}, "verb": "NIGHT"}
+{"args": {}, "verb": "AWAY"}
+{"args": {"device": "bedroom ventilation"}, "verb": "QUERY"}
 {"args": {}, "verb": "TIME"}
 {"args": {}, "verb": "DATE"}
 {"args": {}, "verb": "CHITCHAT"}

@@ -1,9 +1,9 @@
-{"in": {"args": {"action": "TURN_ON", "target": {"type": "DEVICE", "description": "light"}}, "verb": "SWITCH"}, "out": {"atom": "cmd_on(light)", "act": "on", "used": ["action", "target"], "dropped": {}}}
-{"in": {"args": {"action": "TURN_OFF", "target": {"type": "DEVICE", "description": "lab fan"}}, "verb": "SWITCH"}, "out": {"atom": "cmd_off(vent_lab)", "act": "off", "used": ["action", "target"], "dropped": {}}}
-{"in": {"args": {"action": "TURN_OFF", "target": {"type": "DEVICE", "description": "oven"}}, "verb": "SWITCH"}, "out": {"atom": "cmd_off(nothing)", "act": "off", "used": ["action", "target"], "dropped": {}}}
-{"in": {"args": {"scene": "NIGHT"}, "verb": "SCENE"}, "out": {"atom": "cmd_night", "act": "night", "used": ["scene"], "dropped": {}}}
-{"in": {"args": {"scene": "AWAY"}, "verb": "SCENE"}, "out": {"atom": "cmd_away", "act": "away", "used": ["scene"], "dropped": {}}}
-{"in": {"args": {"target": {"type": "DEVICE", "description": "bedroom ventilation"}}, "verb": "QUERY"}, "out": {"atom": "cmd_query(vent_bedroom)", "act": "query", "used": ["target"], "dropped": {}}}
+{"in": {"args": {"device": "light"}, "verb": "ON"}, "out": {"atom": "cmd_on(light)", "act": "on", "used": ["device"], "dropped": {}}}
+{"in": {"args": {"device": "lab fan"}, "verb": "OFF"}, "out": {"atom": "cmd_off(vent_lab)", "act": "off", "used": ["device"], "dropped": {}}}
+{"in": {"args": {"device": "oven"}, "verb": "OFF"}, "out": {"atom": "cmd_off(nothing)", "act": "off", "used": ["device"], "dropped": {}}}
+{"in": {"args": {}, "verb": "NIGHT"}, "out": {"atom": "cmd_night", "act": "night", "used": [], "dropped": {}}}
+{"in": {"args": {}, "verb": "AWAY"}, "out": {"atom": "cmd_away", "act": "away", "used": [], "dropped": {}}}
+{"in": {"args": {"device": "bedroom ventilation"}, "verb": "QUERY"}, "out": {"atom": "cmd_query(vent_bedroom)", "act": "query", "used": ["device"], "dropped": {}}}
 {"in": {"args": {}, "verb": "TIME"}, "out": {"atom": "cmd_time", "act": "time", "used": [], "dropped": {}}}
 {"in": {"args": {}, "verb": "DATE"}, "out": {"atom": "cmd_date", "act": "date", "used": [], "dropped": {}}}
 {"in": {"args": {}, "verb": "CHITCHAT"}, "out": {"atom": "cmd_chat", "act": "chat", "used": [], "dropped": {}}}
