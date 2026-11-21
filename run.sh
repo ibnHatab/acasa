@@ -3,7 +3,7 @@
 # the dialog (fsttm-web: Chrome's speech recognition and synthesis) and the device tiles.
 #   ./run.sh [start]   start in the background, print the URL
 #   ./run.sh stop | status | log | fg     (fg: in the foreground)
-# METIS_AGENT (default ~/metis/metis-agent, else the sibling checkout), ADDR (default 127.0.0.1:8400),
+# METIS_AGENT (default ~/metis/metis-agent, else the sibling checkout), ADDR (default 0.0.0.0:8400: every interface, the LAN and the tailnet),
 # ACASA_THREADS (default: the physical cores), ACASA_NCTX (default 8192).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -11,7 +11,7 @@ AGENT="${METIS_AGENT:-$HOME/metis/metis-agent}"
 [ -d "$AGENT/py" ] || AGENT="$(cd "$HERE/.." && pwd)/metis-agent"
 PY="$AGENT/py/.venv/bin/python"
 MODEL="${ACASA_MODEL:-$AGENT/go/models/gemma4/gemma-4-E2B-it-Q4_K_M.gguf}"
-ADDR="${ADDR:-127.0.0.1:8400}"
+ADDR="${ADDR:-0.0.0.0:8400}"
 RUN="$HERE/.run"; PID="$RUN/service.pid"; LOG="$RUN/service.log"
 NCTX="${ACASA_NCTX:-8192}"
 running() { [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
@@ -59,9 +59,10 @@ start() {
 MODE="${1:-start}"
 case "$MODE" in
   start) running && { echo "already running (pid $(cat "$PID")): http://$ADDR/world.html"; exit 0; }; start ;;
+  restart) running && kill "$(cat "$PID")"; rm -f "$PID"; sleep 2; start ;;
   fg) start ;;
   stop) running && kill "$(cat "$PID")" && echo stopped || echo "not running"; rm -f "$PID" ;;
   status) running && echo "running (pid $(cat "$PID")): http://$ADDR/world.html" || echo "not running" ;;
   log) exec tail -f "$LOG" ;;
-  *) echo "usage: run.sh [start|stop|status|log|fg]" >&2; exit 2 ;;
+  *) echo "usage: run.sh [start|restart|stop|status|log|fg]" >&2; exit 2 ;;
 esac

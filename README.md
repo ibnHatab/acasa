@@ -6,8 +6,8 @@ said back, and Home Assistant is only the pipe to the devices. The page (`web/`)
 and the dialog in one Chrome tab; the mic is the ReSpeaker array through Chrome's speech
 recognition (fsttm-web).
 
-    ./run.sh            # start; then open http://127.0.0.1:8400/world.html in Chrome
-    ./run.sh stop | status | log
+    ./run.sh            # start; then open http://127.0.0.1:8400/world.html in Chrome (or http://nuc:8400/world.html from another machine)
+    ./run.sh stop | restart | status | log
 
 | path | what |
 |---|---|
