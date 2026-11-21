@@ -27,19 +27,19 @@ v3:
     catalog: [home]
     loaded: [home]
     n_ctx: $NCTX
-    tick_ms: 1500
+    tick_ms: 500                # a result waits for the next beat: 1500 ms was up to 1.5 s of every reply
     journal: $RUN/session.jsonl
     world_map: $HERE/web/home.json
 domains:
     names: [home]
-    narrate: home
+    narrate: null              # no domain narrator: the rules %% lines are the words, the voice pass phrases them
     case: live
     seed: 1
     clocks: [{domain: home, n: 1}]
     trace: true
     records: catalog
     narrator_n_ctx: 4096
-    seat_n_ctx: 4096
+    consult: false             # the consult seat re-reads its whole prompt cold on every refusal: ~35 s on this CPU
 ws:
     addr: $ADDR
 Y
