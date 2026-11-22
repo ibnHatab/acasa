@@ -1,0 +1,16 @@
+# Home Assistant: the pipe to the devices (the only container of the stack). Data in ./config
+# next to the copy that runs (~/homeassistant on each machine: the NUC, Pascal).
+#   mkdir -p ~/homeassistant && cp compose.yaml ~/homeassistant/ && cd ~/homeassistant && docker compose up -d
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    restart: unless-stopped
+    network_mode: host          # discovery, Bluetooth, 8123 on the machine
+    privileged: true            # the Bluetooth adapter (the Prana units are BLE)
+    environment:
+      - TZ=Europe/Bucharest
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro  # BlueZ over D-Bus

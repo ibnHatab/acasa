@@ -29,6 +29,12 @@ on 127.0.0.1:8768 and sends its REASONING through her stream door on 127.0.0.1:8
     live/run.sh            # start both; the panel: http://localhost:8770/
     live/run.sh stop | status | log
 
+Home Assistant runs beside them as a container (`homeassistant/compose.yaml`, copied to
+`~/homeassistant` on each machine; Pascal: 2026.11.2 on http://localhost:8123). Once its
+long-lived token is in `~/.config/fsttm/hass.token` (mode 600), `live/run.sh` starts metis-home
+against it: the rules read and switch the real devices through the semantic world, and Home
+Assistant's state reaches Nina as ENVIRONMENT (her silent context, one line per entity).
+
 `live/pascal.yaml` is the config (sound, models, preferences, plugins, sources); the panel and the
 buttons change its `prefs` and save them there. Without `METIS_HOME_HA` metis-home simulates the
 devices. On the Raspberry Pi the same config takes `plugins.gpio` (buttons, lights) and
