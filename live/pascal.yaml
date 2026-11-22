@@ -21,6 +21,11 @@ dialog:
   awake_for: 90s # asleep (and her session closed) after this long without a turn
   start_asleep: true
   note_gap: 2s # a NOTE waits for the floor to be free this long
+  wake: # who hears her name
+    mode: shadow # cloud: the transcriber; shadow: and the local spotter, logged; local: asleep, only what the spotter woke goes to the cloud
+    model: ~/models/sherpa-kws/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01
+    keywords: ~/repo/fsttm-live/testdata/kws-keywords.txt
+    threshold: 0.25 # lower hears more
 # SOURCES: the systems Nina draws on. Metis (metis-home): its tools, and its REASONING through the
 # stream door (opened here). A line's kind gives its level: context (she knows it, says nothing),
 # info / important / urgent (a NOTE: spoken when the floor and the narration knob allow), drop.
@@ -34,7 +39,7 @@ sources:
     levels: {result: context, noticed: info, surprise: info, error: context, env: context} # until Metis quantises them itself
 # Changed at run time by the plugins (the web panel, the buttons) and written back here.
 prefs:
-  mic: true
+  mic: false
   voice: true
   voice_name: Zephyr # a Live voice (Puck, Kore, Aoede, …); "" the model's
   local: "" # "" the Live audio; rhvoice (small machines), paradee (a desktop's socket): a local voice speaks her transcript
