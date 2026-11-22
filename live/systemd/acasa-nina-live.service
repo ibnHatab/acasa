@@ -1,0 +1,17 @@
+[Unit]
+Description=acasa: Nina (fsttm-live: the ReSpeaker, the Live API, the panel on :8770)
+Wants=acasa-metis-home.service
+After=acasa-metis-home.service paradee-tts.socket
+
+[Service]
+Environment=CONFIG=%h/repo/acasa/live/pascal.yaml
+RuntimeDirectory=acasa-live
+RuntimeDirectoryPreserve=yes
+# metis-home's tools first: without them she would start with the demo home
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 60); do (exec 3<>/dev/tcp/127.0.0.1/8768) 2>/dev/null && exit 0; sleep 1; done; exit 0'
+ExecStart=%h/repo/fsttm-live/bin/nina-live -config ${CONFIG} -q -stdin=false -log %t/acasa-live/nina-live.jsonl
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

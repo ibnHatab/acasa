@@ -26,12 +26,17 @@ ReSpeaker, Gemini Live for hearing and speaking, FSTTM's floor machine) with the
 its SOURCES: metis-home (perotheia-packages `metis-agent-home`, the `home` world) answers her tools
 on 127.0.0.1:8768 and sends its REASONING through her stream door on 127.0.0.1:8766.
 
-    live/run.sh            # start both; the panel: http://localhost:8770/
-    live/run.sh stop | status | log
+    live/run.sh install    # build nina-live, link and enable the systemd user units, start them
+    live/run.sh start | stop | restart | status | log | uninstall
+
+Both run as systemd user services that start with the session (`live/systemd/`:
+`acasa-metis-home`, whose `live/metis-home.sh` waits for Home Assistant, and `acasa-nina-live`,
+which waits for metis-home's tools); their output is in `journalctl --user -u acasa-nina-live`,
+Nina's events in `$XDG_RUNTIME_DIR/acasa-live/nina-live.jsonl`. The panel: http://localhost:8770/
 
 Home Assistant runs beside them as a container (`homeassistant/compose.yaml`, copied to
 `~/homeassistant` on each machine; Pascal: 2026.11.2 on http://localhost:8123). Once its
-long-lived token is in `~/.config/fsttm/hass.token` (mode 600), `live/run.sh` starts metis-home
+long-lived token is in `~/.config/fsttm/hass.token` (mode 600), `live/metis-home.sh` starts metis-home
 against it: the rules read and switch the real devices through the semantic world, and Home
 Assistant's state reaches Nina as ENVIRONMENT (her silent context, one line per entity).
 

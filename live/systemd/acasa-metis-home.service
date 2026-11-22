@@ -1,0 +1,11 @@
+[Unit]
+Description=acasa: the home's rules (metis-home) on Home Assistant
+After=network-online.target
+
+[Service]
+ExecStart=%h/repo/acasa/live/metis-home.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
