@@ -19,6 +19,21 @@ recognition (fsttm-web).
 | `web/` | the page: metis-worlds' world page template (`world.html`, `world.js`, `vendor/`: copies), with `home.js` (the device tiles) where the map stands; `home.json` is the page's map file and world card |
 | `serve.py`, `run.sh` | the entry to metis-agent's service (py backend): the thread count of this machine, the one domain as a set of one |
 
+## Nina on the Live API (fsttm-live), with the rules
+
+`live/` runs the next voice: [fsttm-live](https://github.com/ibnHatab/fsttm-live) (`nina-live`: the
+ReSpeaker, Gemini Live for hearing and speaking, FSTTM's floor machine) with the home's rules as
+its SOURCES: metis-home (perotheia-packages `metis-agent-home`, the `home` world) answers her tools
+on 127.0.0.1:8768 and sends its REASONING through her stream door on 127.0.0.1:8766.
+
+    live/run.sh            # start both; the panel: http://localhost:8770/
+    live/run.sh stop | status | log
+
+`live/pascal.yaml` is the config (sound, models, preferences, plugins, sources); the panel and the
+buttons change its `prefs` and save them there. Without `METIS_HOME_HA` metis-home simulates the
+devices. On the Raspberry Pi the same config takes `plugins.gpio` (buttons, lights) and
+`prefs.local: rhvoice`.
+
 ## The desktop (xmonad)
 
 At login (xmonad, GDM's automatic login) `kiosk/kiosk.sh` opens one ordinary Chrome window with
