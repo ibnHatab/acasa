@@ -4,6 +4,51 @@
 // stream), as chat bubbles. The bubbles take assist-chat-display's theme variables, so one theme
 // styles both. Config: panel (default: this host, port 8770), max_messages (20), message_max_age
 // (s, 300; 0 keeps them), height (a CSS height: the card's, e.g. calc(100vh - 32px) on the panel).
+// One hub per page load: one connection to her panel, one conversation, shared by every Nina card
+// (each page of the dashboard has its own card: the conversation goes on as the page changes).
+const hub = window.__ninaHub || (window.__ninaHub = {
+  msgs: [], status: null, prefs: null, cards: new Set(), started: false, said: "", nina: null, panel: null,
+  emit() { this.cards.forEach((c) => c.render()); },
+  add(cls, text) {
+    if (!text || !text.trim()) return null;
+    const m = { cls, text: text.trim(), t: Date.now() };
+    this.msgs.push(m);
+    if (this.msgs.length > 50) this.msgs.shift();
+    this.emit();
+    return m;
+  },
+  start(panel) {
+    if (this.started) return;
+    this.started = true; this.panel = panel;
+    const connect = () => {
+      fetch(panel + "/api/state").then((r) => r.json()).then((s) => { this.prefs = s.prefs; this.status = s.status; this.emit(); })
+        .catch(() => { this.status = null; this.emit(); });
+      const es = new EventSource(panel + "/api/events");
+      es.addEventListener("status", (m) => { this.status = JSON.parse(m.data); this.emit(); });
+      es.addEventListener("ev", (m) => {
+        const e = JSON.parse(m.data);
+        switch (e.ev) {
+          case "typed": this.add("user", e.text); break;
+          case "turn":
+            if (e.note) this.add("note", e.text.replace(/^NOTE \((\w+)\): /, ""));
+            else if (!e.typed_shown) this.add("user", e.text.replace(/^\(You were interrupted[^)]*\)\n/, ""));
+            this.nina = null; this.said = ""; break;
+          case "said":
+            this.said += e.text;
+            if (!this.nina) this.nina = this.add("nina", this.said); else { this.nina.text = this.said.trim(); this.emit(); }
+            break;
+          case "reply_done":
+            if (!this.nina && e.said) this.add("nina", e.said); else if (this.nina) { this.nina.text = (e.said || this.said).trim(); this.emit(); }
+            this.nina = null; this.said = ""; break;
+          case "prefs": this.prefs = e.prefs; this.emit(); break;
+        }
+      });
+      es.onerror = () => { es.close(); this.status = null; this.emit(); setTimeout(connect, 5000); };
+    };
+    connect();
+  },
+});
+
 class NinaCard extends HTMLElement {
   setConfig(c) {
     this.c = Object.assign({ max_messages: 20, message_max_age: 300 }, c || {});
@@ -52,9 +97,21 @@ class NinaCard extends HTMLElement {
       if (this.c.height) this.root.querySelector("ha-card").style.height = this.c.height;
       this.root.querySelectorAll("button").forEach((b) =>
         b.addEventListener("click", () => this.toggle(b.dataset.p)));
-      this.connect();
-      setInterval(() => this.age(), 5000);
+      hub.start(this.panel);
+      setInterval(() => this.render(), 5000);
     }
+  }
+  connectedCallback() { hub.cards.add(this); if (this.root) this.render(); }
+  disconnectedCallback() { hub.cards.delete(this); }
+  render() {
+    if (!this.root) return;
+    this.showPrefs();
+    if (hub.status) this.status(hub.status); else this.state("her panel is not reachable");
+    const max = this.c.message_max_age * 1000;
+    const msgs = hub.msgs.filter((m) => !max || Date.now() - m.t <= max).slice(-this.c.max_messages);
+    const chat = this.root.querySelector(".chat");
+    chat.replaceChildren(...msgs.map((m) => { const b = document.createElement("div"); b.className = "b " + m.cls; b.textContent = m.text; return b; }));
+    chat.scrollTop = chat.scrollHeight;
   }
   set hass(h) { this._hass = h; }
   getCardSize() { return 5; }
@@ -63,54 +120,17 @@ class NinaCard extends HTMLElement {
     return r.json();
   }
   async toggle(p) {
-    const on = !this.prefs?.[p];
-    try { const s = await this.api("/api/prefs", { [p]: on }); this.prefs = Object.assign(this.prefs || {}, { [p]: on }); this.showPrefs(); } catch (e) { this.state("her panel is not reachable"); }
+    const on = !hub.prefs?.[p];
+    try { await this.api("/api/prefs", { [p]: on }); hub.prefs = Object.assign(hub.prefs || {}, { [p]: on }); hub.emit(); } catch (e) { this.state("her panel is not reachable"); }
   }
   showPrefs() {
-    this.root.querySelectorAll("button").forEach((b) => b.classList.toggle("on", !!this.prefs?.[b.dataset.p]));
+    this.root.querySelectorAll("button").forEach((b) => b.classList.toggle("on", !!hub.prefs?.[b.dataset.p]));
   }
   state(t) { this.root.querySelector(".state").textContent = t; }
   status(s) {
     const orb = this.root.querySelector(".orb");
     orb.className = "orb" + (s.awake ? "" : " asleep") + (s.hearing ? " hearing" : "") + (s.speaking ? " speaking" : "");
     this.state(!s.mind && !s.awake ? "asleep" : s.speaking ? "speaking" : s.replying ? "thinking" : s.hearing ? "listening" : s.awake ? "here" : "asleep");
-  }
-  msg(cls, text) {
-    if (!text || !text.trim()) return null;
-    const chat = this.root.querySelector(".chat");
-    const b = document.createElement("div");
-    b.className = "b " + cls; b.textContent = text.trim(); b.dataset.t = Date.now();
-    chat.appendChild(b);
-    while (chat.children.length > this.c.max_messages) chat.firstChild.remove();
-    chat.scrollTop = chat.scrollHeight;
-    return b;
-  }
-  age() {
-    const max = this.c.message_max_age * 1000;
-    if (!max) return;
-    this.root.querySelectorAll(".b").forEach((b) => { if (Date.now() - b.dataset.t > max) b.remove(); });
-  }
-  connect() {
-    this.api("/api/state").then((s) => { this.prefs = s.prefs; this.showPrefs(); this.status(s.status); }).catch(() => this.state("her panel is not reachable"));
-    const es = new EventSource(this.panel + "/api/events");
-    let said = "", nina = null;
-    es.addEventListener("status", (m) => this.status(JSON.parse(m.data)));
-    es.addEventListener("ev", (m) => {
-      const e = JSON.parse(m.data);
-      switch (e.ev) {
-        case "typed": this.msg("user", e.text); break;
-        case "turn":
-          if (e.note) this.msg("note", e.text.replace(/^NOTE \((\w+)\): /, ""));
-          else if (!e.typed_shown) this.msg("user", e.text.replace(/^\(You were interrupted[^)]*\)\n/, ""));
-          nina = null; said = ""; break;
-        case "said": said += e.text; if (!nina) nina = this.msg("nina", " "); if (nina) nina.textContent = said.trim(); break;
-        case "reply_done":
-          if (!nina && e.said) this.msg("nina", e.said); else if (nina) nina.textContent = e.said || said.trim();
-          nina = null; said = ""; break;
-        case "prefs": this.prefs = e.prefs; this.showPrefs(); break;
-      }
-    });
-    es.onerror = () => { es.close(); this.state("reconnecting to her…"); setTimeout(() => this.connect(), 5000); };
   }
 }
 customElements.define("nina-card", NinaCard);
