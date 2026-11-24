@@ -1,0 +1,10 @@
+{
+  "graphite":  {"mood": "calm",    "sheet": "ev-01.lead-black-face.1", "about": "graphite on cream paper: the narrator"},
+  "contact":   {"mood": "wake",    "sheet": "ev-01.lead-black-face.2", "about": "a contact-sheet photograph, white turtleneck: the morning news"},
+  "inkblue":   {"mood": "focus",   "sheet": "ev-01.lead-black-face.3", "about": "ink on blue-grey paper"},
+  "booth":     {"mood": "lively",  "sheet": "ev-01.lead-black-face.4", "about": "a photobooth strip, high contrast"},
+  "snapshot":  {"mood": "cozy",    "sheet": "ev-01.lead-clay-face.1",  "about": "a flash snapshot, tousled bob, white tank top"},
+  "sketch":    {"mood": "playful", "sheet": "ev-01.lead-clay-face.2",  "about": "a sketchbook drawing, messy clay hair"},
+  "tinted":    {"mood": "evening", "sheet": "ev-01.lead-clay-face.3",  "about": "a hand-tinted photograph, copper curls, white shirt"},
+  "porcelain": {"mood": "sleep",   "sheet": "ev-01.lead-clay-face.4",  "about": "a porcelain sculpture, peach bob"}
+}

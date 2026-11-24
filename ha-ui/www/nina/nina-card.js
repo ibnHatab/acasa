@@ -151,7 +151,7 @@ class NinaCard extends HTMLElement {
   face() {
     let dir = this.c.face;
     if (dir === undefined) {
-      const names = this.c.personas || ["graphite", "contact", "inkblue", "booth"];
+      const names = this.c.personas || ["graphite", "contact", "inkblue", "booth", "snapshot", "sketch", "tinted", "porcelain"];
       const asked = new URLSearchParams(location.search).get("persona");
       const d = new Date(), day = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5);
       dir = `/local/nina/personas/${names.includes(asked) ? asked : names[(day * 7 + d.getFullYear()) % names.length]}`;
