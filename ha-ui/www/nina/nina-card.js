@@ -3,7 +3,15 @@
 // mic and her voice, on and off (POST /api/prefs); the conversation as it happens (the event
 // stream), as chat bubbles. The bubbles take assist-chat-display's theme variables, so one theme
 // styles both. Config: panel (default: this host, port 8770), max_messages (20), message_max_age
-// (s, 300; 0 keeps them), height (a CSS height: the card's, e.g. calc(100vh - 32px) on the panel).
+// (s, 300; 0 keeps them), height (a CSS height: the card's, e.g. calc(100vh - 32px) on the panel),
+// face (the folder of her talking head's frames, default /local/nina/narrator; "" for none).
+//
+// Her face (2026-11-24, the user: a talking head, cheap; Claudia's look): five frames drawn as edits
+// of one portrait and composited so they differ only at the mouth and the eyes (nina-live
+// design/tools/sprites.py). The base never leaves; a mouth or blink frame fades in over it and out
+// again, so the crossfades melt instead of ghosting. While she speaks her mouth cycles at random
+// (no lip sync), she blinks every few seconds, sways and breathes (a CSS transform); asleep, her
+// eyes stay closed; after a reply she may smile. Nothing is computed but a timer and an opacity.
 // One hub per page load: one connection to her panel, one conversation, shared by every Nina card
 // (each page of the dashboard has its own card: the conversation goes on as the page changes).
 const hub = window.__ninaHub || (window.__ninaHub = {
@@ -58,7 +66,38 @@ class NinaCard extends HTMLElement {
       this.root.innerHTML = `
 <style>
   :host { display: block; }
-  ha-card { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; box-sizing: border-box; }
+  ha-card { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; height: 100%; box-sizing: border-box;
+            position: relative; overflow: hidden; }
+  ha-card > :not(.face) { position: relative; z-index: 1; }
+  .face { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #d8d4cc; }
+  .face[hidden] { display: none; }
+  .rig { position: absolute; inset: 0; transform-origin: 50% 62%; will-change: transform;
+         animation: sway 9s ease-in-out infinite; transition: rotate .8s ease; }
+  .rig.slow { animation-duration: 16s; }
+  .rig.fast { animation-duration: 6s; }
+  .rig.lean { rotate: 1.2deg; }
+  .rig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%;
+             opacity: 0; transition: opacity 70ms linear; }
+  .rig img.base, .rig img.on { opacity: 1; }
+  .rig img.eyes { transition-duration: 110ms; }
+  .rig img.smile { transition-duration: 400ms; }
+  @keyframes sway {
+    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1.04); }
+    25% { transform: translate(-3px, 1px) rotate(-.6deg) scale(1.046); }
+    50% { transform: translate(1px, -2px) rotate(.3deg) scale(1.04); }
+    75% { transform: translate(3px, 0) rotate(.7deg) scale(1.044); } }
+  .face::after { content: ""; position: absolute; inset: 0;
+                 background: linear-gradient(to bottom, rgba(20,16,14,.55) 0, transparent 18%, transparent 55%, rgba(20,16,14,.6) 100%); }
+  .credit { position: absolute; left: 10px; bottom: 6px; z-index: 1; font-size: 10px; letter-spacing: .02em;
+            color: rgba(255,255,255,.55); }
+  .face:not([hidden]) ~ .top .name, .face:not([hidden]) ~ .top .state { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+  .face:not([hidden]) ~ .chat { justify-content: flex-end;
+         -webkit-mask-image: linear-gradient(transparent 0, #000 35%); mask-image: linear-gradient(transparent 0, #000 35%); }
+  .face:not([hidden]) ~ .chat .b { backdrop-filter: blur(6px); }
+  .face:not([hidden]) ~ .chat .user { background: color-mix(in srgb, var(--assist-chat-display-user-bubble-background, #3b6ea5) 62%, transparent); }
+  .face:not([hidden]) ~ .chat .nina { background: color-mix(in srgb, var(--assist-chat-display-assistant-bubble-background, var(--primary-color)) 66%, transparent); }
+  .face:not([hidden]) ~ .chat .note { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  .face:not([hidden]) ~ .hint { margin: auto 0 18px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
   .top { display: flex; align-items: center; gap: 12px; }
   .orb { width: 42px; height: 42px; border-radius: 50%; flex: none;
          background: radial-gradient(circle at 35% 35%, var(--nina-orb-light, #ffd9a8), var(--nina-orb, #c96f2e));
@@ -88,12 +127,15 @@ class NinaCard extends HTMLElement {
   .chat:not(:empty) + .hint { display: none; }
 </style>
 <ha-card>
+  <div class="face" hidden><div class="rig"></div></div>
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina</div><div class="state">…</div></div>
     <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button></div></div>
   <div class="chat"></div>
   <div class="hint">Say “Nina”, or tap the mic.</div>
+  <div class="credit" hidden>Claudia by anabology · AI-generated</div>
 </ha-card>`;
+      this.face();
       if (this.c.height) this.root.querySelector("ha-card").style.height = this.c.height;
       this.root.querySelectorAll("button").forEach((b) =>
         b.addEventListener("click", () => this.toggle(b.dataset.p)));
@@ -101,8 +143,52 @@ class NinaCard extends HTMLElement {
       setInterval(() => this.render(), 5000);
     }
   }
-  connectedCallback() { hub.cards.add(this); if (this.root) this.render(); }
-  disconnectedCallback() { hub.cards.delete(this); }
+  connectedCallback() { hub.cards.add(this); if (this.root) this.render(); this.animate(true); }
+  disconnectedCallback() { hub.cards.delete(this); this.animate(false); }
+  // face builds the frames' stack (the base, then the overlays).
+  face() {
+    const dir = this.c.face === undefined ? "/local/nina/narrator" : this.c.face;
+    if (!dir) return;
+    const rig = this.root.querySelector(".rig");
+    this.frames = {};
+    for (const [name, cls] of [["neutral", "base"], ["talk-a", "mouth"], ["talk-b", "mouth"], ["smile", "smile"], ["blink", "eyes"]]) {
+      const img = document.createElement("img");
+      img.src = `${dir}/${name}.webp`; img.className = cls; img.alt = "";
+      rig.appendChild(img); this.frames[name] = img;
+    }
+    this.frames.neutral.onload = () => { this.root.querySelector(".face").hidden = false; this.root.querySelector(".credit").hidden = false; };
+  }
+  show(name, on) { const f = this.frames?.[name]; if (f) f.classList.toggle("on", on); }
+  mouth(name) { for (const m of ["talk-a", "talk-b"]) this.show(m, m === name); }
+  // animate runs her face's timers while the card is on the page.
+  animate(run) {
+    clearTimeout(this.tBlink); clearTimeout(this.tMouth);
+    if (!run || !this.frames) return;
+    const blink = () => {
+      const s = hub.status;
+      if (s && (s.awake || s.mind)) {
+        this.show("blink", true);
+        setTimeout(() => this.show("blink", false), 120);
+        if (Math.random() < .15) setTimeout(() => { this.show("blink", true); setTimeout(() => this.show("blink", false), 110); }, 300);
+      }
+      this.tBlink = setTimeout(blink, 2500 + Math.random() * 3800);
+    };
+    const mouth = () => {
+      if (hub.status?.speaking) {
+        const r = Math.random();
+        this.mouth(r < .4 ? "talk-a" : r < .75 ? "talk-b" : null);
+        this.wasSpeaking = true;
+        this.tMouth = setTimeout(mouth, 85 + Math.random() * 95);
+        return;
+      }
+      if (this.wasSpeaking) {
+        this.wasSpeaking = false; this.mouth(null);
+        if (Math.random() < .55) { this.show("smile", true); setTimeout(() => this.show("smile", false), 1400 + Math.random() * 1200); }
+      }
+      this.tMouth = setTimeout(mouth, 120);
+    };
+    this.tBlink = setTimeout(blink, 1500); this.tMouth = setTimeout(mouth, 120);
+  }
   render() {
     if (!this.root) return;
     this.showPrefs();
@@ -130,6 +216,14 @@ class NinaCard extends HTMLElement {
   status(s) {
     const orb = this.root.querySelector(".orb");
     orb.className = "orb" + (s.awake ? "" : " asleep") + (s.hearing ? " hearing" : "") + (s.speaking ? " speaking" : "");
+    if (this.frames) {
+      const asleep = !s.mind && !s.awake;
+      this.show("blink", asleep);
+      const rig = this.root.querySelector(".rig");
+      rig.classList.toggle("slow", asleep);
+      rig.classList.toggle("fast", !!s.speaking);
+      rig.classList.toggle("lean", !!s.hearing && !s.speaking);
+    }
     this.state(!s.mind && !s.awake ? "asleep" : s.speaking ? "speaking" : s.replying ? "thinking" : s.hearing ? "listening" : s.awake ? "here" : "asleep");
   }
 }
