@@ -41,8 +41,8 @@ var (
 	dir    = flag.String("dir", "ha-ui", "the look and feel (acasa/ha-ui)")
 	haURL  = flag.String("url", "http://homeassistant.local:8123", "Home Assistant")
 	token  = flag.String("token", "~/.config/fsttm/hass.token", "the token's file")
-	host   = flag.String("ssh", "nina@homeassistant.local", "the machine Home Assistant's config is on")
-	config = flag.String("config", "/home/nina/homeassistant/config", "Home Assistant's config folder there")
+	host   = flag.String("ssh", "", "the machine Home Assistant's config is on (\"\": this one; the Pi: nina@homeassistant.local)")
+	config = flag.String("config", "~/homeassistant/config", "Home Assistant's config folder there (the Pi: /home/nina/homeassistant/config)")
 	kiosk  = flag.Bool("kiosk", false, "also write the Pi's kiosk config and restart the kiosk")
 )
 
@@ -85,7 +85,10 @@ func fetch(v vendored) ([]byte, error) {
 
 // put writes a file on the config's machine (sudo: the config belongs to the container's root).
 func put(path string, b []byte) error {
-	cmd := exec.Command("ssh", "-o", "BatchMode=yes", *host, fmt.Sprintf("sudo install -D -m 644 /dev/stdin %q", path))
+	cmd := exec.Command("sudo", "install", "-D", "-m", "644", "/dev/stdin", path)
+	if *host != "" {
+		cmd = exec.Command("ssh", "-o", "BatchMode=yes", *host, fmt.Sprintf("sudo install -D -m 644 /dev/stdin %q", path))
+	}
 	cmd.Stdin = bytes.NewReader(b)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("%s: %v %s", path, err, out)
@@ -195,6 +198,9 @@ func main() {
 	flag.Parse()
 	log.SetFlags(0)
 	d := *dir
+	if *host == "" {
+		*config = expand(*config)
+	}
 	h, err := dial()
 	if err != nil {
 		log.Fatal(err)
@@ -280,6 +286,11 @@ func main() {
 		if err := yaml.Unmarshal(b, &conf); err != nil {
 			log.Fatalf("%s: %v", f, err)
 		}
+		for k := range conf { // x-…: the YAML's own (anchors' holders), not the dashboard's
+			if strings.HasPrefix(k, "x-") {
+				delete(conf, k)
+			}
+		}
 		name := strings.TrimSuffix(filepath.Base(f), ".yaml")
 		title, _ := conf["title"].(string)
 		if err := h.dashboard(name+"-panel", title, "mdi:home-heart", conf); err != nil {
@@ -296,6 +307,9 @@ func main() {
 		}
 		if err := put("/etc/ha-pi-kiosk/config.env", b); err != nil {
 			log.Fatal(err)
+		}
+		if *host == "" {
+			log.Fatal("-kiosk is the Pi's: give -ssh nina@homeassistant.local")
 		}
 		out, err := exec.Command("ssh", "-o", "BatchMode=yes", *host, "pkill -x firefox || pkill -x firefox-esr || true").CombinedOutput()
 		if err != nil {

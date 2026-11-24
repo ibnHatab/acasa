@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- The panel's screen on any browser (acasa ha-ui, 2026-11-24): Nina's dashboard framed at the
+     Raspberry Pi panel's size, 1024x600. /local/nina/preview.html?view=music -->
+<html><head><meta charset="utf-8"><title>Nina's panel, 1024x600</title>
+<style>
+  body { margin: 0; background: #222; display: grid; place-items: start center; min-height: 100vh; font: 13px sans-serif; color: #aaa; }
+  .bar { padding: 6px; }
+  iframe { width: 1024px; height: 600px; border: 0; box-shadow: 0 0 0 1px #555; display: block; }
+</style></head>
+<body>
+  <div>
+    <div class="bar">the panel, 1024x600 · views:
+      <a href="?view=home">home</a> <a href="?view=music">music</a> <a href="?view=light">light</a>
+      <a href="?view=air">air</a> <a href="?view=agenda">agenda</a> <a href="?view=weather">weather</a></div>
+    <iframe id="f"></iframe>
+  </div>
+  <script>
+    const v = new URLSearchParams(location.search).get("view") || "home";
+    document.getElementById("f").src = `/nina-panel/${v}?kiosk`;
+  </script>
+</body></html>

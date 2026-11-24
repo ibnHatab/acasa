@@ -3,7 +3,7 @@
 // mic and her voice, on and off (POST /api/prefs); the conversation as it happens (the event
 // stream), as chat bubbles. The bubbles take assist-chat-display's theme variables, so one theme
 // styles both. Config: panel (default: this host, port 8770), max_messages (20), message_max_age
-// (s, 300; 0 keeps them).
+// (s, 300; 0 keeps them), height (a CSS height: the card's, e.g. calc(100vh - 32px) on the panel).
 class NinaCard extends HTMLElement {
   setConfig(c) {
     this.c = Object.assign({ max_messages: 20, message_max_age: 300 }, c || {});
@@ -39,13 +39,17 @@ class NinaCard extends HTMLElement {
           color: var(--assist-chat-display-assistant-bubble-color, #fff); }
   .note { align-self: center; background: transparent; color: var(--secondary-text-color); font-style: italic; font-size: .9em; }
   .off { color: var(--secondary-text-color); font-size: .85em; text-align: center; }
+  .hint { margin: auto; color: var(--secondary-text-color); text-align: center; line-height: 1.6; opacity: .8; }
+  .chat:not(:empty) + .hint { display: none; }
 </style>
 <ha-card>
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina</div><div class="state">…</div></div>
     <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button></div></div>
   <div class="chat"></div>
+  <div class="hint">Say “Nina”, or tap the mic.</div>
 </ha-card>`;
+      if (this.c.height) this.root.querySelector("ha-card").style.height = this.c.height;
       this.root.querySelectorAll("button").forEach((b) =>
         b.addEventListener("click", () => this.toggle(b.dataset.p)));
       this.connect();
