@@ -142,6 +142,7 @@ class NinaCard extends HTMLElement {
            background: var(--secondary-background-color); color: var(--secondary-text-color); }
   button.on { background: var(--primary-color); color: var(--text-primary-color, #fff); }
   button:disabled { opacity: .35; cursor: default; }
+  button.ha { padding: 6px 11px; font-size: 1.15em; line-height: 1; }
   .chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: var(--assist-chat-display-gap, 8px);
           font-size: var(--assist-chat-display-font-size, 16px); min-height: 80px; }
   .b { max-width: 82%; padding: var(--assist-chat-display-padding, 8px) 12px; border-radius: var(--assist-chat-display-radius, 20px);
@@ -159,15 +160,19 @@ class NinaCard extends HTMLElement {
   <div class="face" hidden><div class="rig"></div></div>
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina</div><div class="state">…</div></div>
-    <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button></div></div>
+    <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button></div></div>
   <div class="chat"></div>
   <div class="hint">Say “Nina”, or tap the mic.</div>
   <div class="credit" hidden>Claudia by anabology · AI-generated</div>
 </ha-card>`;
       setTimeout(() => this.face(), 0); // after Home Assistant gives the card its states (her persona)
       if (this.c.height) this.root.querySelector("ha-card").style.height = this.c.height;
-      this.root.querySelectorAll("button").forEach((b) =>
+      this.root.querySelectorAll("button[data-p]").forEach((b) =>
         b.addEventListener("click", () => this.toggle(b.dataset.p)));
+      // ⌂: Home Assistant's full interface (on Nina's own screen its mode; on a Home Assistant
+      // dashboard, its default dashboard, the sidebar there leads back to hers)
+      this.root.querySelector("button.ha").addEventListener("click", () =>
+        window.__ninaShell ? window.__ninaShell.mode("ha") : (location.href = "/"));
       hub.start(this.panel);
       setInterval(() => this.render(), 5000);
     }
@@ -315,7 +320,7 @@ class NinaCard extends HTMLElement {
     if (!this.root) return;
     if (this.persona && !this.pinned && hub.persona && hub.persona !== this.persona && this.names?.includes(hub.persona)) this.swap(hub.persona);
     this.showPrefs();
-    this.root.querySelectorAll("button").forEach((b) => { // the mic and her voice are hers: off without her
+    this.root.querySelectorAll("button[data-p]").forEach((b) => { // the mic and her voice are hers: off without her
       b.disabled = !hub.status;
       b.title = hub.status ? "" : "Nina is not running: nothing to switch";
     });
@@ -366,7 +371,7 @@ class NinaCard extends HTMLElement {
     try { await this.api("/api/prefs", { [p]: on }); hub.prefs = Object.assign(hub.prefs || {}, { [p]: on }); hub.emit(); } catch (e) { this.state("her panel is not reachable"); }
   }
   showPrefs() {
-    this.root.querySelectorAll("button").forEach((b) => b.classList.toggle("on", !!hub.prefs?.[b.dataset.p]));
+    this.root.querySelectorAll("button[data-p]").forEach((b) => b.classList.toggle("on", !!hub.prefs?.[b.dataset.p]));
   }
   state(t) { this.root.querySelector(".state").textContent = t; }
   status(s) {

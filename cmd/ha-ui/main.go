@@ -177,16 +177,27 @@ func (h *ha) dashboard(urlPath, title, icon string, conf any) error {
 		return err
 	}
 	var ds []struct {
+		ID      string `json:"id"`
 		URLPath string `json:"url_path"`
+		Sidebar bool   `json:"show_in_sidebar"`
 	}
 	json.Unmarshal(raw, &ds)
+	sidebar := !strings.HasSuffix(urlPath, "-side") // the side dashboard is framed, never browsed
 	found := false
 	for _, d := range ds {
-		found = found || d.URLPath == urlPath
+		if d.URLPath != urlPath {
+			continue
+		}
+		found = true
+		if d.Sidebar != sidebar {
+			if _, err := h.call(map[string]any{"type": "lovelace/dashboards/update", "dashboard_id": d.ID, "show_in_sidebar": sidebar}); err != nil {
+				return err
+			}
+		}
 	}
 	if !found {
 		if _, err := h.call(map[string]any{"type": "lovelace/dashboards/create", "url_path": urlPath, "title": title,
-			"icon": icon, "show_in_sidebar": true, "require_admin": false, "mode": "storage"}); err != nil {
+			"icon": icon, "show_in_sidebar": sidebar, "require_admin": false, "mode": "storage"}); err != nil {
 			return err
 		}
 	}

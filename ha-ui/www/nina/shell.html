@@ -106,6 +106,7 @@
     };
     document.getElementById("soon").addEventListener("click", () => mode("ha"));
     document.getElementById("toHA").addEventListener("click", () => mode("ha"));
+    window.__ninaShell = { mode }; // the card's ⌂ button
     document.getElementById("toNina").addEventListener("click", () => mode("nina"));
     // the panel's ui action (her voice, a button): {"ev":"ui","mode":"ha"|"nina"}
     const listen = () => {
