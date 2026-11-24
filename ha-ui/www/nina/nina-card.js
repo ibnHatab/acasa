@@ -5,8 +5,9 @@
 // styles both. Config: panel (default: this host, port 8770), max_messages (20), message_max_age
 // (s, 300; 0 keeps them), height (a CSS height: the card's, e.g. calc(100vh - 32px) on the panel),
 // face (the folder of one persona's frames, or "" for none), personas (the folders' names under
-// /local/nina/personas: one is the day's, by the date, until Nina draws it herself; ?persona=NAME
-// in the address picks one).
+// /local/nina/personas). Which one: ?persona=NAME in the address, else Nina's own (her temperament's
+// mood: Home Assistant's sensor.nina_persona, nina-live's persona package), crossfaded when it
+// changes; without her, the day's by the date.
 //
 // Her face (2026-11-24, the user: a talking head, cheap; Claudia's look): five frames drawn as edits
 // of one portrait and composited so they differ only at the mouth and the eyes (nina-live
@@ -146,7 +147,7 @@ class NinaCard extends HTMLElement {
   <div class="hint">Say “Nina”, or tap the mic.</div>
   <div class="credit" hidden>Claudia by anabology · AI-generated</div>
 </ha-card>`;
-      this.face();
+      setTimeout(() => this.face(), 0); // after Home Assistant gives the card its states (her persona)
       if (this.c.height) this.root.querySelector("ha-card").style.height = this.c.height;
       this.root.querySelectorAll("button").forEach((b) =>
         b.addEventListener("click", () => this.toggle(b.dataset.p)));
@@ -157,13 +158,16 @@ class NinaCard extends HTMLElement {
   connectedCallback() { hub.cards.add(this); if (this.root) this.render(); this.animate(true); this.gl?.start(); }
   disconnectedCallback() { hub.cards.delete(this); this.animate(false); this.gl?.stop(); }
   // face builds the frames' stack (the base, then the overlays).
-  face() {
+  face(want) {
     let dir = this.c.face;
     if (dir === undefined) {
       const names = this.c.personas || ["graphite", "contact", "inkblue", "booth", "snapshot", "sketch", "tinted", "porcelain"];
       const asked = new URLSearchParams(location.search).get("persona");
+      const hers = this._hass?.states?.["sensor.nina_persona"]?.state;
       const d = new Date(), day = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5);
-      dir = `/local/nina/personas/${names.includes(asked) ? asked : names[(day * 7 + d.getFullYear()) % names.length]}`;
+      const name = [asked, want, hers].find((n) => names.includes(n)) || names[(day * 7 + d.getFullYear()) % names.length];
+      this.persona = name; this.pinned = names.includes(asked); this.names = names;
+      dir = `/local/nina/personas/${name}`;
     }
     if (!dir) return;
     const rig = this.root.querySelector(".rig");
@@ -287,7 +291,27 @@ class NinaCard extends HTMLElement {
     chat.replaceChildren(...msgs.map((m) => { const b = document.createElement("div"); b.className = "b " + m.cls; b.textContent = m.text; return b; }));
     chat.scrollTop = chat.scrollHeight;
   }
-  set hass(h) { this._hass = h; }
+  set hass(h) {
+    this._hass = h;
+    const p = h?.states?.["sensor.nina_persona"]?.state;
+    if (this.persona && !this.pinned && p && p !== this.persona && this.names?.includes(p)) this.swap(p);
+  }
+  // swap: her mood changed: the face fades out, the new persona's frames in.
+  swap(name) {
+    if (this.swapping) return;
+    this.swapping = true;
+    const f = this.root.querySelector(".face"), rig = this.root.querySelector(".rig");
+    f.style.transition = "opacity .9s ease"; f.style.opacity = "0";
+    setTimeout(() => {
+      this.gl?.stop(); this.gl = null;
+      rig.querySelector("canvas")?.getContext("webgl")?.getExtension("WEBGL_lose_context")?.loseContext();
+      rig.replaceChildren(); rig.classList.remove("gl");
+      this.face(name); this.render();
+      const back = () => { f.style.opacity = "1"; this.swapping = false; };
+      this.frames.neutral.complete ? back() : this.frames.neutral.addEventListener("load", back, { once: true });
+      setTimeout(back, 3000);
+    }, 900);
+  }
   getCardSize() { return 5; }
   async api(path, body) {
     const r = await fetch(this.panel + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
