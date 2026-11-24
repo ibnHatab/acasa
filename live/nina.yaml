@@ -13,3 +13,13 @@ hass:
   token: ~/.config/fsttm/hass.token       # the token's file, never the token here
 dialogue: ~/repo/acasa/live/pascal.yaml   # fsttm-live's config: sound, models, attention, prefs, plugins
 levels: {result: context, event: info, surprise: info, error: context}   # the rules' replies → silent context or a NOTE
+tasks:                                    # System 2: delegate(goal) → a pi task (sky-valley/pi), its result a NOTE
+  enabled: true
+  provider: google
+  model: gemini-3-flash-preview           # 2026-11-24: 3.5/3.8-flash answered 503 (high demand); 2.5-flash closed to new users
+  key: ~/.config/fsttm/gemini.key
+  max_turns: 10
+  timeout: 3m
+  transform: true                         # the world's lines before each request (read-only)
+  steer: true                             # a used package's new conclusion, mid-run
+  follow_up: true                         # a late outcome, after the run would end
