@@ -66,24 +66,30 @@ while true; do
   # the config again before each start: a new KIOSK_URL takes effect at the next Firefox restart
   if [ -f "$CONFIG" ]; then . "$CONFIG"; fi
   HA_BASE="${KIOSK_URL%%\?*}"
-  # Nina's waking-up page at once (it goes to the dashboard when Home Assistant answers); without it,
-  # wait for Home Assistant on a black screen as before
+  # Nina's waking-up page at once while Home Assistant starts (a minute on a cold boot), then the
+  # dashboard: the launcher waits (curl), not the page (Firefox would not let a file:// page probe it)
   START_PAGE=/usr/local/share/ha-pi-kiosk/starting.html
-  URL="$KIOSK_URL"
-  if [ -f "$START_PAGE" ]; then
-    URL="file://${START_PAGE}?to=$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$KIOSK_URL")"
-  else
-    until curl -fsS -o /dev/null --max-time 3 "$HA_BASE"; do # waiting, the config re-read too
-      sleep 3
+  if [ -f "$START_PAGE" ] && ! curl -fsS -o /dev/null --max-time 2 "$HA_BASE"; then
+    "$FIREFOX_BIN" --profile "$PROFILE_DIR" --new-instance --width 1024 --height 600 "file://${START_PAGE}" &
+    SPLASH=$!
+    until curl -fsS -o /dev/null --max-time 3 "$HA_BASE"; do
+      sleep 2
       if [ -f "$CONFIG" ]; then . "$CONFIG"; fi
       HA_BASE="${KIOSK_URL%%\?*}"
     done
+    kill "$SPLASH" 2>/dev/null || true
+    wait "$SPLASH" 2>/dev/null || true # set -e: a Firefox we killed is not a failure
   fi
+  until curl -fsS -o /dev/null --max-time 3 "$HA_BASE"; do # (no waking-up page) waiting, the config re-read too
+    sleep 3
+    if [ -f "$CONFIG" ]; then . "$CONFIG"; fi
+    HA_BASE="${KIOSK_URL%%\?*}"
+  done
   "$FIREFOX_BIN" \
     --profile "$PROFILE_DIR" \
     --new-instance \
     --width 1024 \
     --height 600 \
-    "$URL" || true
+    "$KIOSK_URL" || true
   sleep 2
 done

@@ -1,8 +1,8 @@
 <!doctype html>
 <!-- starting.html (acasa ha-ui kiosk, 2026-11-24): what the screen shows while Home Assistant starts
-     (a minute or more on the Pi): Nina's boot logo at once instead of a black screen; Firefox is
-     warm when Home Assistant answers, and the page goes there. ?to=URL (the dashboard). Installed
-     beside the logo in /usr/local/share/ha-pi-kiosk/ and opened by firefox-kiosk.sh. -->
+     (a minute on a cold boot): Nina's boot logo at once instead of a black screen. firefox-kiosk.sh
+     opens it, waits for Home Assistant, then opens the dashboard. Installed beside the logo in
+     /usr/local/share/ha-pi-kiosk/. -->
 <html><head><meta charset="utf-8"><title>Nina is waking up</title>
 <style>
   html, body { margin: 0; height: 100%; background: #000; color: #b9a99b; font: 18px system-ui, sans-serif; cursor: none; }
@@ -14,17 +14,4 @@
 <body>
   <img src="logo.png" alt="">
   <p id="t">Nina is waking up…</p>
-  <script>
-    const to = new URLSearchParams(location.search).get("to");
-    const base = to ? new URL(to) : null;
-    let n = 0;
-    const probe = () => { // Home Assistant answers when its icon loads
-      if (!base) return;
-      const i = new Image();
-      i.onload = () => location.replace(to);
-      i.onerror = () => { if (++n === 30) document.getElementById("t").textContent = "Still waking up: the house's brain takes its time…"; setTimeout(probe, 2000); };
-      i.src = `${base.origin}/static/icons/favicon.ico?${Date.now()}`;
-    };
-    probe();
-  </script>
 </body></html>
