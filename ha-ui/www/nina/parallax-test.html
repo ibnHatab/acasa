@@ -14,34 +14,39 @@
   <div id="card"></div>
   <div id="out">starting…</div>
   <script type="module">
-    import "/local/nina/nina-card.js";
+    const mode = new URLSearchParams(location.search).get("state") || "talk"; // talk | quiet | asleep | blank (no card: Firefox's own cost)
+    await import("/local/nina/nina-card.js?v=" + Date.now()); // never a cached card
     window.__ninaHub.started = true; // no connection to her panel: this page drives her state
     const c = document.createElement("nina-card");
     c.setConfig({ height: "584px" });
-    document.getElementById("card").appendChild(c);
+    if (mode !== "blank") document.getElementById("card").appendChild(c);
     const hub = window.__ninaHub;
     let speaking = false;
-    setInterval(() => { // she talks for 3 s every 6 s
-      speaking = !speaking;
-      hub.status = { floor: "FREEu", awake: true, hearing: false, replying: speaking, speaking, mind: true, pending: 0 };
+    const set = () => {
+      const awake = mode !== "asleep";
+      hub.status = { floor: "FREEu", awake, hearing: false, replying: speaking, speaking, mind: awake, pending: 0 };
       hub.emit();
-    }, 3000);
-    hub.status = { floor: "FREEu", awake: true, hearing: false, replying: false, speaking: false, mind: true, pending: 0 };
+    };
+    setInterval(() => { if (mode === "talk") speaking = !speaking; set(); }, 3000); // talk: 3 s on, 3 s off
+    set();
     let n = 0, worst = 0, last = performance.now();
     const t0 = last;
     const tick = (now) => { n++; worst = Math.max(worst, now - last); last = now; requestAnimationFrame(tick); };
-    requestAnimationFrame(tick);
+    const counting = new URLSearchParams(location.search).get("fps") !== "0"; // fps=0: no counter (it repaints 60 times a second itself)
+    if (counting) requestAnimationFrame(tick);
     const out = document.getElementById("out");
     let prev = 0;
     setInterval(() => {
       const s = (performance.now() - t0) / 1000, fps = n - prev; prev = n;
       const gl = !!c.gl, cv = c.shadowRoot?.querySelector(".rig canvas");
       out.innerHTML = `persona: ${c.persona || "?"}\n` +
-        `renderer: <span class="${gl ? "ok" : "no"}">${gl ? "WebGL parallax" : "CSS (no WebGL, or too slow)"}</span>\n` +
+        `state: ${mode}\n` + `renderer: <span class="${gl ? "ok" : "no"}">${gl ? "WebGL parallax" : "CSS (no WebGL, or too slow)"}</span>\n` +
         `canvas: ${cv ? cv.width + "×" + cv.height : "none"}\n` +
         `browser frames/s: ${fps}   worst gap: ${Math.round(worst)} ms\n` +
         `running: ${Math.round(s)} s\n` +
         `${navigator.userAgent.replace(/.*(Firefox\/[\d.]+).*/, "$1")}`;
+      const report = new URLSearchParams(location.search).get("report"); // ?report=URL: the numbers sent there too
+      if (report && Math.round(s) % 5 === 0) fetch(report, { method: "POST", mode: "no-cors", body: out.textContent }).catch(() => {});
       worst = 0;
     }, 1000);
   </script>

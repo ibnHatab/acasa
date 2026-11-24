@@ -20,7 +20,9 @@
 // crossfade weights and shifts each pixel by the persona's depth map (Depth Anything, made once:
 // nina-live design/tools/depth.py) along a slow drift, so her head seems to turn a little. It
 // measures itself: under 20 frames a second for three seconds (a Pi whose Firefox has no GPU), it
-// gives way to the CSS version. 30 frames a second at most, none while the page is hidden.
+// gives way to the CSS version. 30 frames a second while she listens or speaks, 15 while she is
+// awake and quiet; asleep, her eyes settle closed and drawing stops (no script runs) until she
+// wakes; none while the page is hidden. (On the Pi 4, 30 a second cost Firefox ~43% of a core.)
 // One hub per page load: one connection to her panel, one conversation, shared by every Nina card
 // (each page of the dashboard has its own card: the conversation goes on as the page changes).
 const hub = window.__ninaHub || (window.__ninaHub = {
@@ -223,14 +225,21 @@ class NinaCard extends HTMLElement {
     rig.appendChild(cv); rig.classList.add("gl");
     const ia = this.frames.neutral.naturalWidth / this.frames.neutral.naturalHeight;
     let last = performance.now(), t0 = last, slow = 0, frames = 0, ox = 0, oy = 0;
-    const stop = () => { cancelAnimationFrame(this.raf); this.raf = null; };
+    const stop = () => { cancelAnimationFrame(this.raf); clearTimeout(this.tm); this.raf = null; };
     const fallback = (why) => { stop(); cv.remove(); rig.classList.remove("gl"); this.gl = null; console.info("nina-card: parallax off:", why); };
+    // paced by a timer, one frame asked for each frame drawn (a loop that asks 60 times a second
+    // and draws 15 is throttled by the browsers to 1 a second, and wakes them for nothing)
+    const next = (every) => { this.tm = setTimeout(() => { this.raf = requestAnimationFrame(draw); }, Math.max(0, every - 8)); };
     const draw = (now) => {
-      this.raf = requestAnimationFrame(draw);
+      const cl0 = rig.classList, asleep = cl0.contains("slow"), busy = cl0.contains("fast") || cl0.contains("lean");
+      const every = busy ? 33 : 66; // 30 or 15 frames a second
+      next(every);
       const dt = now - last;
-      if (dt < 31) return; // 30 frames a second at most
       last = now; frames++;
-      if (frames > 5 && now - t0 < 6000) { slow = dt > 50 ? slow + dt : Math.max(0, slow - dt); if (slow > 3000) return fallback("too slow (" + Math.round(dt) + " ms a frame)"); }
+      if (frames > 5 && now - t0 < 6000) { slow = dt > every + 50 ? slow + dt : Math.max(0, slow - dt); if (slow > 3000) return fallback("too slow (" + Math.round(dt) + " ms a frame)"); }
+      if (asleep && Object.keys(w).every((n) => Math.abs((this.target[n] || 0) - w[n]) < .01)) { // settled: rest until she wakes
+        if (++this.still > 8) { stop(); return; }
+      } else this.still = 0;
       const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       const cw = Math.round(r.width * dpr), ch = Math.round(r.height * dpr);
       if (!cw || !ch) return;
@@ -330,6 +339,7 @@ class NinaCard extends HTMLElement {
     orb.className = "orb" + (s.awake ? "" : " asleep") + (s.hearing ? " hearing" : "") + (s.speaking ? " speaking" : "");
     if (this.frames) {
       const asleep = !s.mind && !s.awake;
+      if (!asleep && this.isConnected && !document.hidden) this.gl?.start(); // drawing rests while she sleeps
       this.show("blink", asleep);
       const rig = this.root.querySelector(".rig");
       rig.classList.toggle("slow", asleep);

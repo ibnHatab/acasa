@@ -66,7 +66,11 @@ while true; do
   # the config again before each start: a new KIOSK_URL takes effect at the next Firefox restart
   if [ -f "$CONFIG" ]; then . "$CONFIG"; fi
   HA_BASE="${KIOSK_URL%%\?*}"
-  until curl -fsS -o /dev/null --max-time 3 "$HA_BASE"; do sleep 3; done
+  until curl -fsS -o /dev/null --max-time 3 "$HA_BASE"; do # waiting, the config re-read too
+    sleep 3
+    if [ -f "$CONFIG" ]; then . "$CONFIG"; fi
+    HA_BASE="${KIOSK_URL%%\?*}"
+  done
   "$FIREFOX_BIN" \
     --profile "$PROFILE_DIR" \
     --new-instance \
