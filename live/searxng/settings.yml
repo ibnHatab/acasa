@@ -1,0 +1,12 @@
+# SearXNG for Nina (acasa, 2026-11-25): her web_search's backend, local only (127.0.0.1:8888).
+use_default_settings: true
+general:
+  instance_name: "nina-search"
+server:
+  secret_key: "CHANGE-ME: openssl rand -hex 32"
+  limiter: false          # local only: no bot protection needed
+  image_proxy: false
+search:
+  safe_search: 0
+  autocomplete: ""
+  formats: [html, json]   # json: Nina's web_search reads it
