@@ -66,16 +66,24 @@ while true; do
   # the config again before each start: a new KIOSK_URL takes effect at the next Firefox restart
   if [ -f "$CONFIG" ]; then . "$CONFIG"; fi
   HA_BASE="${KIOSK_URL%%\?*}"
-  until curl -fsS -o /dev/null --max-time 3 "$HA_BASE"; do # waiting, the config re-read too
-    sleep 3
-    if [ -f "$CONFIG" ]; then . "$CONFIG"; fi
-    HA_BASE="${KIOSK_URL%%\?*}"
-  done
+  # Nina's waking-up page at once (it goes to the dashboard when Home Assistant answers); without it,
+  # wait for Home Assistant on a black screen as before
+  START_PAGE=/usr/local/share/ha-pi-kiosk/starting.html
+  URL="$KIOSK_URL"
+  if [ -f "$START_PAGE" ]; then
+    URL="file://${START_PAGE}?to=$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$KIOSK_URL")"
+  else
+    until curl -fsS -o /dev/null --max-time 3 "$HA_BASE"; do # waiting, the config re-read too
+      sleep 3
+      if [ -f "$CONFIG" ]; then . "$CONFIG"; fi
+      HA_BASE="${KIOSK_URL%%\?*}"
+    done
+  fi
   "$FIREFOX_BIN" \
     --profile "$PROFILE_DIR" \
     --new-instance \
     --width 1024 \
     --height 600 \
-    "$KIOSK_URL" || true
+    "$URL" || true
   sleep 2
 done
