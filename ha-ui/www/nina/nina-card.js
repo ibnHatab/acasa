@@ -14,6 +14,12 @@
 // again, so the crossfades melt instead of ghosting. While she speaks her mouth cycles at random
 // (no lip sync), she blinks every few seconds, sways and breathes (a CSS transform); asleep, her
 // eyes stay closed; after a reply she may smile. Nothing is computed but a timer and an opacity.
+//
+// Depth parallax (parallax: true, the default): with WebGL, one shader draws the frames with their
+// crossfade weights and shifts each pixel by the persona's depth map (Depth Anything, made once:
+// nina-live design/tools/depth.py) along a slow drift, so her head seems to turn a little. It
+// measures itself: under 20 frames a second for three seconds (a Pi whose Firefox has no GPU), it
+// gives way to the CSS version. 30 frames a second at most, none while the page is hidden.
 // One hub per page load: one connection to her panel, one conversation, shared by every Nina card
 // (each page of the dashboard has its own card: the conversation goes on as the page changes).
 const hub = window.__ninaHub || (window.__ninaHub = {
@@ -81,6 +87,9 @@ class NinaCard extends HTMLElement {
   .rig img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%;
              opacity: 0; transition: opacity 70ms linear; }
   .rig img.base, .rig img.on { opacity: 1; }
+  .rig.gl { animation: none; rotate: none; }
+  .rig.gl img { display: none; }
+  .rig canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   .rig img.eyes { transition-duration: 110ms; }
   .rig img.smile { transition-duration: 400ms; }
   @keyframes sway {
@@ -145,8 +154,8 @@ class NinaCard extends HTMLElement {
       setInterval(() => this.render(), 5000);
     }
   }
-  connectedCallback() { hub.cards.add(this); if (this.root) this.render(); this.animate(true); }
-  disconnectedCallback() { hub.cards.delete(this); this.animate(false); }
+  connectedCallback() { hub.cards.add(this); if (this.root) this.render(); this.animate(true); this.gl?.start(); }
+  disconnectedCallback() { hub.cards.delete(this); this.animate(false); this.gl?.stop(); }
   // face builds the frames' stack (the base, then the overlays).
   face() {
     let dir = this.c.face;
@@ -165,9 +174,79 @@ class NinaCard extends HTMLElement {
       img.onerror = () => { img.remove(); delete this.frames[name]; }; // a persona without this frame yet
       rig.appendChild(img); this.frames[name] = img;
     }
+    this.depth = new Image(); this.depth.src = `${dir}/depth.webp`;
     this.frames.neutral.onload = () => { this.root.querySelector(".face").hidden = false; this.root.querySelector(".credit").hidden = false; };
+    this.target = {};
+    if (this.c.parallax !== false) Promise.all([...Object.values(this.frames), this.depth].map((i) => i.decode().catch(() => null)))
+      .then(() => this.gl3d()).catch((e) => console.warn("nina-card: parallax off:", e));
   }
-  show(name, on) { const f = this.frames?.[name]; if (f) f.classList.toggle("on", on); }
+  show(name, on) { const f = this.frames?.[name]; if (f) f.classList.toggle("on", on); if (this.target) this.target[name] = on ? 1 : 0; }
+  // gl3d: the frames and the depth in one shader; it steps aside if the machine is too slow.
+  gl3d() {
+    if (!this.depth.naturalWidth || !this.frames.neutral.naturalWidth) return;
+    const rig = this.root.querySelector(".rig");
+    const cv = document.createElement("canvas");
+    const gl = cv.getContext("webgl", { alpha: false, antialias: false, powerPreference: "low-power" });
+    if (!gl) return;
+    const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o);
+      if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+    const pr = gl.createProgram();
+    gl.attachShader(pr, sh(gl.VERTEX_SHADER, "attribute vec2 p; varying vec2 v; void main(){ v = vec2(p.x*.5+.5, .5-p.y*.5); gl_Position = vec4(p,0.,1.); }"));
+    gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, `precision mediump float; varying vec2 v;
+      uniform sampler2D t0, t1, t2, t3, t4, td; uniform float w1, w2, w3, w4, zoom; uniform vec2 off, vis, org;
+      void main(){
+        vec2 uv = org + ((v - .5) / zoom + .5) * vis;
+        float d = texture2D(td, uv).r;
+        uv += off * (d - .45);
+        vec4 c = texture2D(t0, uv); // each frame differs from the base only at its patch: the differences add
+        vec4 o = c + w1 * (texture2D(t1, uv) - c) + w2 * (texture2D(t2, uv) - c)
+                   + w3 * (texture2D(t3, uv) - c) + w4 * (texture2D(t4, uv) - c);
+        gl_FragColor = clamp(o, 0., 1.); }`));
+    gl.linkProgram(pr); gl.useProgram(pr);
+    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const ap = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
+    const names = ["neutral", "talk-a", "talk-b", "blink", "smile"];
+    [...names.map((n) => this.frames[n] || this.frames.neutral), this.depth].forEach((img, i) => {
+      gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+      for (const [k, val] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, val);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+      gl.uniform1i(gl.getUniformLocation(pr, i < 5 ? "t" + i : "td"), i);
+    });
+    const U = (n) => gl.getUniformLocation(pr, n);
+    const uw = [null, U("w1"), U("w2"), U("w3"), U("w4")], uz = U("zoom"), uo = U("off"), uv = U("vis"), ug = U("org");
+    const tau = { "talk-a": 70, "talk-b": 70, blink: 110, smile: 400 }, w = { "talk-a": 0, "talk-b": 0, blink: 0, smile: 0 };
+    rig.appendChild(cv); rig.classList.add("gl");
+    const ia = this.frames.neutral.naturalWidth / this.frames.neutral.naturalHeight;
+    let last = performance.now(), t0 = last, slow = 0, frames = 0, ox = 0, oy = 0;
+    const stop = () => { cancelAnimationFrame(this.raf); this.raf = null; };
+    const fallback = (why) => { stop(); cv.remove(); rig.classList.remove("gl"); this.gl = null; console.info("nina-card: parallax off:", why); };
+    const draw = (now) => {
+      this.raf = requestAnimationFrame(draw);
+      const dt = now - last;
+      if (dt < 31) return; // 30 frames a second at most
+      last = now; frames++;
+      if (frames > 5 && now - t0 < 6000) { slow = dt > 50 ? slow + dt : Math.max(0, slow - dt); if (slow > 3000) return fallback("too slow (" + Math.round(dt) + " ms a frame)"); }
+      const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const cw = Math.round(r.width * dpr), ch = Math.round(r.height * dpr);
+      if (!cw || !ch) return;
+      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; gl.viewport(0, 0, cw, ch); }
+      const ca = cw / ch; // object-fit: cover, object-position 50% 35%
+      const vis = ca > ia ? [1, ia / ca] : [ca / ia, 1];
+      gl.uniform2f(uv, vis[0], vis[1]); gl.uniform2f(ug, (1 - vis[0]) * .5, (1 - vis[1]) * .35);
+      for (const n in w) w[n] += ((this.target[n] || 0) - w[n]) * Math.min(1, dt / tau[n]);
+      names.slice(1).forEach((n, i) => gl.uniform1f(uw[i + 1], this.frames[n] ? w[n] : 0));
+      const s = now / 1000, cl = rig.classList, amp = cl.contains("slow") ? .012 : cl.contains("fast") ? .03 : .025;
+      const sp = cl.contains("slow") ? .6 : cl.contains("fast") ? 1.4 : 1;
+      const tx = amp * Math.sin(s * sp * 2 * Math.PI / 9) + (cl.contains("lean") ? .02 : 0), ty = amp * .5 * Math.sin(s * sp * 2 * Math.PI / 13 + 1);
+      ox += (tx - ox) * Math.min(1, dt / 600); oy += (ty - oy) * Math.min(1, dt / 600);
+      gl.uniform2f(uo, ox, oy); gl.uniform1f(uz, 1.05 + .004 * Math.sin(s * 2 * Math.PI / 4.5));
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    };
+    this.gl = { start: () => { if (!this.raf) { last = performance.now(); this.raf = requestAnimationFrame(draw); } }, stop };
+    document.addEventListener("visibilitychange", () => this.gl && (document.hidden ? this.gl.stop() : this.gl.start()));
+    if (this.isConnected) this.gl.start();
+  }
   mouth(name) { for (const m of ["talk-a", "talk-b"]) this.show(m, m === name); }
   // animate runs her face's timers while the card is on the page.
   animate(run) {
