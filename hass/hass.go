@@ -179,10 +179,45 @@ func (c *Client) follow(ctx context.Context, apply Apply, now func() float64) er
 			for i := range states {
 				apply(semhome.Event{At: at, Kind: "ha_state", HA: &states[i]})
 			}
+			if loc, err := c.Location(); err == nil { // where the home is: Home Assistant's own configuration
+				apply(semhome.Event{At: at, Kind: "ha_state", HA: loc})
+			} else {
+				log.Printf("[hass] the location: %v", err)
+			}
 		case m.Type == "event":
 			if st := m.Event.Data.NewState; st != nil {
 				apply(semhome.Event{At: now(), Kind: "ha_state", HA: st})
 			}
 		}
 	}
+}
+
+// Location is where the home is, as Home Assistant's configuration says (the user, 2026-11-25:
+// the semantic world should know it, linked through Home Assistant): its coordinates, elevation,
+// time zone, country, language, currency and units, as the state of a "location.home" entity
+// (it has no entity of its own), fed to the world with the others on every connect.
+func (c *Client) Location() (*semhome.HAState, error) {
+	raw, err := c.Call("GET", "/api/config", nil)
+	if err != nil {
+		return nil, err
+	}
+	var cfg struct {
+		Name      string            `json:"location_name"`
+		Lat       float64           `json:"latitude"`
+		Lon       float64           `json:"longitude"`
+		Elevation float64           `json:"elevation"`
+		TZ        string            `json:"time_zone"`
+		Country   string            `json:"country"`
+		Language  string            `json:"language"`
+		Currency  string            `json:"currency"`
+		Radius    float64           `json:"radius"`
+		Units     map[string]string `json:"unit_system"`
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, err
+	}
+	return &semhome.HAState{EntityID: "location.home", State: cfg.Name, Attributes: map[string]any{
+		"friendly_name": "the home", "latitude": cfg.Lat, "longitude": cfg.Lon, "elevation": cfg.Elevation,
+		"time_zone": cfg.TZ, "country": cfg.Country, "language": cfg.Language, "currency": cfg.Currency,
+		"radius": cfg.Radius, "temperature_unit": cfg.Units["temperature"], "length_unit": cfg.Units["length"]}}, nil
 }

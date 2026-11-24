@@ -34,3 +34,18 @@ func TestTheClassesOnTheRealHomeAssistant(t *testing.T) {
 		t.Fatalf("lines: %v", got)
 	}
 }
+
+func TestLocationLine(t *testing.T) {
+	st := semhome.HAState{EntityID: "location.home", State: "Home", Attributes: map[string]any{
+		"latitude": 45.77, "longitude": 21.21, "elevation": 0.0, "time_zone": "Europe/Bucharest", "country": "RO",
+		"language": "en", "currency": "RON", "temperature_unit": "°C", "length_unit": "km"}}
+	got := locationLine(st)
+	want := "the home: 45.77 N, 21.21 E, country RO, time zone Europe/Bucharest; °C, km, RON, en"
+	if got != want {
+		t.Fatalf("\\n got %q\\nwant %q", got, want)
+	}
+	st.State = "Timișoara"
+	if got := locationLine(st); !strings.HasPrefix(got, "the home: Timișoara, 45.77 N") {
+		t.Fatalf("a named place: %q", got)
+	}
+}

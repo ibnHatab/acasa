@@ -29,6 +29,7 @@ var Classes = map[string]string{
 	"person":         "people",
 	"media_player":   "media",
 	"device_tracker": "people",
+	"location":       "location", // location.home: Home Assistant's configuration (Client.Location)
 }
 
 // Service calls a Home Assistant service; with response, its service_response (the entity → data).
@@ -221,6 +222,8 @@ func (o *Observer) Line(ctx context.Context, id string) string {
 			}
 		}
 		return fmt.Sprintf("timer %s: %s", n, st.State)
+	case "location":
+		return locationLine(st)
 	case "person", "device_tracker":
 		where := st.State
 		if where == "not_home" {
@@ -349,4 +352,44 @@ func (o *Observer) Events(ctx context.Context, id string, window time.Duration, 
 		out = append(out, s)
 	}
 	return out, nil
+}
+
+// locationLine words the home's location: the place (when Home Assistant's location name is one,
+// not the default "Home"), the coordinates, country, time zone, units and currency.
+func locationLine(st semhome.HAState) string {
+	a := st.Attributes
+	f := func(k string) string { v, _ := a[k].(string); return v }
+	lat, _ := num(a["latitude"])
+	lon, _ := num(a["longitude"])
+	ns, ew := "N", "E"
+	if lat < 0 {
+		ns, lat = "S", -lat
+	}
+	if lon < 0 {
+		ew, lon = "W", -lon
+	}
+	where := fmt.Sprintf("%.2f %s, %.2f %s", lat, ns, lon, ew)
+	if n := strings.TrimSpace(st.State); n != "" && !strings.EqualFold(n, "home") {
+		where = n + ", " + where
+	}
+	s := "the home: " + where
+	if c := f("country"); c != "" {
+		s += ", country " + c
+	}
+	if tz := f("time_zone"); tz != "" {
+		s += ", time zone " + tz
+	}
+	if e, ok := num(a["elevation"]); ok && e != 0 {
+		s += fmt.Sprintf(", %.0f m up", e)
+	}
+	var u []string
+	for _, k := range []string{"temperature_unit", "length_unit", "currency", "language"} {
+		if v := f(k); v != "" {
+			u = append(u, v)
+		}
+	}
+	if len(u) > 0 {
+		s += "; " + strings.Join(u, ", ")
+	}
+	return s
 }
