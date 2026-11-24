@@ -1,0 +1,12 @@
+# nina-panel-forward: while Nina runs on Pascal, the Pi's port 8770 is her panel's (the Pi's card and
+# screen reach her as homeassistant.local:8770). Off when Nina moves to the Pi. A user unit on the Pi:
+#   systemctl --user link ~/repo/acasa/live/systemd/nina-panel-forward.{socket,service}
+#   systemctl --user enable --now nina-panel-forward.socket
+[Unit]
+Description=Nina's panel on Pascal, at the Pi's port 8770
+
+[Socket]
+ListenStream=8770
+
+[Install]
+WantedBy=sockets.target
