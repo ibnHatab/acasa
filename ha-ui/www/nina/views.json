@@ -17,6 +17,7 @@
     "weather": "weather",
     "home_habits": "home",
     "explain": "home",
+    "narrate": "home",
     "delegate": "home"
   }
 }

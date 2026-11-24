@@ -35,6 +35,7 @@ const ASSETS = new URL(".", import.meta.url).pathname;
 const hub = window.__ninaHub || (window.__ninaHub = {
   msgs: [], status: null, prefs: null, cards: new Set(), started: false, said: "", nina: null, panel: null,
   persona: null, // Nina's persona now (her temperament: the panel's persona events)
+  surprises: null, // {unseen, open}: surprises she has not told about; the domains' records still open
   emit() { this.cards.forEach((c) => c.render()); },
   viewer: null, // {angle, distance, elevation, at}: where the person is (the radar's reading)
   look(v) { this.viewer = Object.assign({}, v, { at: Date.now() }); },
@@ -50,7 +51,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
     if (this.started) return;
     this.started = true; this.panel = panel;
     const connect = () => {
-      fetch(panel + "/api/state").then((r) => r.json()).then((s) => { this.prefs = s.prefs; this.status = s.status; this.persona = s.facts?.persona?.artwork || this.persona; this.emit(); })
+      fetch(panel + "/api/state").then((r) => r.json()).then((s) => { this.prefs = s.prefs; this.status = s.status; this.persona = s.facts?.persona?.artwork || this.persona; this.surprises = s.facts?.surprises || this.surprises; this.emit(); })
         .catch(() => { this.status = null; this.emit(); });
       const es = new EventSource(panel + "/api/events");
       es.addEventListener("status", (m) => { this.status = JSON.parse(m.data); this.emit(); });
@@ -74,6 +75,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
             this.nina = null; this.said = ""; break;
           case "prefs": this.prefs = e.prefs; this.emit(); break;
           case "persona": if (e.artwork && e.artwork !== this.persona) { this.persona = e.artwork; this.emit(); } break;
+          case "surprises": this.surprises = { unseen: e.unseen || 0, open: e.open || 0 }; this.emit(); break;
         }
       });
       es.onerror = () => { es.close(); this.status = null; this.emit(); setTimeout(connect, 5000); };
@@ -143,6 +145,9 @@ class NinaCard extends HTMLElement {
   button.on { background: var(--primary-color); color: var(--text-primary-color, #fff); }
   button:disabled { opacity: .35; cursor: default; }
   button.ha { padding: 6px 11px; font-size: 1.15em; line-height: 1; }
+  .flag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: .7em; font-weight: 600;
+          background: #d97757; color: #fff; cursor: pointer; vertical-align: middle; text-shadow: none; }
+  .flag.quiet { background: rgba(255,255,255,.18); font-weight: 400; }
   .chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: var(--assist-chat-display-gap, 8px);
           font-size: var(--assist-chat-display-font-size, 16px); min-height: 80px; }
   .b { max-width: 82%; padding: var(--assist-chat-display-padding, 8px) 12px; border-radius: var(--assist-chat-display-radius, 20px);
@@ -159,7 +164,7 @@ class NinaCard extends HTMLElement {
 <ha-card>
   <div class="face" hidden><div class="rig"></div></div>
   <div class="top"><div class="orb asleep"></div>
-    <div class="who"><div class="name">Nina</div><div class="state">…</div></div>
+    <div class="who"><div class="name">Nina <span class="flag" hidden></span></div><div class="state">…</div></div>
     <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button></div></div>
   <div class="chat"></div>
   <div class="hint">Say “Nina”, or tap the mic.</div>
@@ -171,6 +176,9 @@ class NinaCard extends HTMLElement {
         b.addEventListener("click", () => this.toggle(b.dataset.p)));
       // ⌂: Home Assistant's full interface (on Nina's own screen its mode; on a Home Assistant
       // dashboard, its default dashboard, the sidebar there leads back to hers)
+      // ⚑: what surprised her (asked as if typed: she answers with the explain tool's SURPRISES)
+      this.root.querySelector(".flag").addEventListener("click", () =>
+        this.api("/api/do", { action: "type", arg: "What surprised you?" }).catch(() => {}));
       this.root.querySelector("button.ha").addEventListener("click", () =>
         window.__ninaShell ? window.__ninaShell.mode("ha") : (location.href = "/"));
       hub.start(this.panel);
@@ -320,6 +328,13 @@ class NinaCard extends HTMLElement {
     if (!this.root) return;
     if (this.persona && !this.pinned && hub.persona && hub.persona !== this.persona && this.names?.includes(hub.persona)) this.swap(hub.persona);
     this.showPrefs();
+    const fl = this.root.querySelector(".flag"), su = hub.surprises; // ⚑ N: surprises she has not told about
+    fl.hidden = !hub.status || !su || (!su.unseen && !su.open);
+    if (su) {
+      fl.textContent = su.unseen ? `⚑ ${su.unseen}` : "⚑";
+      fl.classList.toggle("quiet", !su.unseen);
+      fl.title = `${su.unseen} new surprise${su.unseen === 1 ? "" : "s"}, ${su.open} open in the domains' records: tap to hear them`;
+    }
     this.root.querySelectorAll("button[data-p]").forEach((b) => { // the mic and her voice are hers: off without her
       b.disabled = !hub.status;
       b.title = hub.status ? "" : "Nina is not running: nothing to switch";
