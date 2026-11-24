@@ -16,6 +16,7 @@
   </div>
   <script>
     const v = new URLSearchParams(location.search).get("view") || "home";
-    document.getElementById("f").src = `/nina-panel/${v}?kiosk`;
+    const pe = new URLSearchParams(location.search).get("persona");
+    document.getElementById("f").src = `/nina-panel/${v}?kiosk` + (pe ? `&persona=${encodeURIComponent(pe)}` : "");
   </script>
 </body></html>

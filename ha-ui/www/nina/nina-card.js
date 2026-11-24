@@ -4,7 +4,9 @@
 // stream), as chat bubbles. The bubbles take assist-chat-display's theme variables, so one theme
 // styles both. Config: panel (default: this host, port 8770), max_messages (20), message_max_age
 // (s, 300; 0 keeps them), height (a CSS height: the card's, e.g. calc(100vh - 32px) on the panel),
-// face (the folder of her talking head's frames, default /local/nina/narrator; "" for none).
+// face (the folder of one persona's frames, or "" for none), personas (the folders' names under
+// /local/nina/personas: one is the day's, by the date, until Nina draws it herself; ?persona=NAME
+// in the address picks one).
 //
 // Her face (2026-11-24, the user: a talking head, cheap; Claudia's look): five frames drawn as edits
 // of one portrait and composited so they differ only at the mouth and the eyes (nina-live
@@ -147,13 +149,20 @@ class NinaCard extends HTMLElement {
   disconnectedCallback() { hub.cards.delete(this); this.animate(false); }
   // face builds the frames' stack (the base, then the overlays).
   face() {
-    const dir = this.c.face === undefined ? "/local/nina/narrator" : this.c.face;
+    let dir = this.c.face;
+    if (dir === undefined) {
+      const names = this.c.personas || ["graphite", "contact", "inkblue", "booth"];
+      const asked = new URLSearchParams(location.search).get("persona");
+      const d = new Date(), day = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5);
+      dir = `/local/nina/personas/${names.includes(asked) ? asked : names[(day * 7 + d.getFullYear()) % names.length]}`;
+    }
     if (!dir) return;
     const rig = this.root.querySelector(".rig");
     this.frames = {};
     for (const [name, cls] of [["neutral", "base"], ["talk-a", "mouth"], ["talk-b", "mouth"], ["smile", "smile"], ["blink", "eyes"]]) {
       const img = document.createElement("img");
       img.src = `${dir}/${name}.webp`; img.className = cls; img.alt = "";
+      img.onerror = () => { img.remove(); delete this.frames[name]; }; // a persona without this frame yet
       rig.appendChild(img); this.frames[name] = img;
     }
     this.frames.neutral.onload = () => { this.root.querySelector(".face").hidden = false; this.root.querySelector(".credit").hidden = false; };
