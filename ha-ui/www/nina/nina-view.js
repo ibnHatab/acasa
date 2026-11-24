@@ -68,7 +68,9 @@
   pill.addEventListener("click", () => { location.href = `${bases[0]}${home}?kiosk`; });
   document.body.appendChild(pill);
   const place = () => {
-    if (mine() && new URLSearchParams(location.search).has("kiosk")) localStorage.setItem(KIOSK, "1");
+    const k = new URLSearchParams(location.search).get("kiosk");
+    if (k === "off") localStorage.removeItem(KIOSK); // ?kiosk=off on any page: this browser is not a kiosk
+    else if (mine() && k !== null) localStorage.setItem(KIOSK, "1");
     pill.style.display = !framed && !mine() && localStorage.getItem(KIOSK) === "1" ? "flex" : "none";
   };
   place();
