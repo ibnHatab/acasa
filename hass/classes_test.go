@@ -16,7 +16,7 @@ func TestTheClassesOnTheRealHomeAssistant(t *testing.T) {
 	if os.Getenv("ACASA_LIVE_HA") == "" {
 		t.Skip("ACASA_LIVE_HA=1 reads the real Home Assistant")
 	}
-	c, err := New("http://127.0.0.1:8123", "~/.config/fsttm/hass.token")
+	c, err := New("http://homeassistant.local:8123", "~/.config/fsttm/hass.token")
 	if err != nil {
 		t.Fatal(err)
 	}

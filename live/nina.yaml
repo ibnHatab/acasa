@@ -9,7 +9,7 @@ home:
   call_timeout: 6s
   composed: true                          # the five packages under the director, on the tick (milestone 2)
 hass:
-  url: http://127.0.0.1:8123
+  url: http://homeassistant.local:8123
   token: ~/.config/fsttm/hass.token       # the token's file, never the token here
 dialogue: ~/repo/acasa/live/pascal.yaml   # fsttm-live's config: sound, models, attention, prefs, plugins
 levels: {result: context, event: info, surprise: info, error: context}   # the rules' replies → silent context or a NOTE
