@@ -141,6 +141,7 @@ class NinaCard extends HTMLElement {
   button { border: 0; border-radius: 999px; padding: 8px 14px; font: inherit; cursor: pointer;
            background: var(--secondary-background-color); color: var(--secondary-text-color); }
   button.on { background: var(--primary-color); color: var(--text-primary-color, #fff); }
+  button:disabled { opacity: .35; cursor: default; }
   .chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: var(--assist-chat-display-gap, 8px);
           font-size: var(--assist-chat-display-font-size, 16px); min-height: 80px; }
   .b { max-width: 82%; padding: var(--assist-chat-display-padding, 8px) 12px; border-radius: var(--assist-chat-display-radius, 20px);
@@ -314,9 +315,13 @@ class NinaCard extends HTMLElement {
     if (!this.root) return;
     if (this.persona && !this.pinned && hub.persona && hub.persona !== this.persona && this.names?.includes(hub.persona)) this.swap(hub.persona);
     this.showPrefs();
+    this.root.querySelectorAll("button").forEach((b) => { // the mic and her voice are hers: off without her
+      b.disabled = !hub.status;
+      b.title = hub.status ? "" : "Nina is not running: nothing to switch";
+    });
     if (hub.status) this.status(hub.status);
     else { // no Nina (her panel not reachable): her face rests, eyes closed, nothing drawn
-      this.state("her panel is not reachable");
+      this.state("Nina is not running here");
       if (this.frames) { this.show("blink", true); const rig = this.root.querySelector(".rig"); rig.classList.add("slow"); rig.classList.remove("fast", "lean"); }
     }
     const max = this.c.message_max_age * 1000;
