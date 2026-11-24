@@ -17,4 +17,4 @@ if [ -s "$HA_TOKEN" ]; then
 fi
 echo "Home Assistant: ${METIS_HOME_HA:-not reached (or no token at $HA_TOKEN): simulated devices}"
 export METISC=$METIS/metis-lang/src/metisc
-exec "$METIS/metis-agent-home/go/bin/metis-home" -world "$METIS/metis-worlds-home/home"
+exec "$METIS/metis-agent-home/go/bin/metis-home" -world "${HOME_WORLD:-$HOME/repo/nina-live/catalog}"
