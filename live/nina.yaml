@@ -7,6 +7,7 @@ home:
   beat: 1s
   checkpoint_every: 60                    # a world checkpoint every 60 beats (a rebuild checks it)
   call_timeout: 6s
+  composed: true                          # the five packages under the director, on the tick (milestone 2)
 hass:
   url: http://127.0.0.1:8123
   token: ~/.config/fsttm/hass.token       # the token's file, never the token here
