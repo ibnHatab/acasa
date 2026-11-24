@@ -1,0 +1,17 @@
+# nina-radar: the LD2410C mmWave radar on the Pi's UART (fsttm-live cmd/radar): who is in front of
+# Nina's screen. Publishes sensor.nina_viewer to the Pi's Home Assistant and to Pascal's (where Nina
+# runs for now), and drives the kiosk's screen (the black overlay off when someone is in reach, on
+# after a minute of nobody). A user unit on the Pi:
+#   systemctl --user link ~/repo/acasa/live/systemd/nina-radar.service && systemctl --user enable --now nina-radar
+[Unit]
+Description=Nina's radar: presence in front of the screen (LD2410C)
+After=graphical-session.target
+
+[Service]
+Environment=XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0
+ExecStart=%h/repo/fsttm-live/bin/radar -dev /dev/serial0 -hass http://homeassistant.local:8123 -hass http://192.168.1.140:8123
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

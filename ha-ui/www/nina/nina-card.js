@@ -357,9 +357,11 @@ class NinaCard extends HTMLElement {
   set hass(h) {
     this._hass = h;
     const ve = h?.states?.[this.c.viewer || "sensor.nina_viewer"];
-    if (ve && ve.state !== "unavailable" && ve.state !== "unknown" && isFinite(+ve.state)) {
+    // the radar (fsttm-live cmd/radar): state present | absent, attributes distance (m) and, from a radar
+    // that has one (an LD2450; the LD2410C has none), angle in degrees
+    if (ve && ve.state === "present" && isFinite(+ve.attributes?.angle)) {
       const at = Date.parse(ve.last_updated);
-      if (!hub.viewer || at > hub.viewer.at) hub.viewer = { angle: +ve.state, distance: +ve.attributes?.distance || null, elevation: +ve.attributes?.elevation || 0, at };
+      if (!hub.viewer || at > hub.viewer.at) hub.viewer = { angle: +ve.attributes.angle, distance: +ve.attributes?.distance || null, elevation: +ve.attributes?.elevation || 0, at };
     }
     const p = h?.states?.["sensor.nina_persona"]?.state;
     if (this.persona && !this.pinned && p && p !== this.persona && this.names?.includes(p)) this.swap(p);
