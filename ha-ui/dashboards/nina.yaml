@@ -15,6 +15,7 @@ kiosk_mode:
 x-nina: &nina
   type: custom:nina-card
   height: calc(100vh - 16px)
+  scenes: false   # her domain scenes over her face when a tool runs: true once reviewed (/local/nina/scenes.html)
 
 views:
   - title: Home

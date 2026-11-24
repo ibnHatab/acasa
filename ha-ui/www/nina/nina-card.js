@@ -36,6 +36,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
   msgs: [], status: null, prefs: null, cards: new Set(), started: false, said: "", nina: null, panel: null,
   persona: null, // Nina's persona now (her temperament: the panel's persona events)
   surprises: null, // {unseen, open}: surprises she has not told about; the domains' records still open
+  cue(what) { this.cards.forEach((c) => c.scene?.(what)); }, // a tool, a new persona, a surprise: its scene (scenes.json), where the card shows scenes
   talkUntil: 0, // with her voice off: her face "speaks" her text reply until then (as long as saying it would take)
   quietTalk(text) { if (this.prefs && this.prefs.voice === false && text) this.talkUntil = Math.max(this.talkUntil, Date.now() + Math.min(20000, 600 + text.length * 65)); },
   emit() { this.cards.forEach((c) => c.render()); },
@@ -79,8 +80,9 @@ const hub = window.__ninaHub || (window.__ninaHub = {
             if (!this.nina && e.said) this.add("nina", e.said); else if (this.nina) { this.nina.text = (e.said || this.said).trim(); this.emit(); }
             this.nina = null; this.said = ""; break;
           case "prefs": this.prefs = e.prefs; this.emit(); break;
-          case "persona": if (e.artwork && e.artwork !== this.persona) { this.persona = e.artwork; this.emit(); } break;
-          case "surprises": this.surprises = { unseen: e.unseen || 0, open: e.open || 0 }; this.emit(); break;
+          case "persona": if (e.artwork && e.artwork !== this.persona) { const had = this.persona; this.persona = e.artwork; if (had) this.cue("persona"); this.emit(); } break;
+          case "surprises": { const was = this.surprises?.unseen || 0; this.surprises = { unseen: e.unseen || 0, open: e.open || 0 }; if (this.surprises.unseen > was) this.cue("surprise"); this.emit(); break; }
+          case "tool": this.cue(e.name); break;
         }
       });
       es.onerror = () => { es.close(); this.status = null; this.emit(); setTimeout(connect, 5000); };
@@ -114,6 +116,10 @@ class NinaCard extends HTMLElement {
   .rig.gl { animation: none; rotate: none; }
   .rig.gl img { display: none; }
   .rig canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .scenebox { position: absolute; inset: 0; opacity: 0; transition: opacity 1s ease; pointer-events: none; }
+  .scenebox.on { opacity: 1; }
+  .scenebox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; opacity: 0; transition: opacity 1.2s ease; }
+  .scenebox img.on { opacity: 1; }
   .rig img.eyes { transition-duration: 110ms; }
   .rig img.smile { transition-duration: 400ms; }
   @keyframes sway {
@@ -167,7 +173,7 @@ class NinaCard extends HTMLElement {
   .chat:not(:empty) + .hint { display: none; }
 </style>
 <ha-card>
-  <div class="face" hidden><div class="rig"></div></div>
+  <div class="face" hidden><div class="rig"></div><div class="scenebox"></div></div>
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina <span class="flag" hidden></span></div><div class="state">…</div></div>
     <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button></div></div>
@@ -219,6 +225,25 @@ class NinaCard extends HTMLElement {
     if (this.isConnected) this.animate(true); // the mouth and the blinks (the card was attached before its frames)
     if (this.c.parallax !== false) Promise.all([...Object.values(this.frames), this.depth].map((i) => i.decode().catch(() => null)))
       .then(() => this.gl3d()).catch((e) => console.warn("nina-card: parallax off:", e));
+  }
+  // scene: her domain scene for a tool, a new persona or a surprise (scenes/scenes.json: the user's
+  // Codex scenes), frame after frame over her face, then her face again. Only with scenes: true (or
+  // ?scenes=1 in the address): off until they are reviewed (scenes.html).
+  async scene(what) {
+    const on = this.c.scenes === true || new URLSearchParams(location.search).get("scenes") === "1";
+    if (!on || !this.frames) return;
+    this.scenes ||= await fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => null);
+    const sc = this.scenes;
+    const name = sc && (sc.tools[what] || sc.events[what]);
+    const n = name && sc.frames[name];
+    if (!n) return;
+    const box = this.root.querySelector(".scenebox");
+    clearTimeout(this.sceneEnd); (this.sceneSteps || []).forEach(clearTimeout);
+    box.replaceChildren(...Array.from({ length: n }, (_, i) => { const im = document.createElement("img"); im.src = `${ASSETS}scenes/${name}/${i + 1}.webp`; im.alt = ""; return im; }));
+    const imgs = [...box.children];
+    box.classList.add("on");
+    this.sceneSteps = imgs.map((im, i) => setTimeout(() => imgs.forEach((x) => x.classList.toggle("on", x === im)), 50 + i * sc.frame_seconds * 1000));
+    this.sceneEnd = setTimeout(() => box.classList.remove("on"), Math.max(sc.show_seconds, n * sc.frame_seconds + 2) * 1000);
   }
   show(name, on) { const f = this.frames?.[name]; if (f) f.classList.toggle("on", on); if (this.target) this.target[name] = on ? 1 : 0; }
   // gl3d: the frames and the depth in one shader; it steps aside if the machine is too slow.

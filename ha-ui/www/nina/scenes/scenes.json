@@ -1,0 +1,19 @@
+{
+  "_doc": "Nina's domain scenes (nina-live design/stills/scenes, made by Codex, 2026-11-25): each tool of hers brings up its scene in her card for a while, frame after frame, then her face again. Off until the user has reviewed them (the card's scenes: true). AI-generated; Claudia is an open character by anabology (claudia.gallery).",
+  "frames": {"weather": 2, "news": 2, "music": 2, "glow": 3, "timers": 2, "agenda": 2, "air": 2, "habits": 2, "explain": 2, "asks": 1, "surprise": 1, "fortune": 3},
+  "tools": {
+    "weather": "weather",
+    "home_music": "music",
+    "home_glow": "glow", "home_lights": "glow", "home_scenes": "glow",
+    "home_timers": "timers",
+    "home_agenda": "agenda", "calendar": "agenda", "lists": "agenda",
+    "home_air": "air", "home_comfort": "air",
+    "home_habits": "habits",
+    "narrate": "explain",
+    "web_search": "news",
+    "home_persona": "fortune"
+  },
+  "events": {"surprise": "surprise", "persona": "fortune"},
+  "frame_seconds": 2.5,
+  "show_seconds": 12
+}

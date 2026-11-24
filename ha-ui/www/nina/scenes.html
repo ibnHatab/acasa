@@ -1,0 +1,48 @@
+<!doctype html>
+<!-- scenes.html (acasa ha-ui, 2026-11-25): the review of Nina's domain scenes before they go into her
+     card: every scene, its frames, the tools that bring it up; ▶ plays one at the card's size, as it
+     would run. /local/nina/scenes.html (or Nina's panel: /nina/scenes.html). -->
+<html><head><meta charset="utf-8"><title>Nina's scenes: review</title>
+<style>
+  body { margin: 0; padding: 18px; background: #14100e; color: #e9ddd3; font: 15px system-ui, sans-serif; }
+  h1 { font-weight: 400; margin: 0 0 4px; } p.note { color: #b9a99b; margin: 0 0 18px; }
+  .scene { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 18px; padding: 10px; background: #1e1814; border-radius: 12px; }
+  .meta { width: 190px; flex: none; } .meta b { font-size: 1.15em; } .meta .tools { color: #b9a99b; font-size: .85em; margin-top: 6px; line-height: 1.5; }
+  .meta button { margin-top: 10px; border: 0; border-radius: 999px; padding: 7px 14px; background: #d97757; color: #fff; cursor: pointer; font: inherit; }
+  .scene img { width: 200px; height: 250px; object-fit: cover; border-radius: 8px; }
+  #player { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: none; align-items: center; justify-content: center; }
+  #player.on { display: flex; }
+  #stage { position: relative; width: 500px; height: 584px; border-radius: 12px; overflow: hidden; background: #000; }
+  #stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; opacity: 0; transition: opacity 1.2s ease; }
+  #stage img.on { opacity: 1; }
+</style></head>
+<body>
+  <h1>Nina's scenes</h1>
+  <p class="note">For review before they go into her card (then: <code>scenes: true</code> in the card's config). AI-generated; Claudia is an open character by anabology (claudia.gallery).</p>
+  <div id="list"></div>
+  <div id="player"><div id="stage"></div></div>
+  <script>
+    (async () => {
+      const conf = await fetch("scenes/scenes.json").then((r) => r.json());
+      const byScene = {};
+      for (const [t, s] of Object.entries(conf.tools)) (byScene[s] ||= []).push(t);
+      for (const [e, s] of Object.entries(conf.events)) (byScene[s] ||= []).push("(" + e + ")");
+      const list = document.getElementById("list");
+      for (const [s, n] of Object.entries(conf.frames)) {
+        const d = document.createElement("div"); d.className = "scene";
+        d.innerHTML = `<div class="meta"><b>${s}</b><div class="tools">${(byScene[s] || ["(none)"]).join("<br>")}</div><button>▶ play</button></div>` +
+          Array.from({ length: n }, (_, i) => `<img src="scenes/${s}/${i + 1}.webp" alt="">`).join("");
+        d.querySelector("button").onclick = () => play(s, n);
+        list.appendChild(d);
+      }
+      const player = document.getElementById("player"), stage = document.getElementById("stage");
+      player.onclick = () => player.classList.remove("on");
+      function play(s, n) {
+        stage.innerHTML = Array.from({ length: n }, (_, i) => `<img src="scenes/${s}/${i + 1}.webp" alt="">`).join("");
+        player.classList.add("on");
+        const imgs = [...stage.querySelectorAll("img")];
+        imgs.forEach((im, i) => setTimeout(() => { imgs.forEach((x) => x.classList.toggle("on", x === im)); }, 50 + i * conf.frame_seconds * 1000));
+      }
+    })();
+  </script>
+</body></html>
