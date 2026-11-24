@@ -1,0 +1,162 @@
+# Nina's dashboard (acasa ha-ui, 2026-11-24): the kiosk's screen (1024x600). One view for each
+# kind of thing Nina does; her tool calls bring up the view that shows it (www/nina/views.json,
+# www/nina/nina-view.js), and after a while the dashboard goes back home. Applied by
+# `go run ./cmd/ha-ui` (the dashboard's url: /nina-panel).
+title: Nina
+
+# kiosk-mode (NemesisRE, v16): the panel's screen and the preview hide Home Assistant's chrome; a
+# desktop's full-size browser keeps it, for editing. ?disable_km brings it back anywhere.
+kiosk_mode:
+  hide_header: "[[[ window.matchMedia('(max-width: 1100px)').matches ]]]"
+  hide_sidebar: "[[[ window.matchMedia('(max-width: 1100px)').matches ]]]"
+
+views:
+  - title: Home
+    path: home
+    icon: mdi:home-heart
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:nina-card
+            grid_options: {columns: full, rows: 6}
+      - type: grid
+        cards:
+          - type: custom:bubble-card
+            card_type: button
+            button_type: state
+            entity: media_player.music_player_daemon
+            name: Music
+            icon: mdi:radio
+          - type: custom:bubble-card
+            card_type: button
+            button_type: state
+            entity: weather.home
+            name: Outside
+
+  - title: Music
+    path: music
+    icon: mdi:music
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:bubble-card
+            card_type: separator
+            name: Music
+            icon: mdi:radio
+          - type: custom:bubble-card
+            card_type: media-player
+            entity: media_player.music_player_daemon
+            name: Radio
+          - type: media-control
+            entity: media_player.music_player_daemon
+
+  - title: Light
+    path: light
+    icon: mdi:lightbulb-on
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:bubble-card
+            card_type: separator
+            name: Bedroom light
+            icon: mdi:ceiling-light
+          - type: custom:bubble-card
+            card_type: button
+            button_type: name
+            name: Sunset
+            icon: mdi:weather-sunset-down
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target: {entity_id: script.bedroom_sunset_light}
+          - type: custom:bubble-card
+            card_type: button
+            button_type: name
+            name: White
+            icon: mdi:white-balance-sunny
+            tap_action:
+              action: perform-action
+              perform_action: script.turn_on
+              target: {entity_id: script.bedroom_white_light}
+
+  - title: Air
+    path: air
+    icon: mdi:fan
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: custom:bubble-card
+            card_type: separator
+            name: Living room
+            icon: mdi:sofa
+          - type: custom:bubble-card
+            card_type: button
+            button_type: switch
+            entity: fan.lab_supply_fan
+            name: Supply
+            icon: mdi:fan
+          - type: custom:bubble-card
+            card_type: button
+            button_type: switch
+            entity: fan.lab_extract_fan
+            name: Extract
+            icon: mdi:fan-chevron-down
+      - type: grid
+        cards:
+          - type: custom:bubble-card
+            card_type: separator
+            name: Bedroom
+            icon: mdi:bed
+          - type: custom:bubble-card
+            card_type: button
+            button_type: switch
+            entity: fan.bedroom_badriom_supply_fan
+            name: Supply
+            icon: mdi:fan
+          - type: custom:bubble-card
+            card_type: button
+            button_type: switch
+            entity: fan.bedroom_badriom_extract_fan
+            name: Extract
+            icon: mdi:fan-chevron-down
+
+  - title: Agenda
+    path: agenda
+    icon: mdi:calendar-heart
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: calendar
+            initial_view: listWeek
+            entities: [calendar.nina, calendar.aaosdeveloper_gmail_com]
+      - type: grid
+        cards:
+          - type: todo-list
+            entity: todo.my_tasks
+
+  - title: Weather
+    path: weather
+    icon: mdi:weather-partly-cloudy
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        column_span: 2
+        cards:
+          - type: weather-forecast
+            entity: weather.home
+            forecast_type: daily
+            show_forecast: true

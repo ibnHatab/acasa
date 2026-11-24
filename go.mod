@@ -7,4 +7,4 @@ require (
 	github.com/metis-lang-dev/metis-worlds/libs/semantic-world/go v0.0.0-20261124051101-a735279b0db7
 )
 
-require gopkg.in/yaml.v3 v3.0.1 // indirect
+require gopkg.in/yaml.v3 v3.0.1

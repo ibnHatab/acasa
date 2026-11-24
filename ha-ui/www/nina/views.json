@@ -1,0 +1,22 @@
+{
+  "_doc": "Nina's view (2026-11-24): which page of the kiosk dashboard each of her tool calls brings up; an intent can choose among several; '*' the rest. After return_after seconds without another call, the dashboard goes back home.",
+  "dashboard": "nina-panel",
+  "home": "home",
+  "return_after": 90,
+  "tools": {
+    "home_music": "music",
+    "home_glow": "light",
+    "home_lights": "light",
+    "home_air": "air",
+    "home_comfort": "air",
+    "home_scenes": "home",
+    "home_agenda": "agenda",
+    "calendar": "agenda",
+    "lists": "agenda",
+    "home_timers": "home",
+    "weather": "weather",
+    "home_habits": "home",
+    "explain": "home",
+    "delegate": "home"
+  }
+}
