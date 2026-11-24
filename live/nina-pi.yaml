@@ -31,9 +31,10 @@ tasks:                                    # System 2: delegate(goal) → a pi ta
   steer: true                             # a used package's new conclusion, mid-run
   follow_up: true                         # a late outcome, after the run would end
 
-search:                                   # web_search (nina-live websearch/): Google Search grounding through Gemini Flash, the voice's and the tasks'
-  enabled: false                          # 2026-11-25: the AI Studio key refuses grounding (429 "check your plan and billing"; the 2.5
-                                          # models are closed to new users): on with billing on the key's project (5,000 a month free)
-  models: [gemini-3.8-flash, gemini-3.5-flash, gemini-3.5-flash-lite]   # tried in order (an overloaded one gives way)
+search:                                   # web_search (nina-live websearch/), a pi tool: the voice's and the tasks'
+  enabled: true
+  searxng: http://127.0.0.1:8888          # SearXNG (self-hosted metasearch, ~/searxng: docker searxng/searxng): tried first, free
+  models: [gemini-3.8-flash]              # then Google Search grounding through Gemini Flash: refused on the key until its project
+                                          # has billing (429 "check your plan and billing"); then 5,000 a month free
   key: ~/.config/fsttm/gemini.key
-  daily: 150                              # web queries a day at most: Gemini 3+ has 5,000 a month free, then $14 per 1,000
+  daily: 300                              # searches a day at most (SearXNG's engines are polite to: they rate-limit)
