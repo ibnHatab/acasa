@@ -194,6 +194,39 @@ func (h *ha) dashboard(urlPath, title, icon string, conf any) error {
 	return err
 }
 
+// sideOf is a dashboard without Nina's card: each view whose first card is a horizontal stack
+// beginning with custom:nina-card keeps the rest of the stack (Nina's own screen shows her card
+// itself, beside the dashboard). false: no view has her card.
+func sideOf(conf map[string]any) (map[string]any, bool) {
+	b, _ := json.Marshal(conf) // a deep copy
+	var side map[string]any
+	json.Unmarshal(b, &side)
+	views, _ := side["views"].([]any)
+	found := false
+	for _, v := range views {
+		view, _ := v.(map[string]any)
+		cards, _ := view["cards"].([]any)
+		if len(cards) == 0 {
+			continue
+		}
+		hs, _ := cards[0].(map[string]any)
+		inner, _ := hs["cards"].([]any)
+		if hs["type"] != "horizontal-stack" || len(inner) < 2 {
+			continue
+		}
+		if first, _ := inner[0].(map[string]any); first["type"] != "custom:nina-card" {
+			continue
+		}
+		found = true
+		if len(inner) == 2 {
+			view["cards"] = []any{inner[1]}
+		} else {
+			view["cards"] = []any{map[string]any{"type": "horizontal-stack", "cards": inner[1:]}}
+		}
+	}
+	return side, found
+}
+
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
@@ -297,6 +330,12 @@ func main() {
 			log.Fatalf("dashboard %s: %v", name, err)
 		}
 		log.Printf("dashboard /%s-panel", name)
+		if side, ok := sideOf(conf); ok { // the right half of Nina's own screen (shell.html): Nina's card taken out
+			if err := h.dashboard(name+"-side", title+" (side)", "mdi:page-layout-sidebar-right", side); err != nil {
+				log.Fatalf("dashboard %s-side: %v", name, err)
+			}
+			log.Printf("dashboard /%s-side", name)
+		}
 	}
 
 	// the Pi's kiosk

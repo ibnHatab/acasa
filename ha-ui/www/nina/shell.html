@@ -1,0 +1,118 @@
+<!doctype html>
+<!-- shell.html (acasa ha-ui, 2026-11-24): Nina's own screen, served by her panel
+     (http://homeassistant.local:8770/nina/shell.html), so it is up as soon as she is, whatever Home
+     Assistant is doing. Her card on the left (her face, her voice, the conversation); on the right
+     Home Assistant's side dashboard (nina-side: the panel's pages without her card), framed, once Home
+     Assistant answers (a clock and "the house is waking up" until then). Her tool calls move that
+     dashboard (nina-view.js, inside Home Assistant).
+
+     Home Assistant's full interface, for adding and configuring devices: the house button (or the
+     panel's ui action: POST /api/do {"action":"ui","arg":"ha"}) brings it up full screen; the Nina
+     button, "nina", or ten minutes (after a warning anyone can tap away) bring her back.
+
+     Served under homeassistant.local so the framed Home Assistant keeps its login (Firefox partitions
+     a frame's storage by site; the port is not part of it). Home Assistant must allow being framed
+     (.storage/http: use_x_frame_options false). ?ha=URL: another Home Assistant. -->
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nina</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #14100e; color: #e9ddd3; font: 16px system-ui, sans-serif;
+               overflow: hidden; --clay: #d97757; }
+  #nina { position: absolute; left: 0; top: 0; bottom: 0; width: 49%; padding: 8px; box-sizing: border-box; }
+  #side { position: absolute; left: 49%; right: 0; top: 0; bottom: 0; }
+  #side iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent;
+                 opacity: 0; transition: opacity .6s; }
+  #side iframe.up { opacity: 1; }
+  #wait { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center;
+          align-items: center; gap: 10px; color: #b9a99b; transition: opacity .6s; }
+  #wait .time { font-size: 4em; font-weight: 300; color: #e9ddd3; }
+  #wait.gone { opacity: 0; pointer-events: none; }
+  button.round { position: absolute; z-index: 5; border: 0; border-radius: 999px; cursor: pointer;
+                 background: rgba(20, 16, 14, .55); color: #e9ddd3; backdrop-filter: blur(6px);
+                 box-shadow: 0 1px 4px rgba(0,0,0,.4); font: inherit; }
+  #toHA { right: 10px; bottom: 10px; width: 40px; height: 40px; font-size: 20px; opacity: .55; }
+  #toHA:hover, #toHA:active { opacity: 1; }
+  #toNina { right: 12px; bottom: 12px; padding: 10px 16px 10px 12px; display: none; align-items: center; gap: 8px;
+            z-index: 12; background: var(--clay); color: #fff; font-weight: 500; }
+  #toNina::before { content: ""; width: 22px; height: 22px; border-radius: 50%;
+                    background: radial-gradient(circle at 35% 35%, #ffd9a8, #c96f2e); }
+  body.ha #side { left: 0; z-index: 10; }
+  body.ha #toNina { display: flex; }
+  body.ha #toHA { display: none; }
+  #soon { position: absolute; inset: 0; z-index: 13; display: none; align-items: flex-end; justify-content: center;
+          padding-bottom: 70px; background: rgba(0,0,0,.25); }
+  #soon div { background: rgba(20,16,14,.9); padding: 14px 22px; border-radius: 14px; font-size: 1.1em; }
+  body.soon #soon { display: flex; }
+</style></head>
+<body>
+  <div id="nina"></div>
+  <div id="side">
+    <div id="wait"><div class="time" id="time"></div><div id="date"></div><div id="msg">The house is waking up…</div></div>
+    <iframe id="ha" title="Home Assistant" allow="autoplay; fullscreen"></iframe>
+  </div>
+  <button class="round" id="toHA" title="Home Assistant">⌂</button>
+  <button class="round" id="toNina">Nina</button>
+  <div id="soon"><div>Back to Nina in <span id="secs">10</span> s: tap to stay in Home Assistant</div></div>
+  <script type="module">
+    import "./nina-card.js";
+    const q = new URLSearchParams(location.search);
+    const HA = q.get("ha") || `${location.protocol}//${location.hostname}:8123`;
+    const SIDE = `${HA}/nina-side/home?kiosk`, FULL = `${HA}/`; // the full interface: its own default dashboard
+    const STAY = (+q.get("stay") || 600) * 1000, WARN = 10; // ?stay=SECONDS (tests): how long Home Assistant stays up
+
+    // Nina's card: her panel is this page's own origin
+    const card = document.createElement("nina-card");
+    card.setConfig({ panel: location.origin, height: "calc(100vh - 16px)" });
+    document.getElementById("nina").appendChild(card);
+
+    // the clock while the house wakes up
+    const tick = () => {
+      const d = new Date();
+      document.getElementById("time").textContent = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+      document.getElementById("date").textContent = d.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+    };
+    tick(); setInterval(tick, 10000);
+
+    // Home Assistant, once it answers
+    const frame = document.getElementById("ha");
+    let haUp = false;
+    const show = (url) => { if (frame.src !== url) frame.src = url; };
+    frame.addEventListener("load", () => {
+      if (!haUp) return;
+      frame.classList.add("up");
+      document.getElementById("wait").classList.add("gone");
+    });
+    const probe = () => fetch(`${HA}/manifest.json?${Date.now()}`, { mode: "no-cors", cache: "no-store" })
+      .then(() => { haUp = true; show(document.body.classList.contains("ha") ? FULL : SIDE); })
+      .catch(() => setTimeout(probe, 2000));
+    probe();
+
+    // Nina ⇄ Home Assistant's full interface
+    let back, warn;
+    const mode = (m) => {
+      clearTimeout(back); clearInterval(warn); document.body.classList.remove("soon");
+      document.body.classList.toggle("ha", m === "ha");
+      if (haUp) show(m === "ha" ? FULL : SIDE);
+      if (m === "ha") back = setTimeout(soon, STAY);
+    };
+    const soon = () => { // ten minutes in Home Assistant: back to Nina unless someone taps
+      let n = WARN;
+      document.getElementById("secs").textContent = n;
+      document.body.classList.add("soon");
+      warn = setInterval(() => {
+        if (--n <= 0) return mode("nina");
+        document.getElementById("secs").textContent = n;
+      }, 1000);
+    };
+    document.getElementById("soon").addEventListener("click", () => mode("ha"));
+    document.getElementById("toHA").addEventListener("click", () => mode("ha"));
+    document.getElementById("toNina").addEventListener("click", () => mode("nina"));
+    // the panel's ui action (her voice, a button): {"ev":"ui","mode":"ha"|"nina"}
+    const listen = () => {
+      const es = new EventSource("/api/events");
+      es.addEventListener("ev", (m) => { const e = JSON.parse(m.data); if (e.ev === "ui" && (e.mode === "ha" || e.mode === "nina")) mode(e.mode); });
+      es.onerror = () => { es.close(); setTimeout(listen, 5000); };
+    };
+    listen();
+  </script>
+</body></html>

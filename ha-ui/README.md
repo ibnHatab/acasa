@@ -41,3 +41,29 @@ card). So the screen shows Nina from the start:
 - `kiosk/backlight-control.sh`: idle on an HDMI panel (no backlight): the output off and on through
   wlr-randr; with it off Firefox stops drawing, Nina's face included;
 - cloud-init is off after the first boot (`/etc/cloud/cloud-init.disabled`).
+
+## Nina's own screen (2026-11-24)
+
+`www/nina/shell.html`, served by Nina's panel (`live/*.yaml`: `web.static`, at
+`http://homeassistant.local:8770/nina/shell.html`): it is up as soon as Nina is, whatever Home
+Assistant is doing. Her card on the left (her persona from her panel, not a Home Assistant sensor);
+on the right the `nina-side` dashboard (made by `cmd/ha-ui` from the same YAML, her card taken out),
+framed once Home Assistant answers, a clock until then; `nina-view.js` moves it with her tool calls.
+
+Home Assistant's full interface: the ⌂ button, or her panel's `ui` action (`POST /api/do
+{"action":"ui","arg":"ha"}`); back with the Nina button, `"nina"`, or after ten minutes (a ten-second
+warning anyone can tap away). Home Assistant must allow the frame: its http settings live in
+`.storage/http` now (the YAML is ignored), `use_x_frame_options: false` there (done on Pascal and the
+Pi, the old file kept as `http.before-frame-20261124`).
+
+The kiosk moves to it when Nina runs on the Pi: `KIOSK_URL="http://homeassistant.local:8770/nina/shell.html"`
+(served under homeassistant.local, so the framed Home Assistant keeps the kiosk's login).
+
+## Home Assistant's start (2026-11-24)
+
+`cmd/ha-startup` lists the integrations' start times (Settings → System → Repairs → Integration
+startup time); `cmd/ha-entries` lists the config entries and disables or enables one. `default_config`
+is replaced by the integrations the house uses (configuration.yaml, Pascal's and the Pi's; the old one
+kept as `configuration.yaml.before-trim-20261124`), Bluetooth and go2rtc disabled. The Pi's cold start
+did not change with it (Home Assistant answers ~73 s after a reboot: its own start from the SD card);
+Nina's own screen is the answer to that.

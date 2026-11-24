@@ -51,6 +51,7 @@ plugins:
     enabled: true
     addr: ":8770"
     allow_origin: ["http://homeassistant.local:8123"] # Home Assistant's Nina card reads her state and events, sets the mic and voice
+    static: {"/nina/": ~/repo/acasa/ha-ui/www/nina} # Nina's own screen (shell.html), her card and personas: up before Home Assistant
   gpio: # buttons and lights on a Raspberry Pi (BCM line numbers)
     enabled: false
     chip: gpiochip0

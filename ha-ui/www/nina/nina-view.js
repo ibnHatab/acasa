@@ -1,18 +1,20 @@
 // Nina's view (acasa ha-ui, 2026-11-24): the kiosk dashboard follows what Nina does. Each tool
 // call of hers (her panel's event stream: GET :8770/api/events, event "tool") brings up the page
 // that shows it (views.json: the tool, or its intent, to a view); after a while without another,
-// the dashboard goes back home. Only on Nina's dashboard: no other page is ever moved.
+// the dashboard goes back home. Only on Nina's dashboards (nina-panel; nina-side, the right half of
+// Nina's own screen, shell.html): no other page is ever moved (Home Assistant's own, for editing).
 (async () => {
   const v = new URL(import.meta.url).searchParams.get("v") || "0";
   const conf = await fetch(`/local/nina/views.json?v=${v}`).then((r) => r.json()).catch(() => ({}));
-  const base = `/${conf.dashboard || "nina-panel"}/`;
+  const bases = [conf.dashboard || "nina-panel", ...(conf.also || ["nina-side"])].map((d) => `/${d}/`);
   const home = conf.home || "home";
   const back = (conf.return_after || 90) * 1000;
   const tools = conf.tools || {};
   const panel = conf.panel || `${location.protocol}//${location.hostname}:8770`;
   let timer;
   const go = (view) => {
-    if (!location.pathname.startsWith(base)) return;
+    const base = bases.find((b) => location.pathname.startsWith(b));
+    if (!base) return;
     const path = base + view + location.search;
     if (location.pathname + location.search !== path) {
       history.pushState(null, "", path);

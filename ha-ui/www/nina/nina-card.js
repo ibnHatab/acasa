@@ -29,8 +29,12 @@
 // wakes; none while the page is hidden. (On the Pi 4, 30 a second cost Firefox ~43% of a core.)
 // One hub per page load: one connection to her panel, one conversation, shared by every Nina card
 // (each page of the dashboard has its own card: the conversation goes on as the page changes).
+// The card's own folder (Home Assistant's /local/nina/, or Nina's panel's /nina/): the personas are there.
+const ASSETS = new URL(".", import.meta.url).pathname;
+
 const hub = window.__ninaHub || (window.__ninaHub = {
   msgs: [], status: null, prefs: null, cards: new Set(), started: false, said: "", nina: null, panel: null,
+  persona: null, // Nina's persona now (her temperament: the panel's persona events)
   emit() { this.cards.forEach((c) => c.render()); },
   viewer: null, // {angle, distance, elevation, at}: where the person is (the radar's reading)
   look(v) { this.viewer = Object.assign({}, v, { at: Date.now() }); },
@@ -46,7 +50,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
     if (this.started) return;
     this.started = true; this.panel = panel;
     const connect = () => {
-      fetch(panel + "/api/state").then((r) => r.json()).then((s) => { this.prefs = s.prefs; this.status = s.status; this.emit(); })
+      fetch(panel + "/api/state").then((r) => r.json()).then((s) => { this.prefs = s.prefs; this.status = s.status; this.persona = s.facts?.persona?.artwork || this.persona; this.emit(); })
         .catch(() => { this.status = null; this.emit(); });
       const es = new EventSource(panel + "/api/events");
       es.addEventListener("status", (m) => { this.status = JSON.parse(m.data); this.emit(); });
@@ -56,7 +60,10 @@ const hub = window.__ninaHub || (window.__ninaHub = {
           case "typed": this.add("user", e.text); break;
           case "turn":
             if (e.note) this.add("note", e.text.replace(/^NOTE \((\w+)\): /, ""));
-            else if (!e.typed_shown) this.add("user", e.text.replace(/^\(You were interrupted[^)]*\)\n/, ""));
+            else if (!e.typed_shown) {
+              const t = e.text.replace(/^\(You were interrupted[^)]*\)\n/, "").trim(), last = this.msgs[this.msgs.length - 1];
+              if (!(last && last.cls === "user" && last.text === t && Date.now() - last.t < 5000)) this.add("user", t); // a typed line: shown already
+            }
             this.nina = null; this.said = ""; break;
           case "said":
             this.said += e.text;
@@ -66,6 +73,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
             if (!this.nina && e.said) this.add("nina", e.said); else if (this.nina) { this.nina.text = (e.said || this.said).trim(); this.emit(); }
             this.nina = null; this.said = ""; break;
           case "prefs": this.prefs = e.prefs; this.emit(); break;
+          case "persona": if (e.artwork && e.artwork !== this.persona) { this.persona = e.artwork; this.emit(); } break;
         }
       });
       es.onerror = () => { es.close(); this.status = null; this.emit(); setTimeout(connect, 5000); };
@@ -173,9 +181,9 @@ class NinaCard extends HTMLElement {
       const asked = new URLSearchParams(location.search).get("persona");
       const hers = this._hass?.states?.["sensor.nina_persona"]?.state;
       const d = new Date(), day = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5);
-      const name = [asked, want, hers].find((n) => names.includes(n)) || names[(day * 7 + d.getFullYear()) % names.length];
+      const name = [asked, want, hub.persona, hers].find((n) => names.includes(n)) || names[(day * 7 + d.getFullYear()) % names.length];
       this.persona = name; this.pinned = names.includes(asked); this.names = names;
-      dir = `/local/nina/personas/${name}`;
+      dir = `${ASSETS}personas/${name}`;
     }
     if (!dir) return;
     const rig = this.root.querySelector(".rig");
@@ -303,6 +311,7 @@ class NinaCard extends HTMLElement {
   }
   render() {
     if (!this.root) return;
+    if (this.persona && !this.pinned && hub.persona && hub.persona !== this.persona && this.names?.includes(hub.persona)) this.swap(hub.persona);
     this.showPrefs();
     if (hub.status) this.status(hub.status); else this.state("her panel is not reachable");
     const max = this.c.message_max_age * 1000;
