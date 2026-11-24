@@ -1,0 +1,11 @@
+[Unit]
+Description=Nina (nina-live: the voice, the home rules, the tasks) on the Raspberry Pi
+After=network-online.target
+
+[Service]
+ExecStart=%h/repo/nina-live/bin/nina -config %h/repo/acasa/live/nina-pi.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
