@@ -29,10 +29,18 @@ on 127.0.0.1:8768 and sends its REASONING through her stream door on 127.0.0.1:8
     live/run.sh install    # build nina-live, link and enable the systemd user units, start them
     live/run.sh start | stop | restart | status | log | uninstall
 
-Both run as systemd user services that start with the session (`live/systemd/`:
-`acasa-metis-home`, whose `live/metis-home.sh` waits for Home Assistant, and `acasa-nina-live`,
-which waits for metis-home's tools); their output is in `journalctl --user -u acasa-nina-live`,
-Nina's events in `$XDG_RUNTIME_DIR/acasa-live/nina-live.jsonl`. The panel: http://localhost:8770/
+Since 2026-11-24 Nina runs as **one** systemd user service, `acasa-nina`. It is
+[nina-live](https://github.com/ibnHatab/nina-live)'s `cmd/nina` with `live/nina.yaml`, and it
+holds:
+
+- her voice (fsttm-live's `pkg/dialogue`, configured by `live/pascal.yaml`);
+- the home's rules (metis-agent's `pkg/metishome`);
+- the semantic world, rebuilt from her event log, `~/.local/share/nina/nina.db` (SQLite);
+- Home Assistant as her tool (this repo's `hass/`: the websocket feed and the REST device).
+
+Its output is in `journalctl --user -u acasa-nina`, and everything she heard, said and saw is
+in the log. `OLD=1 live/run.sh install` brings back the two services that came before it
+(`acasa-metis-home`, `acasa-nina-live`). The panel is at http://localhost:8770/.
 
 Home Assistant runs beside them as a container (`homeassistant/compose.yaml`, copied to
 `~/homeassistant` on each machine; Pascal: 2026.11.2 on http://localhost:8123). Once its

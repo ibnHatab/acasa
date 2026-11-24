@@ -1,0 +1,12 @@
+[Unit]
+Description=acasa: Nina (nina-live: her voice, the home's rules, the world from her event log)
+After=network-online.target paradee-tts.socket
+Conflicts=acasa-nina-live.service acasa-metis-home.service
+
+[Service]
+ExecStart=%h/repo/nina-live/bin/nina -config %h/repo/acasa/live/nina.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,14 @@
+# nina (nina-live's cmd/nina): Nina in one process on Pascal: her voice, the home's rules, the world
+# rebuilt from her event log, Home Assistant as her tool.
+log: ~/.local/share/nina/nina.db          # her memory: every event, append only (SQLite)
+home:
+  root: ~/repo/perotheia-packages/metis-worlds-home/home
+  metisc: ~/repo/perotheia-packages/metis-lang/src/metisc
+  beat: 1s
+  checkpoint_every: 60                    # a world checkpoint every 60 beats (a rebuild checks it)
+  call_timeout: 6s
+hass:
+  url: http://127.0.0.1:8123
+  token: ~/.config/fsttm/hass.token       # the token's file, never the token here
+dialogue: ~/repo/acasa/live/pascal.yaml   # fsttm-live's config: sound, models, attention, prefs, plugins
+levels: {result: context, event: info, surprise: info, error: context}   # the rules' replies → silent context or a NOTE
