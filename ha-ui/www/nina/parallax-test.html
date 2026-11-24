@@ -1,0 +1,48 @@
+<!doctype html>
+<!-- parallax-test.html (acasa ha-ui, 2026-11-24): Nina's card alone, at the panel's left half, with
+     no Home Assistant and no panel behind it; she "speaks" every few seconds. It shows whether the
+     WebGL parallax held on this machine (the Pi 4's Firefox) or fell back to CSS, and the frame
+     rate. /local/nina/parallax-test.html?persona=NAME -->
+<html><head><meta charset="utf-8"><title>Nina: parallax test</title>
+<style>
+  body { margin: 0; background: #14100e; color: #eee; font: 18px system-ui, sans-serif; display: flex; height: 100vh; }
+  #card { width: 500px; height: 584px; margin: 8px; flex: none; }
+  #out { padding: 16px; white-space: pre; font-size: 22px; line-height: 1.5; }
+  .ok { color: #8fd18f; } .no { color: #f08a6a; }
+</style></head>
+<body>
+  <div id="card"></div>
+  <div id="out">starting…</div>
+  <script type="module">
+    import "/local/nina/nina-card.js";
+    window.__ninaHub.started = true; // no connection to her panel: this page drives her state
+    const c = document.createElement("nina-card");
+    c.setConfig({ height: "584px" });
+    document.getElementById("card").appendChild(c);
+    const hub = window.__ninaHub;
+    let speaking = false;
+    setInterval(() => { // she talks for 3 s every 6 s
+      speaking = !speaking;
+      hub.status = { floor: "FREEu", awake: true, hearing: false, replying: speaking, speaking, mind: true, pending: 0 };
+      hub.emit();
+    }, 3000);
+    hub.status = { floor: "FREEu", awake: true, hearing: false, replying: false, speaking: false, mind: true, pending: 0 };
+    let n = 0, worst = 0, last = performance.now();
+    const t0 = last;
+    const tick = (now) => { n++; worst = Math.max(worst, now - last); last = now; requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+    const out = document.getElementById("out");
+    let prev = 0;
+    setInterval(() => {
+      const s = (performance.now() - t0) / 1000, fps = n - prev; prev = n;
+      const gl = !!c.gl, cv = c.shadowRoot?.querySelector(".rig canvas");
+      out.innerHTML = `persona: ${c.persona || "?"}\n` +
+        `renderer: <span class="${gl ? "ok" : "no"}">${gl ? "WebGL parallax" : "CSS (no WebGL, or too slow)"}</span>\n` +
+        `canvas: ${cv ? cv.width + "×" + cv.height : "none"}\n` +
+        `browser frames/s: ${fps}   worst gap: ${Math.round(worst)} ms\n` +
+        `running: ${Math.round(s)} s\n` +
+        `${navigator.userAgent.replace(/.*(Firefox\/[\d.]+).*/, "$1")}`;
+      worst = 0;
+    }, 1000);
+  </script>
+</body></html>
