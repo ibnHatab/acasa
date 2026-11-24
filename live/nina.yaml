@@ -13,6 +13,8 @@ hass:
   token: ~/.config/fsttm/hass.token       # the token's file, never the token here
 dialogue: ~/repo/acasa/live/pascal.yaml   # fsttm-live's config: sound, models, attention, prefs, plugins
 levels: {result: context, event: info, surprise: info, error: context}   # the rules' replies → silent context or a NOTE
+persona: ~/repo/nina-live/prompts/nina.md   # Nina's character (2026-11-24), before the voice's protocol and the task runner's charter
+voice: ~/repo/nina-live/prompts/voice.md     # the voice's protocol: with the persona, the dialogue's charter (written beside the log)
 tasks:                                    # System 2: delegate(goal) → a pi task (sky-valley/pi), its result a NOTE
   enabled: true
   provider: openrouter                    # any of pi-ai's providers; 2026-11-24: OpenRouter (the user's credit), not the free AI Studio tier's quota
