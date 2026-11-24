@@ -36,6 +36,8 @@ const hub = window.__ninaHub || (window.__ninaHub = {
   msgs: [], status: null, prefs: null, cards: new Set(), started: false, said: "", nina: null, panel: null,
   persona: null, // Nina's persona now (her temperament: the panel's persona events)
   surprises: null, // {unseen, open}: surprises she has not told about; the domains' records still open
+  talkUntil: 0, // with her voice off: her face "speaks" her text reply until then (as long as saying it would take)
+  quietTalk(text) { if (this.prefs && this.prefs.voice === false && text) this.talkUntil = Math.max(this.talkUntil, Date.now() + Math.min(20000, 600 + text.length * 65)); },
   emit() { this.cards.forEach((c) => c.render()); },
   viewer: null, // {angle, distance, elevation, at}: where the person is (the radar's reading)
   look(v) { this.viewer = Object.assign({}, v, { at: Date.now() }); },
@@ -72,6 +74,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
             if (!this.nina) this.nina = this.add("nina", this.said); else { this.nina.text = this.said.trim(); this.emit(); }
             break;
           case "reply_done":
+            this.quietTalk(e.said || this.said);
             if (!this.nina && e.said) this.add("nina", e.said); else if (this.nina) { this.nina.text = (e.said || this.said).trim(); this.emit(); }
             this.nina = null; this.said = ""; break;
           case "prefs": this.prefs = e.prefs; this.emit(); break;
@@ -310,7 +313,7 @@ class NinaCard extends HTMLElement {
       this.tBlink = setTimeout(blink, 2500 + Math.random() * 3800);
     };
     const mouth = () => {
-      if (hub.status?.speaking) {
+      if (hub.status?.speaking || Date.now() < hub.talkUntil) { // her voice, or her text reply with the voice off
         const r = Math.random();
         this.mouth(r < .4 ? "talk-a" : r < .75 ? "talk-b" : null);
         this.wasSpeaking = true;

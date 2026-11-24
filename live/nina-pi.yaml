@@ -17,11 +17,14 @@ persona: ~/repo/nina-live/prompts/nina.md   # Nina's character (2026-11-24), bef
 voice: ~/repo/nina-live/prompts/voice.md     # the voice's protocol: with the persona, the dialogue's charter (written beside the log)
 tasks:                                    # System 2: delegate(goal) → a pi task (sky-valley/pi), its result a NOTE
   enabled: true
-  provider: openrouter                    # any of pi-ai's providers; 2026-11-24: OpenRouter (the user's credit), not the free AI Studio tier's quota
-  model: deepseek/deepseek-v4.1-flash     # the user's choice, like Gemini 3.8 Flash at a fraction of the cost. Others for roles to come:
-                                          #   z-ai/glm-5.3-flash (intent extraction, typed propositions), qwen/qwen3.8-flash (multilingual),
-                                          #   google/gemini-3.8-flash (complex research: spends the credit fast)
-  key: ~/.config/metis/openrouter.env     # OPENROUTER_API_KEY=...
+  provider: google                        # 2026-11-24: back to Google's Flash through pi-ai (the user); pi-ai is checked
+  model: gemini-3.8-flash                 # 10/12 in the experiment grid. OpenRouter, for roles to come (key ~/.config/metis/openrouter.env):
+                                          #   deepseek/deepseek-v4.1-flash (cheap), z-ai/glm-5.3-flash (intent extraction, typed
+                                          #   propositions), qwen/qwen3.8-flash (multilingual)
+  key: ~/.config/fsttm/gemini.key         # the AI Studio key's file (GEMINI_API_KEY, or the bare key)
+  fallback:                               # a one-shot ask (narration) when the model fails (Google's "high demand", a quota)
+    - {provider: google, model: gemini-3.5-flash, key: ~/.config/fsttm/gemini.key}
+    - {provider: openrouter, model: deepseek/deepseek-v4.1-flash, key: ~/.config/metis/openrouter.env}
   max_turns: 10
   timeout: 3m
   transform: true                         # the world's lines before each request (read-only)
