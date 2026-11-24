@@ -20,7 +20,11 @@
 // crossfade weights and shifts each pixel by the persona's depth map (Depth Anything, made once:
 // nina-live design/tools/depth.py) along a slow drift, so her head seems to turn a little. It
 // measures itself: under 20 frames a second for three seconds (a Pi whose Firefox has no GPU), it
-// gives way to the CSS version. 30 frames a second while she listens or speaks, 15 while she is
+// gives way to the CSS version. Where she looks: a person's direction (viewer, default
+// sensor.nina_viewer: its state the angle in degrees, 0 ahead, + to the right as one faces the
+// screen; attributes distance in m and elevation in degrees; or window.__ninaHub.look({angle,
+// distance, elevation}) from any source, e.g. the panel's radar): fresh (10 s) and she awake, her
+// head turns towards them and the idle drift calms. 30 frames a second while she listens or speaks, 15 while she is
 // awake and quiet; asleep, her eyes settle closed and drawing stops (no script runs) until she
 // wakes; none while the page is hidden. (On the Pi 4, 30 a second cost Firefox ~43% of a core.)
 // One hub per page load: one connection to her panel, one conversation, shared by every Nina card
@@ -28,6 +32,8 @@
 const hub = window.__ninaHub || (window.__ninaHub = {
   msgs: [], status: null, prefs: null, cards: new Set(), started: false, said: "", nina: null, panel: null,
   emit() { this.cards.forEach((c) => c.render()); },
+  viewer: null, // {angle, distance, elevation, at}: where the person is (the radar's reading)
+  look(v) { this.viewer = Object.assign({}, v, { at: Date.now() }); },
   add(cls, text) {
     if (!text || !text.trim()) return null;
     const m = { cls, text: text.trim(), t: Date.now() };
@@ -251,7 +257,12 @@ class NinaCard extends HTMLElement {
       names.slice(1).forEach((n, i) => gl.uniform1f(uw[i + 1], this.frames[n] ? w[n] : 0));
       const s = now / 1000, cl = rig.classList, amp = cl.contains("slow") ? .012 : cl.contains("fast") ? .03 : .025;
       const sp = cl.contains("slow") ? .6 : cl.contains("fast") ? 1.4 : 1;
-      const tx = amp * Math.sin(s * sp * 2 * Math.PI / 9) + (cl.contains("lean") ? .02 : 0), ty = amp * .5 * Math.sin(s * sp * 2 * Math.PI / 13 + 1);
+      let tx = amp * Math.sin(s * sp * 2 * Math.PI / 9) + (cl.contains("lean") ? .02 : 0), ty = amp * .5 * Math.sin(s * sp * 2 * Math.PI / 13 + 1);
+      const vw = hub.viewer, flip = this.c.viewer_flip ? -1 : 1;
+      if (vw && Date.now() - vw.at < 10000 && !cl.contains("slow")) { // someone there: she turns to them, the drift calms
+        const k = Math.max(-1, Math.min(1, (vw.angle || 0) / 40)), e = Math.max(-1, Math.min(1, (vw.elevation || 0) / 30));
+        tx = -flip * .035 * k + tx * .3; ty = -.02 * e + ty * .3;
+      }
       ox += (tx - ox) * Math.min(1, dt / 600); oy += (ty - oy) * Math.min(1, dt / 600);
       gl.uniform2f(uo, ox, oy); gl.uniform1f(uz, 1.05 + .004 * Math.sin(s * 2 * Math.PI / 4.5));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -302,6 +313,11 @@ class NinaCard extends HTMLElement {
   }
   set hass(h) {
     this._hass = h;
+    const ve = h?.states?.[this.c.viewer || "sensor.nina_viewer"];
+    if (ve && ve.state !== "unavailable" && ve.state !== "unknown" && isFinite(+ve.state)) {
+      const at = Date.parse(ve.last_updated);
+      if (!hub.viewer || at > hub.viewer.at) hub.viewer = { angle: +ve.state, distance: +ve.attributes?.distance || null, elevation: +ve.attributes?.elevation || 0, at };
+    }
     const p = h?.states?.["sensor.nina_persona"]?.state;
     if (this.persona && !this.pinned && p && p !== this.persona && this.names?.includes(p)) this.swap(p);
   }
