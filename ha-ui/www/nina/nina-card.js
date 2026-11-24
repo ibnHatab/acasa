@@ -197,6 +197,7 @@ class NinaCard extends HTMLElement {
     this.depth = new Image(); this.depth.src = `${dir}/depth.webp`;
     this.frames.neutral.onload = () => { this.root.querySelector(".face").hidden = false; this.root.querySelector(".credit").hidden = false; };
     this.target = {};
+    if (this.isConnected) this.animate(true); // the mouth and the blinks (the card was attached before its frames)
     if (this.c.parallax !== false) Promise.all([...Object.values(this.frames), this.depth].map((i) => i.decode().catch(() => null)))
       .then(() => this.gl3d()).catch((e) => console.warn("nina-card: parallax off:", e));
   }
@@ -313,7 +314,11 @@ class NinaCard extends HTMLElement {
     if (!this.root) return;
     if (this.persona && !this.pinned && hub.persona && hub.persona !== this.persona && this.names?.includes(hub.persona)) this.swap(hub.persona);
     this.showPrefs();
-    if (hub.status) this.status(hub.status); else this.state("her panel is not reachable");
+    if (hub.status) this.status(hub.status);
+    else { // no Nina (her panel not reachable): her face rests, eyes closed, nothing drawn
+      this.state("her panel is not reachable");
+      if (this.frames) { this.show("blink", true); const rig = this.root.querySelector(".rig"); rig.classList.add("slow"); rig.classList.remove("fast", "lean"); }
+    }
     const max = this.c.message_max_age * 1000;
     const msgs = hub.msgs.filter((m) => !max || Date.now() - m.t <= max).slice(-this.c.max_messages);
     const chat = this.root.querySelector(".chat");

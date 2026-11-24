@@ -31,9 +31,11 @@ find_backlight() {
 }
 
 BACKLIGHT_DIR="$(find_backlight || true)"
-# Nina (2026-11-24): an HDMI panel has no sysfs backlight (the 7" HDMI one here): off and on switch
-# the output through the compositor (wlr-randr), dim does nothing (HDMI has no brightness). With the
-# output off Wayland stops the frame callbacks, so the page's animations (Nina's face) stop too.
+# Nina (2026-11-24): an HDMI panel has no sysfs backlight (the 7" HDMI one here), so dim, off and on
+# do nothing: idle-off.sh's black overlay (swaylock) blanks the screen and a touch lifts it. Switching
+# the output off (wlr-randr --off) froze the Pi 4's display: the kernel warned in vc4_hvs
+# (__vc4_hvs_stop_channel) and the panel kept its last frame after --on, touch and all. Nina's face
+# stops drawing by itself while she sleeps.
 hdmi_output() {
   [[ -n "${KIOSK_OUTPUT:-}" ]] && { echo "$KIOSK_OUTPUT"; return; }
   wlr-randr 2>/dev/null | awk '/^[^ ]/ {print $1; exit}'
@@ -41,10 +43,8 @@ hdmi_output() {
 if [[ -z "${BACKLIGHT_DIR}" ]]; then
   out="$(hdmi_output)"
   case "${1:-}" in
-    dim) exit 0 ;;
-    off) wlr-randr --output "$out" --off ;;
-    on) wlr-randr --output "$out" --on ;;
-    status) echo "output=${out} (no sysfs backlight: off/on through wlr-randr)"; wlr-randr | grep -A6 "^$out" | grep Enabled ;;
+    dim | off | on) exit 0 ;;
+    status) echo "output=${out} (no sysfs backlight: idle is idle-off.sh's black overlay only)" ;;
     path) echo "wlr-randr:${out}" ;;
     *) echo "usage: $0 {dim|off|on|status|path}" >&2; exit 2 ;;
   esac
