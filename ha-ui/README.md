@@ -20,3 +20,11 @@ panel's size; edit here, `go run ./cmd/ha-ui`, F5.
 
 Nina's card and view talk to her panel (fsttm-live's web plugin, :8770) from Home Assistant's page:
 the panel's `allow_origin` (live/pi.yaml) lists Home Assistant's address.
+
+## The boot logo
+
+`kiosk/logo.png` is the Pi's boot splash (ha-pi-kiosk's `images/logo.png`: copy it there and re-run
+its `setup.sh`, then reboot). Nina, as Claudia, switching the home on: an AI-generated still
+(OpenRouter, openai/gpt-5.4-image-2, from her face sheet; prompt in
+nina-live/design/stills/round1/boot.txt). Claudia is an open character by anabology
+(claudia.gallery).
