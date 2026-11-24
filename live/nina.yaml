@@ -15,9 +15,11 @@ dialogue: ~/repo/acasa/live/pascal.yaml   # fsttm-live's config: sound, models, 
 levels: {result: context, event: info, surprise: info, error: context}   # the rules' replies → silent context or a NOTE
 tasks:                                    # System 2: delegate(goal) → a pi task (sky-valley/pi), its result a NOTE
   enabled: true
-  provider: google
-  model: gemini-3-flash-preview           # 2026-11-24: 3.5/3.8-flash answered 503 (high demand); 2.5-flash closed to new users
-  key: ~/.config/fsttm/gemini.key
+  provider: openrouter                    # any of pi-ai's providers; 2026-11-24: OpenRouter (the user's credit), not the free AI Studio tier's quota
+  model: deepseek/deepseek-v4.1-flash     # the user's choice, like Gemini 3.8 Flash at a fraction of the cost. Others for roles to come:
+                                          #   z-ai/glm-5.3-flash (intent extraction, typed propositions), qwen/qwen3.8-flash (multilingual),
+                                          #   google/gemini-3.8-flash (complex research: spends the credit fast)
+  key: ~/.config/metis/openrouter.env     # OPENROUTER_API_KEY=...
   max_turns: 10
   timeout: 3m
   transform: true                         # the world's lines before each request (read-only)
