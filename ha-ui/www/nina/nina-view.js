@@ -4,6 +4,10 @@
 // the dashboard goes back home. Only on Nina's dashboards (nina-panel; nina-side, the right half of
 // Nina's own screen, shell.html): no other page is ever moved (Home Assistant's own, for editing).
 (async () => {
+  // loaded twice on Nina's dashboards (a dashboard resource, and frontend.extra_module_url for every
+  // page: Home Assistant's own pages load no dashboard resources): once is enough
+  if (window.__ninaView) return;
+  window.__ninaView = true;
   const v = new URL(import.meta.url).searchParams.get("v") || "0";
   const conf = await fetch(`/local/nina/views.json?v=${v}`).then((r) => r.json()).catch(() => ({}));
   const bases = [conf.dashboard || "nina-panel", ...(conf.also || ["nina-side"])].map((d) => `/${d}/`);
@@ -44,4 +48,31 @@
     };
   };
   connect();
+
+  // the way back: on a kiosk (a browser that opened Nina's dashboard with ?kiosk), any other Home
+  // Assistant page (its full interface, opened by her card's ⌂) gets a floating Nina button. Not in
+  // Nina's own screen's frame (it has its own), not in a desktop browser.
+  const KIOSK = "nina-kiosk";
+  const mine = () => bases.some((b) => location.pathname.startsWith(b));
+  const framed = window.top !== window;
+  const pill = document.createElement("button");
+  pill.textContent = "Nina";
+  pill.title = "Back to Nina";
+  Object.assign(pill.style, { position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: "12px", zIndex: 9999, // Home Assistant's own buttons are in the corners display: "none",
+    alignItems: "center", gap: "8px", border: "0", borderRadius: "999px", padding: "10px 16px 10px 12px",
+    background: "#d97757", color: "#fff", font: "500 15px system-ui, sans-serif", cursor: "pointer",
+    boxShadow: "0 1px 6px rgba(0,0,0,.45)" });
+  const dot = document.createElement("span");
+  Object.assign(dot.style, { width: "22px", height: "22px", borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #ffd9a8, #c96f2e)" });
+  pill.prepend(dot);
+  pill.addEventListener("click", () => { location.href = `${bases[0]}${home}?kiosk`; });
+  document.body.appendChild(pill);
+  const place = () => {
+    if (mine() && new URLSearchParams(location.search).has("kiosk")) localStorage.setItem(KIOSK, "1");
+    pill.style.display = !framed && !mine() && localStorage.getItem(KIOSK) === "1" ? "flex" : "none";
+  };
+  place();
+  window.addEventListener("location-changed", place);
+  window.addEventListener("popstate", place);
+  setInterval(place, 2000); // Home Assistant's own navigation does not always say so
 })();

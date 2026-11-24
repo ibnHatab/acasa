@@ -67,3 +67,12 @@ is replaced by the integrations the house uses (configuration.yaml, Pascal's and
 kept as `configuration.yaml.before-trim-20261124`), Bluetooth and go2rtc disabled. The Pi's cold start
 did not change with it (Home Assistant answers ~73 s after a reboot: its own start from the SD card);
 Nina's own screen is the answer to that.
+
+## The way back to Nina (2026-11-24)
+
+On a kiosk (a browser that opened Nina's dashboard with `?kiosk`), every other Home Assistant page
+(its full interface, opened by her card's ⌂) has a floating "Nina" button, bottom centre (Home
+Assistant's own buttons are in the corners). Home Assistant loads dashboard resources only on
+dashboards, so `nina-view.js` is also loaded on every page through `frontend: extra_module_url:
+[/local/nina/nina-boot.js]` (configuration.yaml, Pascal's and the Pi's); the loader never changes and
+imports `nina-view.js` fresh, so no cache keeps an old one. A desktop browser never sees the button.
