@@ -61,6 +61,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
           case "typed": this.add("user", e.text); break;
           case "turn":
             if (e.note) this.add("note", e.text.replace(/^NOTE \((\w+)\): /, ""));
+            else if (/^SAY: /.test(e.text)) { /* Nina's own words handed to her voice (a narration): shown as her reply, not as the person's */ }
             else if (!e.typed_shown) {
               const t = e.text.replace(/^\(You were interrupted[^)]*\)\n/, "").trim(), last = this.msgs[this.msgs.length - 1];
               if (!(last && last.cls === "user" && last.text === t && Date.now() - last.t < 5000)) this.add("user", t); // a typed line: shown already
