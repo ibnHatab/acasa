@@ -40,6 +40,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
   quietTalk(text) { if (this.prefs && this.prefs.voice === false && text) this.talkUntil = Math.max(this.talkUntil, Date.now() + Math.min(20000, 600 + text.length * 65)); },
   emit() { this.cards.forEach((c) => c.render()); },
   viewer: null, // {angle, distance, elevation, at}: where the person is (the radar's reading)
+  presence: null, // {present, near, inReach}: the radar's (sensor.nina_viewer): someone in reach, she attends
   look(v) { this.viewer = Object.assign({}, v, { at: Date.now() }); },
   add(cls, text) {
     if (!text || !text.trim()) return null;
@@ -346,7 +347,11 @@ class NinaCard extends HTMLElement {
     if (hub.status) this.status(hub.status);
     else { // no Nina (her panel not reachable): her face rests, eyes closed, nothing drawn
       this.state("Nina is not running here");
-      if (this.frames) { this.show("blink", true); const rig = this.root.querySelector(".rig"); rig.classList.add("slow"); rig.classList.remove("fast", "lean"); }
+      if (this.frames) { // …unless someone is at the screen (the radar): then she looks up
+        const attend = !!hub.presence?.inReach, rig = this.root.querySelector(".rig");
+        this.show("blink", !attend); rig.classList.toggle("slow", !attend); rig.classList.toggle("lean", attend); rig.classList.remove("fast");
+        if (attend && this.isConnected && !document.hidden) this.gl?.start();
+      }
     }
     const max = this.c.message_max_age * 1000;
     const msgs = hub.msgs.filter((m) => !max || Date.now() - m.t <= max).slice(-this.c.max_messages);
@@ -357,6 +362,10 @@ class NinaCard extends HTMLElement {
   set hass(h) {
     this._hass = h;
     const ve = h?.states?.[this.c.viewer || "sensor.nina_viewer"];
+    if (ve) { // presence: someone in reach of the screen and she attends (eyes open, leaning in), asleep or not
+      const pr = { present: ve.state === "present", near: !!ve.attributes?.near, inReach: ve.state === "present" && !!ve.attributes?.in_reach };
+      if (!hub.presence || pr.inReach !== hub.presence.inReach || pr.near !== hub.presence.near || pr.present !== hub.presence.present) { hub.presence = pr; hub.emit(); }
+    }
     // the radar (fsttm-live cmd/radar): state present | absent, attributes distance (m) and, from a radar
     // that has one (an LD2450; the LD2410C has none), angle in degrees
     if (ve && ve.state === "present" && isFinite(+ve.attributes?.angle)) {
@@ -399,13 +408,13 @@ class NinaCard extends HTMLElement {
     const orb = this.root.querySelector(".orb");
     orb.className = "orb" + (s.awake ? "" : " asleep") + (s.hearing ? " hearing" : "") + (s.speaking ? " speaking" : "");
     if (this.frames) {
-      const asleep = !s.mind && !s.awake;
-      if (!asleep && this.isConnected && !document.hidden) this.gl?.start(); // drawing rests while she sleeps
-      this.show("blink", asleep);
+      const asleep = !s.mind && !s.awake, attend = !!hub.presence?.inReach; // someone at the screen: she looks up
+      if ((!asleep || attend) && this.isConnected && !document.hidden) this.gl?.start(); // drawing rests while she sleeps alone
+      this.show("blink", asleep && !attend);
       const rig = this.root.querySelector(".rig");
-      rig.classList.toggle("slow", asleep);
+      rig.classList.toggle("slow", asleep && !attend);
       rig.classList.toggle("fast", !!s.speaking);
-      rig.classList.toggle("lean", !!s.hearing && !s.speaking);
+      rig.classList.toggle("lean", (!!s.hearing || attend) && !s.speaking);
     }
     this.state(!s.mind && !s.awake ? "asleep" : s.speaking ? "speaking" : s.replying ? "thinking" : s.hearing ? "listening" : s.awake ? "here" : "asleep");
   }
