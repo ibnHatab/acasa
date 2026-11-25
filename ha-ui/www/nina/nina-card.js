@@ -57,6 +57,24 @@ const hub = window.__ninaHub || (window.__ninaHub = {
   viewer: null, // {angle, distance, elevation, at}: where the person is (the radar's reading)
   presence: null, // {present, near, inReach}: the radar's (sensor.nina_viewer): someone in reach, she attends
   look(v) { this.viewer = Object.assign({}, v, { at: Date.now() }); },
+  cur: null,        // the person's turn as it is heard: {cls, parts: [{seq, text, final}]}, until the turn goes to her
+  listening: null,  // an utterance open (its seq): the dots, until its words come
+  tent: new Set(),  // utterances over her voice: shown only once they are a barge-in
+  part(seq) {
+    if (!this.cur) { this.cur = { cls: "user", text: "", parts: [], t: Date.now(), live: true }; this.msgs.push(this.cur); if (this.msgs.length > 50) this.msgs.shift(); }
+    let p = this.cur.parts.find((x) => x.seq === seq);
+    if (!p) { p = { seq, text: "", final: false }; this.cur.parts.push(p); }
+    return p;
+  },
+  joined() { if (this.cur) this.cur.text = this.cur.parts.map((p) => p.text).filter(Boolean).join(" "); },
+  drop(seq) { // an utterance that was not the person's words (her echo, a phantom name, kept local asleep)
+    if (this.listening === seq) this.listening = null;
+    if (this.cur) {
+      this.cur.parts = this.cur.parts.filter((p) => p.seq !== seq);
+      if (!this.cur.parts.length) { this.msgs = this.msgs.filter((m) => m !== this.cur); this.cur = null; } else this.joined();
+    }
+    this.emit();
+  },
   add(cls, text) {
     if (!text || !text.trim()) return null;
     const m = { cls, text: text.trim(), t: Date.now() };
@@ -80,12 +98,32 @@ const hub = window.__ninaHub || (window.__ninaHub = {
         const e = JSON.parse(m.data);
         switch (e.ev) {
           case "typed": this.add("user", e.text); break;
+          case "vad_start": if (e.tentative) this.tent.add(e.seq); else { this.listening = e.seq; this.emit(); } break;
+          case "vad_end": if (this.listening === e.seq) setTimeout(() => { if (this.listening === e.seq) { this.listening = null; this.emit(); } }, 2500); break;
+          case "barge_duck": this.tent.delete(e.seq); this.listening = e.seq; this.emit(); break; // a voice over hers: shown from now on
+          case "interim":
+            if (this.tent.has(e.seq) || !e.text) break;
+            { const p = this.part(e.seq); if (!p.final) { p.text = e.text.trim(); this.listening = null; this.joined(); this.emit(); } }
+            break;
+          case "heard":
+            if (e.tentative) break; // over her voice: echo or barge_in decide
+            if (!e.text || !e.text.trim()) { this.drop(e.seq); break; }
+            { const p = this.part(e.seq); p.text = e.text.trim(); p.final = true; if (this.listening === e.seq) this.listening = null; this.joined(); this.emit(); }
+            break;
+          case "barge_in": { this.tent.delete(e.seq); const p = this.part(e.seq); p.text = (e.heard || "").trim(); p.final = true; this.joined(); this.emit(); break; }
+          case "echo": case "phantom_name": case "asleep_local": this.tent.delete(e.seq); this.drop(e.seq); break;
+          case "aside": if (this.cur) { this.cur.cls = "user aside"; this.cur.live = false; this.cur = null; this.emit(); } break;
           case "turn":
             if (e.note) this.add("note", e.text.replace(/^NOTE \((\w+)\): /, ""));
             else if (/^SAY: /.test(e.text)) { /* Nina's own words handed to her voice (a narration): shown as her reply, not as the person's */ }
             else if (!e.typed_shown) {
               const t = e.text.replace(/^\(You were interrupted[^)]*\)\n/, "").trim(), last = this.msgs[this.msgs.length - 1];
-              if (!(last && last.cls === "user" && last.text === t && Date.now() - last.t < 5000)) this.add("user", t); // a typed line: shown already
+              if (this.cur) { // heard as it was spoken: the turn's text settles it (her echo stripped, utterances joined)
+                const norm = (x) => x.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").replace(/\s+/g, " ").trim();
+                if (norm(this.cur.parts.map((p) => p.text).join(" ")) !== norm(t)) this.cur.parts = [{ seq: 0, text: t, final: true }];
+                this.cur.parts.forEach((p) => (p.final = true));
+                this.cur.live = false; this.joined(); this.cur = null; this.listening = null; this.emit();
+              } else if (!(last && last.cls === "user" && last.text === t && Date.now() - last.t < 5000)) this.add("user", t); // a typed line: shown already
             }
             this.nina = null; this.said = ""; break;
           case "said":
@@ -185,6 +223,13 @@ class NinaCard extends HTMLElement {
           color: var(--assist-chat-display-user-bubble-color, #fff); }
   .nina { align-self: flex-start; background: var(--assist-chat-display-assistant-bubble-background, var(--primary-color));
           color: var(--assist-chat-display-assistant-bubble-color, #fff); }
+  .b .seg.live { opacity: .62; font-style: italic; }       /* progressive recognition: words still forming */
+  .b .cut { display: inline-block; width: 1px; height: .9em; margin: 0 7px; vertical-align: -1px; background: currentColor; opacity: .45; } /* an utterance split (FSTTM) */
+  .b.live { opacity: .92; }
+  .b.listening { align-self: flex-end; padding: 6px 12px; background: rgba(59,110,165,.45); color: #fff; letter-spacing: 3px; }
+  .b.listening::after { content: "•••"; animation: ninadots 1.2s infinite steps(4); }
+  @keyframes ninadots { 0% { clip-path: inset(0 100% 0 0); } 100% { clip-path: inset(0 0 0 0); } }
+  .user.aside { opacity: .55; font-style: italic; }
   .note { align-self: center; background: transparent; color: var(--secondary-text-color); font-style: italic; font-size: .9em; }
   .off { color: var(--secondary-text-color); font-size: .85em; text-align: center; }
   .hint { margin: auto; color: var(--secondary-text-color); text-align: center; line-height: 1.6; opacity: .8; }
@@ -417,7 +462,19 @@ class NinaCard extends HTMLElement {
     const max = this.c.message_max_age * 1000;
     const msgs = hub.msgs.filter((m) => !max || Date.now() - m.t <= max).slice(-this.c.max_messages);
     const chat = this.root.querySelector(".chat");
-    chat.replaceChildren(...msgs.map((m) => { const b = document.createElement("div"); b.className = "b " + m.cls; b.textContent = m.text; return b; }));
+    const bubble = (m) => {
+      const b = document.createElement("div");
+      b.className = "b " + m.cls + (m.live ? " live" : "");
+      if (!m.parts) { b.textContent = m.text; return b; }
+      m.parts.filter((p) => p.text).forEach((p, i) => { // the utterances as the endpointer split them
+        if (i) { const c = document.createElement("span"); c.className = "cut"; c.title = "a pause: the utterance split here"; b.appendChild(c); }
+        const sp = document.createElement("span"); sp.className = "seg" + (p.final ? "" : " live"); sp.textContent = p.text; b.appendChild(sp);
+      });
+      return b;
+    };
+    const nodes = msgs.filter((m) => !m.parts || m.parts.some((p) => p.text)).map(bubble);
+    if (hub.listening != null && hub.status?.awake !== false) { const d = document.createElement("div"); d.className = "b listening"; d.title = "listening"; nodes.push(d); }
+    chat.replaceChildren(...nodes);
     chat.scrollTop = chat.scrollHeight;
   }
   set hass(h) {
