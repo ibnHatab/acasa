@@ -202,7 +202,17 @@ class NinaCard extends HTMLElement {
       setTimeout(() => this.face(), 0); // after Home Assistant gives the card its states (her persona)
       if (this.c.height) this.root.querySelector("ha-card").style.height = this.c.height;
       this.root.querySelectorAll("button[data-p]").forEach((b) =>
-        b.addEventListener("click", () => this.toggle(b.dataset.p)));
+        b.addEventListener("click", async () => {
+          const was = !!hub.prefs?.[b.dataset.p];
+          this.toggle(b.dataset.p);
+          if (was) return; // turned off: nothing to open
+          // on a Home Assistant dashboard (not her own screen, not opened large already): the mic brings
+          // her card up large, the conversation readable while you talk (the user, 2026-11-25)
+          if (b.dataset.p === "mic" && !this.c.expanded && !window.__ninaShell && !location.pathname.startsWith("/nina-")) {
+            const { expand, card } = await EXPAND;
+            expand(card("nina-card", { ...this.c, expanded: true, height: "min(86vh, 640px)" }));
+          }
+        }));
       // ⌂: Home Assistant's full interface (on Nina's own screen its mode; on a Home Assistant
       // dashboard, its default dashboard, the sidebar there leads back to hers)
       // ⚑: what surprised her (asked as if typed: she answers with the explain tool's SURPRISES)

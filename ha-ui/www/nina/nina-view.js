@@ -71,12 +71,7 @@ const ninaStream = (panel) => ((window.__ninaStreams ||= {})[panel] ||= (() => {
   const dot = document.createElement("span");
   Object.assign(dot.style, { width: "22px", height: "22px", borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #ffd9a8, #c96f2e)" });
   pill.prepend(dot);
-  pill.addEventListener("click", async () => { // a single click: her card large, her own screen one more tap
-    const { expand, card } = await EXPAND;
-    if (!customElements.get("nina-card")) { location.href = `${bases[0]}${home}?kiosk`; return; }
-    expand(card("nina-card", { type: "custom:nina-card", height: "min(86vh, 640px)", scenes: false, expanded: true }),
-      { actions: [{ label: "Her screen", run: () => { location.href = `${bases[0]}${home}?kiosk`; } }] });
-  });
+  pill.addEventListener("click", () => { location.href = `${bases[0]}${home}?kiosk`; }); // her own screen (the user: the button changes the layout; her card opens from the card)
   document.body.appendChild(pill);
   const place = () => {
     const k = new URLSearchParams(location.search).get("kiosk");
