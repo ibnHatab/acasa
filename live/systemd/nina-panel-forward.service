@@ -1,7 +1,7 @@
 [Unit]
-Description=Nina's panel on Pascal, at the Pi's port 8770 (systemd-socket-proxyd)
+Description=Nina's panel on Pascal (its tailnet address: fixed, the LAN one is DHCP), at the Pi's port 8770 (systemd-socket-proxyd)
 Requires=nina-panel-forward.socket
 After=nina-panel-forward.socket
 
 [Service]
-ExecStart=/usr/lib/systemd/systemd-socket-proxyd 192.168.1.140:8770
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 100.111.202.46:8770

@@ -9,7 +9,7 @@ After=graphical-session.target
 
 [Service]
 Environment=XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0
-ExecStart=%h/repo/fsttm-live/bin/radar -dev /dev/serial0 -hass http://homeassistant.local:8123 -hass http://192.168.1.140:8123
+ExecStart=%h/repo/fsttm-live/bin/radar -dev /dev/serial0 -hass http://homeassistant.local:8123 -hass http://100.111.202.46:8123
 Restart=on-failure
 RestartSec=5
 
