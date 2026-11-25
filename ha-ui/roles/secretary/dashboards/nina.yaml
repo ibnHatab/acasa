@@ -1,0 +1,161 @@
+# The secretary's (the office, pero; acasa ha-ui roles/secretary, 2026-11-25): the home's without its
+# light and air, the agenda on the office account's Google calendar. Replaces dashboards/nina.yaml where
+# the role is secretary. From the home's:
+# Nina's dashboard (acasa ha-ui, 2026-11-24): the kiosk's screen (1024x600). One page for each
+# kind of thing Nina does, all alike: Nina on the left (her state, the mic and voice, the
+# conversation going on as the page changes), what she is doing on the right. Her tool calls bring
+# up the page that shows it (www/nina/views.json, www/nina/nina-view.js); after a while the
+# dashboard goes back home. Applied by `go run ./cmd/ha-ui` (the dashboard: /nina-panel).
+# Preview at the panel's size: /local/nina/preview.html?view=<page>.
+#
+# 2026-11-25 (the user's design 2): the right side is Nina's domain cards (www/nina/nina-domain-card.js):
+# each domain's Codex scene faint behind its card; when she uses the domain the card blooms (the
+# scene, her words) and collapses into its icon, which keeps a mark (a timer: its countdown). Her
+# face on the left stays hers alone.
+title: Nina
+x-icon: mdi:account-voice   # the sidebar's (ha-ui)
+x-sidebar: false            # the kiosk's screen, opened by its address (/nina-panel/home?kiosk): in Home Assistant's
+                            # full mode it only repeated the Home dashboard (the user, 2026-11-25: confusing)
+
+# kiosk-mode (NemesisRE, v16): the panel's screen and the preview hide Home Assistant's chrome; a
+# desktop's full-size browser keeps it, for editing. ?disable_km brings it back anywhere.
+kiosk_mode:
+  hide_header: "[[[ window.matchMedia('(max-width: 1100px)').matches ]]]"
+  hide_sidebar: "[[[ window.matchMedia('(max-width: 1100px)').matches ]]]"
+
+x-nina: &nina
+  type: custom:nina-card
+  height: calc(100vh - 16px)
+  scenes: false   # scenes over her face: off (design 2 puts them on the domain cards instead)
+
+
+x-agenda-soon: &agenda_soon
+  type: markdown
+  text_only: true
+  content: >-
+    {% set ev = [('calendar.nina_pero_tm_gmail_com','Office')] %}
+    {% for e, who in ev if state_attr(e, 'message') %}
+    **{{ as_timestamp(state_attr(e, 'start_time')) | timestamp_custom('%a %H:%M') }}** · {{ state_attr(e, 'message') }}<br>
+    {% else %}Nothing in the calendar soon.{% endfor %}
+
+views:
+  - title: Home
+    path: home
+    icon: mdi:home-heart
+    type: panel
+    cards:
+      - type: horizontal-stack
+        cards:
+          - *nina
+          - type: vertical-stack
+            cards:
+              - type: markdown
+                text_only: true
+                content: >-
+                  <h1 style="font-size:3.2em;font-weight:300;margin:0;line-height:1">{{ now().strftime('%H:%M') }}</h1>
+                  {{ now().strftime('%A, %-d %B') }}{% if state_attr('sensor.nina_persona', 'mood') %}<span style="opacity:.6">
+                  · {{ state_attr('sensor.nina_persona', 'mood') }}, {{ state_attr('sensor.nina_persona', 'moon') }}</span>{% endif %}
+              - type: custom:nina-domain-card
+                compact: true
+                scene: weather
+                focus: "12% 18%"
+                title: Weather
+                icon: mdi:weather-partly-cloudy
+                card: {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
+                expand: {type: vertical-stack, cards: [{type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}, {type: weather-forecast, entity: weather.home, forecast_type: hourly, show_current: false, show_forecast: true}]}
+              - type: custom:nina-domain-card
+                compact: true
+                scene: music
+                focus: "92% 55%"
+                title: Radio
+                icon: mdi:radio
+                card: {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
+                expand: {type: vertical-stack, cards: [{type: media-control, entity: media_player.music_player_daemon}, {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}]}
+              - type: horizontal-stack
+                cards:
+                  - type: custom:nina-domain-card
+                    compact: true
+                    scene: agenda
+                    focus: "90% 45%"
+                    title: Agenda
+                    icon: mdi:calendar-heart
+                    card: *agenda_soon
+                    expand: {type: vertical-stack, cards: [{type: calendar, initial_view: listWeek, entities: [calendar.nina_pero_tm_gmail_com]}, {type: todo-list, entity: todo.my_tasks}]}
+                  - type: custom:nina-domain-card
+                    scene: timers
+                    focus: "45% 78%"
+                    title: Timers
+                    subtitle: none running
+                    icon: mdi:timer-sand
+                    countdown: true
+
+  - title: Music
+    path: music
+    icon: mdi:music
+    type: panel
+    cards:
+      - type: horizontal-stack
+        cards:
+          - *nina
+          - type: custom:nina-domain-card
+            scene: music
+            title: Music
+            subtitle: ask for a kind of music, a station, or "something"
+            icon: mdi:radio
+            height: 584px
+            card:
+              type: vertical-stack
+              cards:
+                - {type: media-control, entity: media_player.music_player_daemon}
+                - {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
+
+  - title: Agenda
+    path: agenda
+    icon: mdi:calendar-heart
+    type: panel
+    cards:
+      - type: horizontal-stack
+        cards:
+          - *nina
+          - type: custom:nina-domain-card
+            scene: agenda
+            title: Agenda
+            icon: mdi:calendar-heart
+            height: 584px
+            card:
+              type: vertical-stack
+              cards:
+                - {type: calendar, initial_view: listWeek, entities: [calendar.nina_pero_tm_gmail_com]}
+                - {type: todo-list, entity: todo.my_tasks}
+
+  - title: Weather
+    path: weather
+    icon: mdi:weather-partly-cloudy
+    type: panel
+    cards:
+      - type: horizontal-stack
+        cards:
+          - *nina
+          - type: custom:nina-domain-card
+            scene: weather
+            title: Weather
+            icon: mdi:weather-partly-cloudy
+            height: 584px
+            card:
+              type: vertical-stack
+              cards:
+                - {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
+                - {type: weather-forecast, entity: weather.home, forecast_type: hourly, show_current: false, show_forecast: true}
+
+  - title: Surprises
+    path: surprises
+    icon: mdi:flag
+    type: panel
+    cards:
+      - type: horizontal-stack
+        cards:
+          - *nina
+          - type: vertical-stack
+            cards:
+              - {type: custom:nina-surprises-card, list_height: 210px}
+              - {type: custom:nina-activity-card, list_height: 170px}

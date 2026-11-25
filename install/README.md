@@ -133,6 +133,10 @@ bubble (`prefs.bubble`, the one sound knob for her voice and the music), the bar
   §4: an include lifts a unit's declarations; `include "unit" hiding (rule …)` drops a rule, and
   its replacement takes a new name: a hidden rule re-declared is `hiding-shadow`), its own
   `composition.yaml`, its own `.metis/` for her surprises.
+- **Her screens**: her role's dashboards, where they differ from the home's
+  (`ha-ui/roles/ROLE/dashboards/`, e.g. the office's `secretary`: no home lights or air, the office
+  account's Google calendar and tasks): `echo ROLE > ~/.config/nina/role`, then `go run ./cmd/ha-ui
+  -url http://127.0.0.1:8123` (and every `pi-update.sh`) applies them.
 - **Her config**: `acasa/live/nina-HOST.yaml` (the core: the log, the catalog, Home Assistant at
   `http://127.0.0.1:8123`, the tasks, the search, the MCP servers) and `acasa/live/HOST.yaml` (the
   dialogue: the sound, the models, the prefs, the panel with `remote: /nina/shell.html` and the

@@ -44,6 +44,7 @@ var (
 	host   = flag.String("ssh", "", "the machine Home Assistant's config is on (\"\": this one; the Pi: nina@homeassistant.local)")
 	config = flag.String("config", "~/homeassistant/config", "Home Assistant's config folder there (the Pi: /home/nina/homeassistant/config)")
 	kiosk  = flag.Bool("kiosk", false, "also write the Pi's kiosk config and restart the kiosk")
+	role   = flag.String("role", "", "her role here (roles/<role>/dashboards/<name>.yaml replaces dashboards/<name>.yaml); \"\": ~/.config/nina/role, else the home's")
 )
 
 func expand(p string) string {
@@ -322,8 +323,24 @@ func main() {
 		log.Printf("themes: %d, Nina's the default", len(themes))
 	}
 
-	// dashboards
+	// dashboards: the home's, each replaced by her role's own where it has one (the office: roles/secretary)
+	if *role == "" {
+		if b, err := os.ReadFile(expand("~/.config/nina/role")); err == nil {
+			*role = strings.TrimSpace(string(b))
+		}
+	}
 	dbs, _ := filepath.Glob(filepath.Join(d, "dashboards", "*.yaml"))
+	for i, f := range dbs {
+		if *role == "" {
+			break
+		}
+		if r := filepath.Join(d, "roles", *role, "dashboards", filepath.Base(f)); exists(r) {
+			dbs[i] = r
+		}
+	}
+	if *role != "" {
+		log.Printf("role: %s", *role)
+	}
 	for _, f := range dbs {
 		b, _ := os.ReadFile(f)
 		var conf map[string]any
@@ -376,3 +393,5 @@ func main() {
 		log.Printf("kiosk: config written, Firefox restarted")
 	}
 }
+
+func exists(p string) bool { _, err := os.Stat(p); return err == nil }

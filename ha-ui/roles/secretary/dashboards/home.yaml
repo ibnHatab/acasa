@@ -1,0 +1,84 @@
+# The secretary's (the office, pero; acasa ha-ui roles/secretary, 2026-11-25; the user: only the office
+# and the kitchen, the home's lights and air not here; her calendar and tasks are the office account's
+# Google ones). Replaces dashboards/home.yaml where the role is secretary. From the home's:
+# Home Assistant's full mode in Nina's scheme (acasa ha-ui, 2026-11-25; the user: in the full mode a
+# Nina card, not a button, with her settings and her activities; the surprises a card of their own;
+# the rooms' cards with the scenes as their backgrounds). Her card's ⌂ opens it (/home-panel); the
+# chrome stays (no kiosk_mode): here devices are added and configured. Applied by `go run ./cmd/ha-ui`.
+title: Office
+x-icon: mdi:view-dashboard-variant   # the sidebar's (ha-ui)
+
+views:
+  - title: Home
+    path: home
+    icon: mdi:home-heart
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - {type: heading, heading: Nina, icon: mdi:account-voice}
+          - {type: custom:nina-card, height: 380px, scenes: false, grid_options: {columns: full}}
+          - {type: custom:nina-activity-card, list_height: 260px, grid_options: {columns: full}}
+          - {type: custom:nina-surprises-card, list_height: 200px, grid_options: {columns: full}}
+
+      - type: grid
+        cards:
+          - {type: heading, heading: Office, icon: mdi:desk}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: agenda
+            title: Agenda
+            icon: mdi:calendar-heart
+            card: {type: calendar, initial_view: listWeek, entities: [calendar.nina_pero_tm_gmail_com]}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: agenda
+            focus: "90% 45%"
+            title: Tasks
+            icon: mdi:format-list-checks
+            card: {type: todo-list, entity: todo.my_tasks}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: timers
+            focus: "45% 78%"
+            title: Timers
+            subtitle: none running
+            icon: mdi:timer-sand
+            countdown: true
+
+      - type: grid
+        cards:
+          - {type: heading, heading: Kitchen, icon: mdi:silverware-fork-knife}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: music
+            focus: "92% 55%"
+            title: Radio
+            icon: mdi:radio
+            card: {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
+          - {type: heading, heading: Outside, icon: mdi:weather-partly-cloudy}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: weather
+            focus: "12% 18%"
+            title: Weather
+            icon: mdi:weather-partly-cloudy
+            card: {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
+
+  - title: Nina
+    path: nina
+    icon: mdi:account-cog
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - {type: heading, heading: Her settings, icon: mdi:account-cog}
+          - {type: custom:nina-settings-card, grid_options: {columns: full}}
+          - {type: heading, heading: Her sound bubble, icon: mdi:surround-sound}
+          - {type: custom:nina-bubble-card, room: 5, grid_options: {columns: full}}   # the one sound knob, her voice and the music
+      - type: grid
+        cards:
+          - {type: heading, heading: What she did, icon: mdi:timeline-clock}
+          - {type: custom:nina-activity-card, list_height: 420px, grid_options: {columns: full}}
