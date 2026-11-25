@@ -2,7 +2,8 @@
 # machine.sh: a Nina machine from a fresh Raspberry Pi OS (trixie) card (install/README.md, step 2;
 # written on the office Pi "pero", 2026-11-25). Run on the Pi as nina, from a clone of acasa:
 #
-#   git clone -q https://github.com/ibnHatab/acasa.git ~/repo/acasa && ~/repo/acasa/install/machine.sh
+#   sudo apt-get install -y -qq git && git clone -q https://github.com/ibnHatab/acasa.git ~/repo/acasa && ~/repo/acasa/install/machine.sh
+#   (Lite has no git)
 #
 # For Raspberry Pi OS **Lite** (64-bit, trixie): the kiosk is ha-pi-kiosk's bare labwc session, as
 # on the first Pi (a desktop image would keep its own desktop and taskbar).

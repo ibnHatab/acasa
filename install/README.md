@@ -34,7 +34,7 @@ serial port (`console=ttyS0`): taken off in step 2 for a radar.
 On the Pi, as `nina` (SSH from the desktop: `ssh nina@HOST.local`):
 
 ```
-git clone -q https://github.com/ibnHatab/acasa.git ~/repo/acasa && ~/repo/acasa/install/machine.sh
+sudo apt-get install -y -qq git && git clone -q https://github.com/ibnHatab/acasa.git ~/repo/acasa && ~/repo/acasa/install/machine.sh
 ```
 
 One idempotent command (run it again after a failure: it skips what is done):
