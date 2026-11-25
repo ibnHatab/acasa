@@ -105,6 +105,8 @@ views:
         cards:
           - {type: heading, heading: Her settings, icon: mdi:account-cog}
           - {type: custom:nina-settings-card, grid_options: {columns: full}}
+          - {type: heading, heading: Her sound bubble, icon: mdi:surround-sound}
+          - {type: custom:nina-bubble-card, room: 5, grid_options: {columns: full}}   # the one sound knob, her voice and the music
       - type: grid
         cards:
           - {type: heading, heading: What she did, icon: mdi:timeline-clock}

@@ -6,6 +6,8 @@
 //   type: custom:nina-settings-card     her name, persona (automatic or pinned), voice, the temperament's tuning
 //   type: custom:nina-activity-card     what she did lately: her tools, her moods, who came by, surprises
 //   type: custom:nina-surprises-card    the loop workspace's surprises: open, taken, ruled (panel /metis/)
+//   type: custom:nina-bubble-card       her sound bubble: the one sound knob (her voice and the music), as a space
+//                                       in the room; the distance calibration's points (room: 5, metres wide)
 const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
 const ASSETS = new URL(".", import.meta.url).pathname;
 const PANEL = `${location.protocol}//${location.hostname}:8770`;
@@ -134,6 +136,118 @@ class NinaSettingsCard extends NinaBase {
   }
 }
 
+// ---- the sound bubble ---------------------------------------------------------------------------
+// The one sound knob (the user, 2026-11-25: not a sound level, the sound bubble: a 5-metre room, you
+// put the bubble and she operates in that space). Her voice and the music carry to its edge: 1 m is
+// the acoustic calibration's minimum (as loud at the array as a person), each doubling `slope` dB
+// more, up to the echo canceller's limit (+12 dB). The distance calibration: stand somewhere, set
+// the bubble until she is comfortable there, "comfortable here": the slope is fitted to the points.
+const MAX_GAIN = 12; // fsttm-live audio.MaxGain
+class NinaBubbleCard extends NinaBase {
+  get style() {
+    return `.plan { width: 100%; display: block; border-radius: 12px; background: rgba(0,0,0,.35); touch-action: none; cursor: crosshair; }
+      .plan .grid { stroke: rgba(255,255,255,.08); stroke-width: .02; }
+      .plan .wall { fill: none; stroke: rgba(255,255,255,.35); stroke-width: .05; }
+      .plan .edge { fill: none; stroke: #f0a37f; stroke-width: .05; }
+      .plan .limit { fill: none; stroke: rgba(255,255,255,.3); stroke-width: .03; stroke-dasharray: .12 .1; }
+      .plan .ripple { fill: none; stroke: #f0a37f; stroke-width: .04; }
+      .plan text { fill: rgba(255,255,255,.7); font: .22px system-ui, sans-serif; }
+      .plan .pt { fill: #fff; } .plan .who { fill: #7fc7f0; }
+      .read { font-variant-numeric: tabular-nums; }
+      .row button { padding: 8px 14px; } .row input.d { flex: none; width: 64px; }`;
+  }
+  setConfig(c) {
+    this.c = c || {};
+    if (this.root) return;
+    this.W = this.c.room || 5; this.H = this.c.depth || Math.round(this.W * 0.7 * 10) / 10;
+    const W = this.W, H = this.H, nx = 0.25, ny = H / 2;
+    this.at = [nx, ny];
+    const el = this.frame("music", 2, "mdi:surround-sound", "Sound bubble", "how far her voice and the music carry");
+    let grid = "";
+    for (let x = 1; x < W; x++) grid += `<line class="grid" x1="${x}" y1="0" x2="${x}" y2="${H}"/>`;
+    for (let y = 1; y < H; y++) grid += `<line class="grid" x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
+    el.innerHTML = `
+      <svg class="plan" viewBox="-0.1 -0.1 ${W + 0.2} ${H + 0.2}">
+        <defs><radialGradient id="glow"><stop offset="0" stop-color="#d97757" stop-opacity=".55"/><stop offset="1" stop-color="#d97757" stop-opacity=".08"/></radialGradient>
+          <clipPath id="room"><rect x="0" y="0" width="${W}" height="${H}"/></clipPath></defs>
+        ${grid}
+        <g clip-path="url(#room)">
+          <circle class="limit" cx="${nx}" cy="${ny}" r="4"/>
+          <circle class="fill" cx="${nx}" cy="${ny}" r="1" fill="url(#glow)"/>
+          ${[0, 1, 2].map((i) => `<circle class="ripple" cx="${nx}" cy="${ny}" r="0"><animate attributeName="r" from="0" to="1" dur="3s" begin="${i}s" repeatCount="indefinite"/><animate attributeName="opacity" from=".9" to="0" dur="3s" begin="${i}s" repeatCount="indefinite"/></circle>`).join("")}
+          <circle class="edge" cx="${nx}" cy="${ny}" r="1"/>
+          <g class="pts"></g>
+          <circle class="who" cx="-9" cy="${ny}" r=".12"/>
+        </g>
+        <rect class="wall" x="0" y="0" width="${W}" height="${H}"/>
+        <rect x="${nx - 0.12}" y="${ny - 0.22}" width=".16" height=".44" rx=".04" fill="#d97757"/>
+        <text x="${nx + 0.1}" y="${ny + 0.55}">Nina</text>
+        <text x="${W - 0.55}" y="${H - 0.12}">${W} m</text>
+      </svg>
+      <div class="row"><span class="read r"></span></div>
+      <div class="row"><button class="ghost minus" title="quieter: her last words again">−</button><button class="ghost plus" title="louder: her last words again">+</button>
+        <button class="ghost hear">▶ Hear her</button><span class="note msg"></span></div>
+      <div class="row"><label>Comfortable at</label><input class="d" type="number" min="0.5" max="12" step="0.1" value="2"> m
+        <button class="here">Comfortable here</button><button class="ghost reset" title="forget the distance points">Reset</button></div>
+      <div class="note">Drag the bubble's edge, or − and +: her voice and the music carry to it. To calibrate, stand where you sit, size the bubble until she is comfortable there, then "Comfortable here". The dashed ring is the echo canceller's limit.</div>`;
+    const q = (s) => this.root.querySelector(s);
+    const svg = q(".plan");
+    const say = (t) => { q(".msg").textContent = t; clearTimeout(this.tm); this.tm = setTimeout(() => (q(".msg").textContent = ""), 4000); };
+    const point = (e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const m = p.matrixTransform(svg.getScreenCTM().inverse()); return Math.hypot(m.x - nx, m.y - ny); };
+    let drag = false;
+    svg.addEventListener("pointerdown", (e) => { drag = true; svg.setPointerCapture(e.pointerId); this.draw(point(e)); });
+    svg.addEventListener("pointermove", (e) => drag && this.draw(point(e)));
+    svg.addEventListener("pointerup", async (e) => {
+      if (!drag) return; drag = false;
+      const b = this.clamp(point(e));
+      try { const r = await api("/api/prefs", { bubble: Math.round(b * 100) / 100 }); if (r.error) throw r.error; await api("/api/do", { action: "sample" }).catch(() => {}); }
+      catch (err) { say(String(err)); }
+      this.load();
+    });
+    const act = (a, arg) => api("/api/do", { action: a, arg: arg || "" }).then((r) => { if (r?.error) say(r.error); setTimeout(() => this.load(), 300); }).catch((e) => say(String(e)));
+    q(".minus").addEventListener("click", () => act("quieter"));
+    q(".plus").addEventListener("click", () => act("louder"));
+    q(".hear").addEventListener("click", () => act("sample"));
+    q(".here").addEventListener("click", () => act("bubble_here", q(".d").value).then(() => say("noted")));
+    q(".reset").addEventListener("click", () => act("bubble_reset"));
+    this.load();
+    this.tw = setInterval(() => this.who(), 5000);
+  }
+  disconnectedCallback() { clearInterval(this.tw); }
+  connectedCallback() { if (this.root && !this.tw) this.tw = setInterval(() => this.who(), 5000); }
+  slope() { return this.p?.bubble_slope || 6; }
+  max() { return Math.pow(2, MAX_GAIN / this.slope()); }
+  clamp(b) { return Math.max(0.5, Math.min(this.max(), b)); }
+  load() {
+    return api("/api/state").then((s) => { this.p = s.prefs || {}; this.draw(this.p.bubble || 1); this.who(); })
+      .catch(() => (this.root.querySelector(".r").textContent = "her panel is not reachable"));
+  }
+  draw(b) {
+    const q = (s) => this.root.querySelector(s);
+    b = this.clamp(b);
+    for (const c of this.root.querySelectorAll(".fill, .edge")) c.setAttribute("r", b);
+    for (const a of this.root.querySelectorAll(".ripple animate[attributeName=r]")) a.setAttribute("to", b);
+    q(".limit").setAttribute("r", this.max());
+    const g = this.slope() * Math.log2(b);
+    q(".r").textContent = `${b.toFixed(1)} m · ${g >= 0 ? "+" : ""}${g.toFixed(1)} dB over the minimum · ${this.slope()} dB per doubling · limit ${this.max().toFixed(1)} m`;
+    const [nx, ny] = this.at;
+    q(".pts").innerHTML = (this.p?.bubble_points || []).map(([d], i) => {
+      const a = (i % 5 - 2) * 0.35; // fanned out, so points at one distance stay apart
+      return `<circle class="pt" cx="${nx + d * Math.cos(a)}" cy="${ny + d * Math.sin(a)}" r=".07"><title>${d} m</title></circle>`;
+    }).join("");
+  }
+  // the person, from the radar (her panel's presence events), on her axis
+  who() {
+    api("/api/recent").then((r) => {
+      const ev = (r || []).filter((e) => e.ev === "presence").pop();
+      const d = ev?.distance;
+      const c = this.root.querySelector(".who");
+      if (d && ev.kind !== "left") { c.setAttribute("cx", this.at[0] + d); this.root.querySelector(".d").value = (+d).toFixed(1); }
+      else c.setAttribute("cx", -9);
+    }).catch(() => {});
+  }
+}
+
 // ---- activity ---------------------------------------------------------------------------------
 const TOOL_WORDS = { home_timers: "a timer", home_music: "the music", home_glow: "the bedroom light", home_lights: "the lights",
   home_air: "the air", home_comfort: "the air", home_agenda: "the agenda", calendar: "the calendar", lists: "the lists",
@@ -213,6 +327,7 @@ class NinaSurprisesCard extends NinaBase {
 customElements.define("nina-settings-card", NinaSettingsCard);
 customElements.define("nina-activity-card", NinaActivityCard);
 customElements.define("nina-surprises-card", NinaSurprisesCard);
+customElements.define("nina-bubble-card", NinaBubbleCard);
 window.customCards = window.customCards || [];
 window.customCards.push(
   { type: "nina-settings-card", name: "Nina: settings", description: "Her name, persona, voice and temperament." },

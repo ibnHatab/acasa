@@ -12,7 +12,9 @@ audio:
   channels: 6 # the ReSpeaker's 6-channel firmware
   speech: 0 # its processed speech channel
   ref: 5 # its echo reference channel (-1: none)
-  out: "" # playback: aplay -D (plughw:ArrayUAC10: the ReSpeaker's jack), pulse:SINK; "" default
+  out: pulse:alsa_output.usb-SEEED_ReSpeaker_4_Mic_Array__UAC1.0_-00.analog-stereo # the speakers on the array's jack
+      # (2026-11-25), through PulseAudio so the radio (MPD) mixes in: both in the echo canceller's reference
+  level: -36 # her speech out, dBFS RMS, at a 1 m bubble: as loud at the array as the person (fsttm-live scripts/calib)
   vad_mode: 3
   hang: 700ms # silence that ends an utterance
   max_utterance: 25s
@@ -46,6 +48,7 @@ prefs:
   rhvoice: slt
   paradee: af_heart
   narration: important # the lowest NOTE level spoken: info, important, urgent, off
+  bubble: 1 # the one sound knob: metres her voice (and the music) carries; 1 the calibrated minimum, x2 +6 dB, up to 4
 plugins:
   web: # the panel: preferences, status, the conversation; a kiosk's screen
     enabled: true
