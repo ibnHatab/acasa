@@ -11,11 +11,11 @@ models:
   mind: gemini-3.1-flash-live-preview # the voice+mind: text turns in, audio out
   vocab: [Nina, office, kitchen, agenda, calendar, meeting, tasks, reminder]
 audio:
-  device: pulse:alsa_input.usb-KTMicro_KT_USB_Audio_2021-06-07-0000-0000-0000--00.mono-fallback # the KT USB adapter's microphone (UGREEN), through PipeWire
+  device: pulse:nina_ec_source # the KT adapter's microphone (UGREEN) through PipeWire's echo canceller (live/pipewire)
   channels: 1
   speech: 0
-  ref: -1 # no echo reference: barge-in by words until PipeWire's echo canceller (calibration: next)
-  out: pulse:alsa_output.usb-KTMicro_KT_USB_Audio_2021-06-07-0000-0000-0000--00.analog-stereo # the speakers on the KT adapter's jack
+  ref: -1 # no reference channel in the sound: the canceller works in PipeWire, before Nina hears it
+  out: pulse:nina_ec_sink # the KT adapter's speakers, through the canceller (its reference: her voice and the radio)
   level: 0 # her voice as it comes: not calibrated yet here (fsttm-live scripts/calib, softaec.py)
   barge: -1 # no reference to tell her echo from a voice by level
   vad_mode: 3

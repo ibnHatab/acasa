@@ -1,0 +1,39 @@
+# Nina's echo canceller (acasa live/pipewire; install: echo-cancel.sh): PipeWire's WebRTC canceller between
+# a separate microphone and speakers (no ReSpeaker array, no reference of its own: the office's KT USB
+# adapter, 2026-11-26). Nina listens to nina_ec_source; her voice and the radio play to nina_ec_sink (the
+# default output), which the canceller takes as its reference. The microphone and speakers are named, not
+# the defaults: the canceller's own sink becomes the default, and would loop into itself.
+# No automatic gain: at home it lifted the leftover echo with the voice (fsttm-live scripts/calib).
+context.modules = [
+  { name = libpipewire-module-echo-cancel
+    args = {
+      library.name = aec/libspa-aec-webrtc
+      monitor.mode = false
+      aec.args = {
+        webrtc.gain_control = false
+        webrtc.extended_filter = true
+        webrtc.noise_suppression = true
+        webrtc.high_pass_filter = true
+        webrtc.voice_detection = false
+      }
+      capture.props = {
+        node.name = "nina_ec_capture"
+        target.object = "@SOURCE@"
+        node.passive = true
+      }
+      source.props = {
+        node.name = "nina_ec_source"
+        node.description = "Nina: the microphone, her echo cancelled"
+      }
+      sink.props = {
+        node.name = "nina_ec_sink"
+        node.description = "Nina: the speakers (the canceller's reference)"
+      }
+      playback.props = {
+        node.name = "nina_ec_playback"
+        target.object = "@SINK@"
+        node.passive = true
+      }
+    }
+  }
+]
