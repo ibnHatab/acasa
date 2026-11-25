@@ -55,6 +55,7 @@ plugins:
     addr: ":8770"
     allow_origin: ["http://homeassistant.local:8123", "https://nina-home.tail2ffd4d.ts.net:8443"] # the Pi's, local and from the tailnet (live/tailscale-serve.sh) # Home Assistant's Nina card reads her state and events, sets the mic and voice
     static: {"/nina/": ~/repo/acasa/ha-ui/www/nina, "/metis/": ~/repo/nina-live/catalog/domains/.metis} # her own screen, card and personas; the loop workspace (read only: the surprises card)
+    remote: /nina/shell.html # from outside (Tailscale serve, live/tailscale-serve.sh): "/" is her own screen
   gpio: # buttons and lights on a Raspberry Pi (BCM line numbers)
     enabled: false
     chip: gpiochip0
