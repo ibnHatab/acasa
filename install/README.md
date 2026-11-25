@@ -18,7 +18,14 @@ here by hand; this is the way from now on.
    assistant), or plugs a cable. Eject the card.
 
 Check: the first boot takes a few minutes (cloud-init, the root partition grown to the card);
-then `ssh nina@HOST.local` answers with the key.
+then `ssh nina@HOST.local` answers with the key, and `cloud-init status` says `done`.
+
+Seen on `pero` (a Pi 4 Model B, 4 GB): the firmware's rainbow square stays on screen for a while
+on the second HDMI port (HDMI1; only HDMI0, beside the power, shows the boot messages): the desktop
+appears there once it is up. `network-config`'s access points: the network's name is the key itself
+(`"MyWifi":` with `password:` under it), one entry per network (home and office both: it joins the
+one it finds). The first-boot `rpi: interfaces: serial: true` puts a login console back on the
+serial port (`console=ttyS0`): taken off in step 2 for a radar.
 
 ## 2. The machine (next)
 
