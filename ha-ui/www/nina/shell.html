@@ -73,7 +73,7 @@
 
     // Nina's card: her panel is this page's own origin
     const card = document.createElement("nina-card");
-    card.setConfig({ panel: location.origin, height: REMOTE ? "100dvh" : "calc(100vh - 16px)", input: REMOTE });
+    card.setConfig({ panel: location.origin, height: REMOTE ? "100dvh" : "calc(100vh - 16px)", input: REMOTE, remote: REMOTE }); // remote: the mic and voice buttons are this device's
     document.getElementById("nina").appendChild(card);
 
     // the clock while the house wakes up

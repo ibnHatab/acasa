@@ -147,6 +147,85 @@ const hub = window.__ninaHub || (window.__ninaHub = {
   },
 });
 
+
+// remote: this device's own microphone and speaker (her screen on a phone, through the tailnet; the
+// user, 2026-11-25: talk from the phone while the room's mic is off, or from the room). Her panel's
+// /api/audio WebSocket: the microphone up (s16le mono 16 kHz), her voice down (24 kHz); while on,
+// she hears this device instead of the room, and speaks here instead of the room. The browser's own
+// echo cancelling keeps her voice out of the phone's microphone.
+const WORKLET = `registerProcessor("nina-mic", class extends AudioWorkletProcessor {
+  process(ins) { const c = ins[0] && ins[0][0]; if (c) this.port.postMessage(c.slice(0)); return true; } });`;
+const remote = {
+  ws: null, mic: false, voice: false, ctx: null, stream: null, src: null, node: null, next: 0, srcs: new Set(), carry: [], panel: "",
+  async audio() {
+    if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (this.ctx.state === "suspended") await this.ctx.resume();
+    return this.ctx;
+  },
+  open() {
+    if (this.ws && this.ws.readyState < 2) return;
+    const ws = new WebSocket(this.panel.replace(/^http/, "ws") + "/api/audio");
+    ws.binaryType = "arraybuffer";
+    ws.onopen = () => this.sync();
+    ws.onmessage = (m) => {
+      if (typeof m.data === "string") { try { if (JSON.parse(m.data).cut) this.flush(); } catch {} return; }
+      this.play(m.data);
+    };
+    ws.onclose = () => { if (this.ws === ws) this.ws = null; if (this.mic || this.voice) setTimeout(() => this.open(), 2000); };
+    this.ws = ws;
+  },
+  sync() { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ mic: this.mic, voice: this.voice })); },
+  async toggle(panel, p) {
+    this.panel = panel;
+    const on = !this[p];
+    const ctx = await this.audio(); // a tap: the browsers let sound start only from one
+    if (p === "mic") {
+      if (on) {
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+        if (!this.node) await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" })));
+        this.src = ctx.createMediaStreamSource(this.stream);
+        this.node = new AudioWorkletNode(ctx, "nina-mic");
+        const ratio = ctx.sampleRate / 16000;
+        let pos = 0;
+        this.node.port.onmessage = (e) => { // to 16 kHz (linear), then 20 ms frames of s16le
+          const x = e.data, out = [];
+          for (; pos < x.length; pos += ratio) {
+            const i = Math.floor(pos), f = pos - i, a = x[i], b = i + 1 < x.length ? x[i + 1] : a;
+            out.push(a + (b - a) * f);
+          }
+          pos -= x.length;
+          this.carry.push(...out);
+          while (this.carry.length >= 320) {
+            const fr = this.carry.splice(0, 320), pcm = new Int16Array(320);
+            for (let k = 0; k < 320; k++) pcm[k] = Math.max(-32768, Math.min(32767, Math.round(fr[k] * 32767)));
+            if (this.ws?.readyState === 1 && this.mic) this.ws.send(pcm.buffer);
+          }
+        };
+        this.src.connect(this.node);
+      } else {
+        this.stream?.getTracks().forEach((t) => t.stop());
+        this.src?.disconnect(); this.node?.port && (this.node.port.onmessage = null); this.node?.disconnect();
+        this.stream = this.src = null; this.node = null; this.carry = [];
+      }
+    }
+    this[p] = on;
+    if (this.mic || this.voice) this.open(); else this.flush();
+    this.sync();
+    if (!this.mic && !this.voice && this.ws) { const ws = this.ws; this.ws = null; setTimeout(() => ws.close(), 300); }
+  },
+  play(buf) { // her voice: 24 kHz s16le, each chunk after the last
+    if (!this.voice || !this.ctx) return;
+    const pcm = new Int16Array(buf), ab = this.ctx.createBuffer(1, pcm.length, 24000), ch = ab.getChannelData(0);
+    for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
+    const s = this.ctx.createBufferSource();
+    s.buffer = ab; s.connect(this.ctx.destination);
+    const t = Math.max(this.ctx.currentTime + 0.08, this.next);
+    s.start(t); this.next = t + ab.duration;
+    this.srcs.add(s); s.onended = () => this.srcs.delete(s);
+  },
+  flush() { this.srcs.forEach((s) => { try { s.stop(); } catch {} }); this.srcs.clear(); this.next = 0; },
+};
+
 class NinaCard extends HTMLElement {
   setConfig(c) {
     this.c = Object.assign({ max_messages: 20, message_max_age: 300 }, c || {});
@@ -535,11 +614,16 @@ class NinaCard extends HTMLElement {
     return r.json();
   }
   async toggle(p) {
+    if (this.c.remote) { // this device's microphone and speaker, not the room's
+      try { await remote.toggle(this.panel, p); } catch (e) { this.state(p === "mic" ? "no microphone here: " + (e.message || e) : String(e)); }
+      hub.emit();
+      return;
+    }
     const on = !hub.prefs?.[p];
     try { await this.api("/api/prefs", { [p]: on }); hub.prefs = Object.assign(hub.prefs || {}, { [p]: on }); hub.emit(); } catch (e) { this.state("her panel is not reachable"); }
   }
   showPrefs() {
-    this.root.querySelectorAll("button[data-p]").forEach((b) => b.classList.toggle("on", !!hub.prefs?.[b.dataset.p]));
+    this.root.querySelectorAll("button[data-p]").forEach((b) => b.classList.toggle("on", this.c.remote ? !!remote[b.dataset.p] : !!hub.prefs?.[b.dataset.p]));
   }
   state(t) { this.root.querySelector(".state").textContent = t; }
   status(s) {
