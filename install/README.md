@@ -104,6 +104,11 @@ In a browser at `http://HOST.local:8123` (or `https://HOST.TAILNET.ts.net:8443`)
 
 Then her look and feel: `cd ~/repo/acasa && go run ./cmd/ha-ui -url http://127.0.0.1:8123`.
 
+Use the machine's name (`http://HOST.local:8123`), not its IP: the integrations keep the address
+they were set up from. Chrome on a Linux desktop does not resolve `HOST.local` (its own DNS client
+skips the system's mDNS; Firefox asks the system and finds it): add the name to the desktop's
+`/etc/hosts` (`192.168.x.y HOST.local HOST`), and reserve that address for the Pi in the router.
+
 Check: `http://HOST.local:8123/home-panel/home` is in her scheme; the kiosk shows her dashboard.
 
 ## 5. Her keys
