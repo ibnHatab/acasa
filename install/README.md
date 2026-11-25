@@ -51,8 +51,15 @@ One idempotent command (run it again after a failure: it skips what is done):
   `HOST.local`), started with the desktop, logged in as `nina` at boot;
 - `loginctl enable-linger`: her user services run without a login.
 
-Check: the script ends with "is a Nina machine"; `http://HOST.local:8123` shows Home Assistant's
-onboarding; `docker ps` lists `homeassistant` and `searxng`.
+Then reboot once (`sudo reboot`): the desktop logs `nina` in and the kiosk starts with it; her
+group docker counts from then on.
+
+Check: the script ends with "is a Nina machine"; after the reboot the screen says "Nina is waking
+up…" (her dashboard comes with step 4); `http://HOST.local:8123` shows Home Assistant's
+onboarding (its first start takes a few minutes); `docker ps` lists `homeassistant` and `searxng`.
+
+Seen on `pero`: a Pi 4 takes ~25 min for step 2 (most of it the build). Debian trixie splits the
+`docker` command (`docker-cli`) from the daemon (`docker.io`): the script names both.
 
 ## 3. The network: Tailscale
 
