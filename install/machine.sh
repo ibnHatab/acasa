@@ -114,7 +114,7 @@ K=$R/acasa/ha-ui/kiosk
 T=$(mktemp -d)
 cp -r "$K/ha-pi-kiosk/." "$T/"
 cp "$K/logo.png" "$T/images/logo.png"
-sed "s|homeassistant.local|$HOST.local|g" "$K/config.env" >"$T/config.env"
+sed "s|homeassistant.local|localhost|g" "$K/config.env" >"$T/config.env" # the kiosk: Home Assistant at localhost (its own user's login, README step 4)
 (cd "$T" && echo n | ./setup.sh >/tmp/ha-pi-kiosk.log 2>&1) || { tail -20 /tmp/ha-pi-kiosk.log; exit 1; }
 grep "^==>" /tmp/ha-pi-kiosk.log
 rm -rf "$T"
@@ -124,7 +124,7 @@ sudo install -m 755 "$K/firefox-kiosk.sh" /usr/local/bin/firefox-kiosk.sh
 sudo install -m 755 "$K/backlight-control.sh" /usr/local/bin/backlight-control.sh
 sudo install -D -m 644 "$K/starting.html" /usr/local/share/ha-pi-kiosk/starting.html
 sudo install -m 644 "$K/logo.png" /usr/local/share/ha-pi-kiosk/logo.png
-sed "s|homeassistant.local|$HOST.local|g" "$K/config.env" | sudo install -D -m 644 /dev/stdin /etc/ha-pi-kiosk/config.env
+sed "s|homeassistant.local|localhost|g" "$K/config.env" | sudo install -D -m 644 /dev/stdin /etc/ha-pi-kiosk/config.env
 
 step "user services without a login"
 sudo loginctl enable-linger "$USER"

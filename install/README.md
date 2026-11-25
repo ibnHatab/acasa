@@ -104,6 +104,13 @@ In a browser at `http://HOST.local:8123` (or `https://HOST.TAILNET.ts.net:8443`)
 
 Then her look and feel: `cd ~/repo/acasa && go run ./cmd/ha-ui -url http://127.0.0.1:8123`.
 
+The kiosk's login: a user of its own, not an admin and without a password, signed in only from the
+machine itself (the kiosk's Firefox opens `http://localhost:8123`). The person's owner session, in a
+browser: `config/auth/create` (name `Kiosk`, group `system-users`, local only); then
+`configuration.yaml`'s `homeassistant: auth_providers:` gets `homeassistant` and `trusted_networks`
+(`127.0.0.1` and `::1`, `trusted_users` both that user, `allow_bypass_login: true`). Anyone else,
+through the tailnet's proxy too (its forwarded address counts), logs in as usual.
+
 Use the machine's name (`http://HOST.local:8123`), not its IP: the integrations keep the address
 they were set up from. Chrome on a Linux desktop does not resolve `HOST.local` (its own DNS client
 skips the system's mDNS; Firefox asks the system and finds it): add the name to the desktop's
