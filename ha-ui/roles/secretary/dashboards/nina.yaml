@@ -165,7 +165,7 @@ views:
       - type: horizontal-stack
         cards:
           - *nina
-          - {type: custom:nina-video-card, title: Claudia, video: Z6_ENp_fO_Y, height: 584px}   # the playlist: when its full id comes
+          - {type: custom:nina-video-card, title: Claudia, playlist: PLFwT7adpzr0o, height: 584px}   # "Claudia" (13 videos, unlisted)
 
   - title: Surprises
     path: surprises
