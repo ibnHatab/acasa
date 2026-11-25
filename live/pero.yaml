@@ -1,0 +1,72 @@
+# pero: Nina in the office (the secretary; acasa install/README step 7, 2026-11-25): fsttm-live's
+# config (her sound, models, attention, prefs, panel). From the first Pi's (pi.yaml).
+# The Raspberry Pi 4 (2026-11-24): the ReSpeaker on USB (card ArrayUAC10), playback on the default output until the speakers come; otherwise as pascal.yaml.
+# nina-live: the machine's settings, the person's preferences, the plugins.
+# Relative paths are relative to this file; ~/ is the home directory.
+
+key: ~/.config/fsttm/gemini.key # the AI Studio key's file (chmod 600); never the key here
+charter: ~/repo/fsttm-live/testdata/charter-v2.txt
+models:
+  ears: gemini-3.5-transcribe-live # text only, under our endpointing
+  mind: gemini-3.1-flash-live-preview # the voice+mind: text turns in, audio out
+  vocab: [Nina, office, kitchen, agenda, calendar, meeting, tasks, reminder]
+audio:
+  device: pulse:alsa_input.usb-KTMicro_KT_USB_Audio_2021-06-07-0000-0000-0000--00.mono-fallback # the KT USB adapter's microphone (UGREEN), through PipeWire
+  channels: 1
+  speech: 0
+  ref: -1 # no echo reference: barge-in by words until PipeWire's echo canceller (calibration: next)
+  out: pulse:alsa_output.usb-KTMicro_KT_USB_Audio_2021-06-07-0000-0000-0000--00.analog-stereo # the speakers on the KT adapter's jack
+  level: 0 # her voice as it comes: not calibrated yet here (fsttm-live scripts/calib, softaec.py)
+  barge: -1 # no reference to tell her echo from a voice by level
+  vad_mode: 3
+  hang: 700ms # silence that ends an utterance
+  max_utterance: 25s
+dialog:
+  follow_up: 30s # without her name, meant for her this long after she spoke; later: an aside (0: all, while awake)
+  awake_for: 90s # asleep (and her session closed) after this long without a turn
+  start_asleep: true
+  note_gap: 2s # a NOTE waits for the floor to be free this long
+  wake: # who hears her name
+    mode: local # cloud: the transcriber; shadow: and the local spotter, logged; local: asleep, only what the spotter woke goes to the cloud
+    model: ~/models/sherpa-kws/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01
+    keywords: ~/repo/fsttm-live/testdata/kws-keywords.txt
+    threshold: 0.25 # lower hears more
+# SOURCES: the systems Nina draws on. Metis (metis-home): its tools, and its REASONING through the
+# stream door (opened here). A line's kind gives its level: context (she knows it, says nothing),
+# info / important / urgent (a NOTE: spoken when the floor and the narration knob allow), drop.
+# A line carrying its own "level" (Metis's narration port) keeps it.
+sources:
+  metis:
+    enabled: true
+    tools: 127.0.0.1:8768
+    door: 127.0.0.1:8766
+    wait: 3s # for its tools at start; without them: a demo home
+    levels: {result: context, noticed: info, surprise: info, error: context, env: context} # until Metis quantises them itself
+# Changed at run time by the plugins (the web panel, the buttons) and written back here.
+prefs:
+  mic: true
+  voice: true
+  voice_name: Zephyr # a Live voice (Puck, Kore, Aoede, …); "" the model's
+  local: "" # "" the Live audio; rhvoice (small machines), paradee (a desktop's socket): a local voice speaks her transcript
+  rhvoice: slt
+  paradee: af_heart
+  narration: important # the lowest NOTE level spoken: info, important, urgent, off
+plugins:
+  web: # the panel: preferences, status, the conversation; a kiosk's screen
+    enabled: true
+    addr: ":8770"
+    allow_origin: ["http://pero.local:8123"] # pero's own Home Assistant (her cards there)
+    static: {"/nina/": ~/repo/acasa/ha-ui/www/nina, "/metis/": ~/repo/nina-live/catalog/domains/.metis} # her own screen, card and personas; the loop workspace (read only: the surprises card)
+    remote: /nina/shell.html # from outside (Tailscale serve, live/tailscale-serve.sh): "/" is her own screen
+  gpio: # buttons and lights on a Raspberry Pi (BCM line numbers)
+    enabled: false
+    chip: gpiochip0
+    debounce: 30ms
+    long_press: 1200ms
+    buttons:
+      - {line: 17, press: talk, long: sleep} # talk: wake her (or stop her if she speaks); long: sleep
+      - {line: 27, press: mic} # the mic on and off
+      - {line: 22, press: voice} # her sound on and off
+    lights:
+      - {line: 5, show: awake}
+      - {line: 6, show: speaking}

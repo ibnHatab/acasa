@@ -1,0 +1,13 @@
+[Unit]
+Description=Nina (nina-live: her voice, the home's rules, her tasks): this machine's (~/.config/nina/nina.yaml)
+# ~/.config/nina/nina.yaml links to acasa/live/nina-HOST.yaml (install/README step 7): the same unit on
+# every machine, its config chosen by the link
+After=network-online.target pipewire.service
+
+[Service]
+ExecStart=%h/repo/nina-live/bin/nina -config %h/.config/nina/nina.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

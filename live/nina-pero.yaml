@@ -1,0 +1,52 @@
+# pero: Nina in the office (the secretary; 2026-11-25): the core's config. From the first Pi's (nina-pi.yaml).
+# nina (nina-live's cmd/nina): Nina in one process on Pascal: her voice, the home's rules, the world
+# rebuilt from her event log, Home Assistant as her tool.
+log: ~/.local/share/nina/nina.db          # her memory: every event, append only (SQLite)
+home:
+  root: ~/repo/nina-live/catalog           # the home world (moved from metis-worlds, 2026-11-24)
+  metisc: ~/repo/perotheia-packages/metis-lang/src/metisc
+  beat: 1s
+  checkpoint_every: 60                    # a world checkpoint every 60 beats (a rebuild checks it)
+  call_timeout: 6s
+  composed: true                          # the five packages under the director, on the tick (milestone 2)
+hass:
+  url: http://127.0.0.1:8123
+  token: ~/.config/fsttm/hass.token       # the token's file, never the token here
+dialogue: ~/repo/acasa/live/pero.yaml   # fsttm-live's config: sound, models, attention, prefs, plugins
+levels: {result: context, event: info, surprise: info, error: context}   # the rules' replies → silent context or a NOTE
+persona: ~/repo/nina-live/prompts/nina.md   # Nina's character (2026-11-24), before the voice's protocol and the task runner's charter
+voice: ~/repo/nina-live/prompts/voice.md     # the voice's protocol: with the persona, the dialogue's charter (written beside the log)
+tasks:                                    # System 2: delegate(goal) → a pi task (sky-valley/pi), its result a NOTE
+  enabled: true
+  provider: google                        # 2026-11-24: back to Google's Flash through pi-ai (the user); pi-ai is checked
+  model: gemini-3.8-flash                 # 10/12 in the experiment grid. OpenRouter, for roles to come (key ~/.config/metis/openrouter.env):
+                                          #   deepseek/deepseek-v4.1-flash (cheap), z-ai/glm-5.3-flash (intent extraction, typed
+                                          #   propositions), qwen/qwen3.8-flash (multilingual)
+  key: ~/.config/fsttm/gemini.key         # the AI Studio key's file (GEMINI_API_KEY, or the bare key)
+  fallback:                               # a one-shot ask (narration) when the model fails (Google's "high demand", a quota)
+    - {provider: google, model: gemini-3.5-flash, key: ~/.config/fsttm/gemini.key}
+  max_turns: 10
+  timeout: 5m                            # configuration work takes turns (ha-mcp, 2026-11-25)
+  transform: true                         # the world's lines before each request (read-only)
+  steer: true                             # a used package's new conclusion, mid-run
+  follow_up: true                         # a late outcome, after the run would end
+
+search:                                   # web_search (nina-live websearch/), a pi tool: the voice's and the tasks'
+  enabled: true
+  searxng: http://127.0.0.1:8888          # SearXNG (self-hosted metasearch, ~/searxng: docker searxng/searxng): tried first, free
+  models: [gemini-3.8-flash]              # then Google Search grounding through Gemini Flash: refused on the key until its project
+                                          # has billing (429 "check your plan and billing"); then 5,000 a month free
+  key: ~/.config/fsttm/gemini.key
+  daily: 300                              # searches a day at most (SearXNG's engines are polite to: they rate-limit)
+
+agenda: # hers is the office account's Google calendar; the tasks are its Google Tasks (the user: the global ones)
+  nina_cal: calendar.nina_pero_tm_gmail_com
+  my_tasks: todo.my_tasks
+
+music: # one knob for the radio and her voice (as at home; her level is not calibrated here yet)
+  top: -19
+  under: 10
+  curve: pulse
+
+mcp: [] # Home Assistant's MCP servers (her tasks' ha_* tools): after ha-mcp and the mcp_server integration here
+
