@@ -149,8 +149,10 @@ bubble (`prefs.bubble`, the one sound knob for her voice and the music), the bar
   `http://127.0.0.1:8123`, the tasks, the search, the MCP servers) and `acasa/live/HOST.yaml` (the
   dialogue: the sound, the models, the prefs, the panel with `remote: /nina/shell.html` and the
   tailnet's `allow_origin`); start from the first Pi's `nina-pi.yaml` and `pi.yaml`.
-- **ha-mcp** (her tasks' configuration tools): `uv tool install --python 3.13 ha-mcp`, then the
-  user service `live/systemd/nina-ha-mcp.service`.
+- **ha-mcp** (her tasks' configuration tools): `sudo apt install pipx && pipx install --python
+  python3.13 "ha-mcp==9.2.0"` (Debian's pipx: no other installer), then the user service
+  `live/systemd/nina-ha-mcp.service`; and Home Assistant's **Model Context Protocol Server**
+  integration (its config flow takes no fields): her config's `mcp:` names both (`assist`, `hacfg`).
 - **Her service**: `live/systemd/nina-pi.service` pointed at `nina-HOST.yaml`, linked into
   `~/.config/systemd/user/`, `systemctl --user enable --now nina`.
 

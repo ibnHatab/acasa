@@ -48,5 +48,14 @@ music: # one knob for the radio and her voice (as at home; her level is not cali
   under: 10
   curve: pulse
 
-mcp: [] # Home Assistant's MCP servers (her tasks' ha_* tools): after ha-mcp and the mcp_server integration here
+mcp:                                      # Home Assistant's two MCP servers, the backends of her three tools (ha_find,
+                                          # ha_automation, ha_diagnose): its own (the mcp_server integration) and ha-mcp
+  - name: assist                          # (pipx install ha-mcp==9.2.0; service nina-ha-mcp, loopback)
+    role: assist
+    url: http://127.0.0.1:8123/api/mcp
+    token_file: ~/.config/fsttm/hass.token
+  - name: hacfg
+    role: config
+    url: http://127.0.0.1:8086/mcp
+    bare: true
 
