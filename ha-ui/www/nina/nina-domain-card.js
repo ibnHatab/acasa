@@ -15,6 +15,7 @@
 //   height: 180px            # optional
 //   compact: true            # no header row: the icon small in the corner (a crowded page)
 //   focus: "15% 20%"         # the crop's centre (object-position): a small card shows the scene's object
+//   entities: [light.bedroom_led]  # their changes bloom it too (the domain used from Home Assistant, not by Nina)
 const ASSETS = new URL(".", import.meta.url).pathname;
 const SCENES = fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => ({ frames: {}, tools: {}, events: {} }));
 
@@ -136,7 +137,21 @@ class NinaDomainCard extends HTMLElement {
     if (this._hass) this.child.hass = this._hass;
     this.root.querySelector(".inner").appendChild(this.child);
   }
-  set hass(h) { this._hass = h; if (this.child) this.child.hass = h; }
+  set hass(h) {
+    this._hass = h;
+    if (this.child) this.child.hass = h;
+    for (const id of this.c.entities || []) { // a watched entity changed: the card blooms with its new state
+      const st = h.states[id];
+      if (!st) continue;
+      this.seen ||= {};
+      const key = st.state + JSON.stringify(st.attributes?.hs_color || st.attributes?.color_temp_kelvin || st.attributes?.brightness || "");
+      if (this.seen[id] !== undefined && this.seen[id] !== key) {
+        const name = st.attributes?.friendly_name || id;
+        this.cue({ name: "@entity", result: { text: `${name}: ${st.state === "on" ? "on" : st.state}` } }, true);
+      }
+      this.seen[id] = key;
+    }
+  }
   connectedCallback() { bus.cards.add(this); }
   disconnectedCallback() { bus.cards.delete(this); }
   getCardSize() { return 2; }
@@ -152,8 +167,8 @@ class NinaDomainCard extends HTMLElement {
     this.tSteps = imgs.slice(1).map((im, i) => setTimeout(() => imgs.forEach((x) => x.classList.toggle("on", x === im)), (i + 1) * step));
   }
   // cue: one of her tools: bloom (the scene replayed, her words), then collapse into the icon
-  cue(e) {
-    if (!this.tools?.includes(e.name)) return;
+  cue(e, entity) {
+    if (!entity && !this.tools?.includes(e.name)) return;
     const card = this.root.querySelector("ha-card");
     const text = e.result?.text || "";
     this.root.querySelector(".caption").textContent = text;

@@ -76,3 +76,12 @@ Assistant's own buttons are in the corners). Home Assistant loads dashboard reso
 dashboards, so `nina-view.js` is also loaded on every page through `frontend: extra_module_url:
 [/local/nina/nina-boot.js]` (configuration.yaml, Pascal's and the Pi's); the loader never changes and
 imports `nina-view.js` fresh, so no cache keeps an old one. A desktop browser never sees the button.
+
+## The bedroom lamp (2026-11-25)
+
+The bedroom's LED Geiling lights live in Alexa (no Home Assistant entity of their own). A template
+light in configuration.yaml (Pascal's; the Pi's to sync), `light.bedroom_led` in the Bedroom area,
+turns its actions into Alexa commands through `script.alexa_quiet`: on, off, a brightness, a colour
+(Alexa's colour name from the hue), a white (warm, soft, white, daylight, cool). Alexa says nothing
+back: the light is optimistic (it knows what it was last told). On the light page as a tile; its
+changes bloom the page's card (the domain card's `entities`).

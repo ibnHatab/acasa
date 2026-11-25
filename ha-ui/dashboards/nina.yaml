@@ -136,21 +136,29 @@ views:
             icon: mdi:ceiling-light
             height: 584px
             swatches: *swatches
+            entities: [light.bedroom_led]
             card:
-              type: horizontal-stack
+              type: vertical-stack
               cards:
-                - type: custom:bubble-card
-                  card_type: button
-                  button_type: name
-                  name: Sunset
-                  icon: mdi:weather-sunset-down
-                  tap_action: {action: perform-action, perform_action: script.turn_on, target: {entity_id: script.bedroom_sunset_light}}
-                - type: custom:bubble-card
-                  card_type: button
-                  button_type: name
-                  name: White
-                  icon: mdi:white-balance-sunny
-                  tap_action: {action: perform-action, perform_action: script.turn_on, target: {entity_id: script.bedroom_white_light}}
+                - type: tile
+                  entity: light.bedroom_led
+                  name: LED Geiling lights
+                  features_position: bottom
+                  features: [{type: light-brightness}, {type: light-color-temp}]
+                - type: horizontal-stack
+                  cards:
+                  - type: custom:bubble-card
+                    card_type: button
+                    button_type: name
+                    name: Sunset
+                    icon: mdi:weather-sunset-down
+                    tap_action: {action: perform-action, perform_action: script.turn_on, target: {entity_id: script.bedroom_sunset_light}}
+                  - type: custom:bubble-card
+                    card_type: button
+                    button_type: name
+                    name: White
+                    icon: mdi:white-balance-sunny
+                    tap_action: {action: perform-action, perform_action: script.turn_on, target: {entity_id: script.bedroom_white_light}}
 
   - title: Air
     path: air
