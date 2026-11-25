@@ -1,0 +1,35 @@
+% director — the office's (acasa roles/secretary, 2026-11-26): the main catalog's director domain, included as it is
+% (../director_domain.llp), and the office's instance: its members, the scene's wishes they handle (no lights, air,
+% comfort, glow here: those wishes find no handler, the director asks). From the home's:
+% director — Nina's director (nina-live, 2026-11-24): the catalog's lifted base (../director_domain.llp, a
+% byte-equal copy) and this home's instance. The scenes package is the planner: a scene's three wishes arrive as
+% kinds, and each goes to the one package that handles it. The packages run every tick whatever the director says:
+% its wake and sleep are its own bookkeeping (Nina serves all five cards).
+catalog director 1.
+provenance text "the office's director: a scene's wishes to the media, the timers and the music" "2026-11-26".
+include "../director_domain.llp".
+
+type domain {media scenes timers agenda music habits persona}.
+type kind {scene_media scene_timers scene_music mood_music}.
+
+specialist(media).
+specialist(timers).
+specialist(agenda).
+specialist(music).
+specialist(habits).
+specialist(persona).
+planner(scenes).
+handles(media, scene_media).
+handles(timers, scene_timers).
+handles(music, scene_music).
+handles(music, mood_music).
+
+#init active(scenes) 1
+#init attention(scenes) 1
+#init fresh 1
+#init inactive(media) 1
+#init inactive(timers) 1
+#init inactive(agenda) 1
+#init inactive(music) 1
+#init inactive(habits) 1
+#init inactive(persona) 1
