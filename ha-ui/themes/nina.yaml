@@ -1,5 +1,5 @@
 # Nina's theme (2026-11-24): the home's character in colour: warm and low after dark, an amber
-# glow for her, soft rounded cards. Both modes; the kiosk follows the system's (dark at night).
+# glow for her, soft rounded cards. Both modes: a browser's scheme picks one; the kiosk's Firefox is set to dark (kiosk/firefox-kiosk.sh).
 Nina:
   ha-card-border-radius: "20px"
   ha-card-box-shadow: "none"

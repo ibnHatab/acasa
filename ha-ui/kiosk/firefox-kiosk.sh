@@ -46,6 +46,13 @@ user_pref("dom.disable_open_during_load", false);
 EOF
 fi
 
+# the dark scheme (2026-11-25, the user: Pascal's dark looks much better; the Pi's desktop always
+# reports light, so Home Assistant's Nina theme took its light mode): pages see prefers-color-scheme
+# dark. Ensured on every start, so an existing profile gets it too.
+for pref in 'user_pref("layout.css.prefers-color-scheme.content-override", 0);' 'user_pref("ui.systemUsesDarkTheme", 1);'; do
+  grep -qF "$pref" "$PROFILE_DIR/user.js" 2>/dev/null || echo "$pref" >>"$PROFILE_DIR/user.js"
+done
+
 if [ ! -f "$PROFILE_DIR/chrome/userChrome.css" ]; then
   cat >"$PROFILE_DIR/chrome/userChrome.css" <<'EOF'
 /* Hide browser chrome so the panel looks like a dedicated wall display. */
