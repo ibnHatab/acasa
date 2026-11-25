@@ -4,11 +4,15 @@
 #
 #   git clone -q https://github.com/ibnHatab/acasa.git ~/repo/acasa && ~/repo/acasa/install/machine.sh
 #
+# For Raspberry Pi OS **Lite** (64-bit, trixie): the kiosk is ha-pi-kiosk's bare labwc session, as
+# on the first Pi (a desktop image would keep its own desktop and taskbar).
+#
 # Idempotent: run it again after a failure, it skips what is done. It installs and starts:
 #   the locale; the packages (cmake, OCaml, Docker, PulseAudio's tools, MPD, …); Go (go.dev's
 #   tarball, its sha256 checked); the repos from GitHub; metisc, nina and the radar built
 #   (pi-update.sh); Home Assistant (Docker, a fresh config: the person makes its owner account);
-#   SearXNG (Docker, local only); the kiosk (Firefox on Nina's dashboard at boot); user services
+#   SearXNG (Docker, local only); the kiosk (ha-pi-kiosk: Firefox on Nina's dashboard, alone on
+#   the screen, from boot; its boot splash with Nina's logo; Raspberry Pi Connect); user services
 #   kept running without a login (linger).
 # Not here (README, step 3 on): Tailscale, Home Assistant's onboarding and integrations, Nina's
 # token and keys, her role's catalog workspace and her service.
@@ -94,16 +98,24 @@ echo "searxng: $($D inspect -f '{{.State.Status}}' searxng)"
 step "the build: metisc, nina, the radar (pi-update.sh; the look and feel waits for Home Assistant's token)"
 bash "$R/nina-live/scripts/pi-update.sh" 2>&1 | grep -v "^go: downloading"
 
-step "the kiosk (Firefox on Nina's dashboard, started with the desktop)"
+step "the kiosk: ha-pi-kiosk (Raspberry Pi OS Lite: tty1 autologin, a bare labwc, Firefox), then acasa's own files"
+# ha-pi-kiosk, vendored in acasa (ha-ui/kiosk/ha-pi-kiosk, VENDOR.md), run from a copy: Nina's logo
+# for its boot splash, this machine's settings (the repo's name the first Pi: HOST.local here)
 K=$R/acasa/ha-ui/kiosk
+T=$(mktemp -d)
+cp -r "$K/ha-pi-kiosk/." "$T/"
+cp "$K/logo.png" "$T/images/logo.png"
+sed "s|homeassistant.local|$HOST.local|g" "$K/config.env" >"$T/config.env"
+(cd "$T" && echo n | ./setup.sh >/tmp/ha-pi-kiosk.log 2>&1) || { tail -20 /tmp/ha-pi-kiosk.log; exit 1; }
+grep "^==>" /tmp/ha-pi-kiosk.log
+rm -rf "$T"
+# acasa's own over it: Firefox's launcher (Nina's starting page, the dark scheme), the HDMI
+# backlight, the starting page, the logo, the settings with their comments
 sudo install -m 755 "$K/firefox-kiosk.sh" /usr/local/bin/firefox-kiosk.sh
 sudo install -m 755 "$K/backlight-control.sh" /usr/local/bin/backlight-control.sh
 sudo install -D -m 644 "$K/starting.html" /usr/local/share/ha-pi-kiosk/starting.html
 sudo install -m 644 "$K/logo.png" /usr/local/share/ha-pi-kiosk/logo.png
 sed "s|homeassistant.local|$HOST.local|g" "$K/config.env" | sudo install -D -m 644 /dev/stdin /etc/ha-pi-kiosk/config.env
-mkdir -p ~/.config/labwc
-grep -qs firefox-kiosk.sh ~/.config/labwc/autostart || echo '/usr/local/bin/firefox-kiosk.sh &' >>~/.config/labwc/autostart
-sudo raspi-config nonint do_boot_behaviour B4 # the desktop, logged in as nina, at boot
 
 step "user services without a login"
 sudo loginctl enable-linger "$USER"

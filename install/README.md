@@ -6,9 +6,11 @@ here by hand; this is the way from now on.
 
 ## 1. The card (on a desktop with a card reader)
 
-1. Raspberry Pi OS 64-bit with desktop (trixie): the kiosk is labwc + Firefox, as on `nina-home`.
-   Download it from downloads.raspberrypi.com (`raspios_arm64/images/…/…-raspios-trixie-arm64.img.xz`)
-   with its `.sha256`, and check it: `sha256sum -c`.
+1. Raspberry Pi OS **Lite** 64-bit (trixie), as on `nina-home`: the kiosk is ha-pi-kiosk's bare
+   labwc session (step 2), not a desktop (a desktop image keeps its own taskbar and windows: tried
+   on `pero` first, then reflashed). Download it from downloads.raspberrypi.com
+   (`raspios_lite_arm64/images/…/…-raspios-trixie-arm64-lite.img.xz`) with its `.sha256`, and check
+   it: `sha256sum -c`.
 2. Flash it (the card, never the desktop's own disk: check the size and that nothing of it is mounted):
    `xzcat IMAGE.img.xz | sudo dd of=/dev/mmcblkN bs=4M conv=fsync status=progress`
 3. Mount the card's `bootfs` and run `install/sd-firstboot.sh /media/$USER/bootfs HOST`: the
@@ -47,12 +49,16 @@ One idempotent command (run it again after a failure: it skips what is done):
   allowed for her own screen, the local proxy trusted for Tailscale), and SearXNG in Docker
   (127.0.0.1:8888 only, its own secret);
 - the build through `nina-live/scripts/pi-update.sh`: `metisc`, `nina`, the radar;
-- the kiosk: Firefox on Nina's dashboard (`/etc/ha-pi-kiosk/config.env`: this machine's own
-  `HOST.local`), started with the desktop, logged in as `nina` at boot;
+- the kiosk: ha-pi-kiosk (vendored: `ha-ui/kiosk/ha-pi-kiosk`, see its `VENDOR.md`): `nina` logged
+  in on tty1 at boot straight into a bare labwc session, Firefox alone on the screen (maximized, no
+  title bar), the on-screen keyboard, the idle dimming, its boot splash with Nina's logo (the
+  firmware's rainbow off), Raspberry Pi Connect; then acasa's own launcher, starting page and
+  settings over it (`/etc/ha-pi-kiosk/config.env`: this machine's own `HOST.local`);
 - `loginctl enable-linger`: her user services run without a login.
 
-Then reboot once (`sudo reboot`): the desktop logs `nina` in and the kiosk starts with it; her
-group docker counts from then on.
+Then reboot once (`sudo reboot`): Nina's logo, then the kiosk alone on the screen; her group
+docker counts from then on. Raspberry Pi Connect (remote screen) once, if wanted: `rpi-connect
+signin` over SSH, the printed link approved with a Raspberry Pi ID.
 
 Check: the script ends with "is a Nina machine"; after the reboot the screen says "Nina is waking
 up…" (her dashboard comes with step 4); `http://HOST.local:8123` shows Home Assistant's
