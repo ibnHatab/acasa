@@ -42,6 +42,8 @@ search:                                   # web_search (nina-live websearch/), a
 music:                                    # one knob for the radio and her voice (the user, 2026-11-25): the music set
   top: -19                                # in dB from her voice's level; top: the stream at 100 % on the speakers' feed
   under: 10                               # (dBFS RMS, measured); while anyone talks, the music this many dB under her
+  curve: pulse                            # MPD's mixer_type hardware: the volume at PulseAudio's mix, heard at once (the
+                                          # software mixer's lagged her duck by ~1 s: its output buffer)
 
 mcp:                                      # Home Assistant's two MCP servers (nina-live mcp/), the backends of Nina's own three
                                           # tools (hatools: ha_find, ha_automation, ha_diagnose; ~450 tokens, her tasks only).
