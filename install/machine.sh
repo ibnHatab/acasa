@@ -100,6 +100,13 @@ echo "searxng: $($D inspect -f '{{.State.Status}}' searxng)"
 step "the build: metisc, nina, the radar (pi-update.sh; the look and feel waits for Home Assistant's token)"
 bash "$R/nina-live/scripts/pi-update.sh" 2>&1 | grep -v "^go: downloading"
 
+step "MPD (her radio: a user service on the default output; Home Assistant's MPD integration at 127.0.0.1)"
+sudo systemctl disable --now mpd.service mpd.socket >/dev/null 2>&1 || true # the system-wide one: not hers
+mkdir -p ~/.config/mpd/playlists ~/.local/share/mpd ~/Music
+[ -f ~/.config/mpd/mpd.conf ] || cp "$R/acasa/live/mpd.conf" ~/.config/mpd/mpd.conf
+systemctl --user enable --now mpd.service >/dev/null 2>&1 || systemctl --user restart mpd.service
+echo "mpd: $(systemctl --user is-active mpd.service)"
+
 step "the kiosk: ha-pi-kiosk (Raspberry Pi OS Lite: tty1 autologin, a bare labwc, Firefox), then acasa's own files"
 # ha-pi-kiosk, vendored in acasa (ha-ui/kiosk/ha-pi-kiosk, VENDOR.md), run from a copy: Nina's logo
 # for its boot splash, this machine's settings (the repo's name the first Pi: HOST.local here)
