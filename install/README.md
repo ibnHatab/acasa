@@ -65,7 +65,10 @@ up…" (her dashboard comes with step 4); `http://HOST.local:8123` shows Home As
 onboarding (its first start takes a few minutes); `docker ps` lists `homeassistant` and `searxng`.
 
 Seen on `pero`: a Pi 4 takes ~25 min for step 2 (most of it the build). Debian trixie splits the
-`docker` command (`docker-cli`) from the daemon (`docker.io`): the script names both.
+`docker` command (`docker-cli`) from the daemon (`docker.io`): the script names both. Lite has no
+`git` (the first command installs it). Over SSH a user's PATH lacks `/usr/sbin` (ha-pi-kiosk's
+check for `plymouth-set-default-theme` failed): the script adds it. `grim` takes the kiosk's
+screen over SSH: `XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-0 grim /tmp/s.png`.
 
 ## 3. The network: Tailscale
 
