@@ -65,6 +65,12 @@ views:
             icon: mdi:weather-partly-cloudy
             card: {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
 
+      - type: grid
+        cards:
+          - {type: heading, heading: Gallery, icon: mdi:image-multiple}
+          - {type: custom:nina-photos-card, album: "Nina's gallery", interval: 10, height: 300px, grid_options: {columns: full}}
+          - {type: custom:nina-video-card, title: Claudia, video: Z6_ENp_fO_Y, height: 300px, grid_options: {columns: full}}   # the playlist: when its full id comes
+
   - title: Nina
     path: nina
     icon: mdi:account-cog

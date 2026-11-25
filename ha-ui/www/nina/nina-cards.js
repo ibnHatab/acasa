@@ -6,6 +6,9 @@
 //   type: custom:nina-settings-card     her name, persona (automatic or pinned), voice, the temperament's tuning
 //   type: custom:nina-activity-card     what she did lately: her tools, her moods, who came by, surprises
 //   type: custom:nina-surprises-card    the loop workspace's surprises: open, taken, ruled (panel /metis/)
+//   type: custom:nina-photos-card       a Google Photos album as a slideshow (album: its name; Home Assistant's
+//                                       Google Photos integration: the albums she made and filled)
+//   type: custom:nina-video-card        a YouTube playlist (playlist: its id) or video (video: its id), embedded
 //   type: custom:nina-bubble-card       her sound bubble: the one sound knob (her voice and the music), as a space
 //                                       in the room; the distance calibration's points (room: 5, metres wide)
 const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
@@ -248,6 +251,94 @@ class NinaBubbleCard extends NinaBase {
   }
 }
 
+// ---- photos and videos ------------------------------------------------------------------------
+// The office's gallery and videos (the user, 2026-11-26: Home Assistant's own media, no media system of
+// ours). Photos: Home Assistant's Google Photos integration (since March 2025 Google lets an app see only
+// what it uploaded: the albums Nina made and filled), browsed and resolved through its media source; a
+// resolved address lasts about an hour, so each photo is resolved as it is shown. Videos: YouTube's
+// player, embedded from youtube-nocookie.com, muted and looping by default (a referrer sent: YouTube's
+// player refuses without one).
+class NinaPhotosCard extends HTMLElement {
+  setConfig(c) {
+    this.c = Object.assign({ album: "Nina's gallery", interval: 10, title: "Gallery", icon: "mdi:image-multiple", height: "320px" }, c || {});
+    if (this.root) return;
+    this.root = this.attachShadow({ mode: "open" });
+    this.root.innerHTML = `<style>${SCHEME}
+      ha-card { padding: 0; height: var(--h); }
+      .pic { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.4s ease; }
+      .pic.on { opacity: 1; }
+      .bar { position: absolute; left: 0; right: 0; top: 0; padding: 12px 16px;
+             background: linear-gradient(to bottom, rgba(10,8,7,.7), transparent); }
+      .count { position: absolute; right: 14px; bottom: 10px; font-size: .8em; color: rgba(255,255,255,.75); }
+    </style><ha-card><img class="pic" alt=""><img class="pic" alt="">
+      <div class="bar"><div class="head"><div class="icon"><ha-icon icon="${this.c.icon}"></ha-icon></div>
+        <div><div class="title">${this.c.title}</div><div class="sub">${this.c.album}</div></div></div></div>
+      <div class="count"></div></ha-card>`;
+    this.root.querySelector("ha-card").style.setProperty("--h", this.c.height);
+  }
+  set hass(h) { this._hass = h; if (!this.items && !this.loading) this.load(); }
+  connectedCallback() { if (this.items && !this.tm) this.next(); }
+  disconnectedCallback() { clearTimeout(this.tm); this.tm = null; }
+  async load() {
+    this.loading = true;
+    const ws = (id) => this._hass.callWS({ type: "media_source/browse_media", media_content_id: id });
+    try {
+      const root = await ws("media-source://google_photos");
+      for (const acct of root.children || []) {
+        const albums = await ws(acct.media_content_id);
+        const al = (albums.children || []).find((a) => a.title === this.c.album);
+        if (!al) continue;
+        const pics = await ws(al.media_content_id);
+        this.items = (pics.children || []).filter((p) => p.media_class === "image").map((p) => p.media_content_id);
+        break;
+      }
+    } catch (e) { this.root.querySelector(".sub").textContent = "Google Photos: " + (e.message || e); }
+    this.loading = false;
+    if (!this.items?.length) { this.root.querySelector(".sub").textContent = `no album "${this.c.album}"`; return; }
+    for (let i = this.items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.items[i], this.items[j]] = [this.items[j], this.items[i]]; }
+    this.i = -1; this.next();
+  }
+  async next() {
+    clearTimeout(this.tm);
+    if (!this.isConnected || !this.items?.length) return;
+    this.i = (this.i + 1) % this.items.length;
+    try {
+      const r = await this._hass.callWS({ type: "media_source/resolve_media", media_content_id: this.items[this.i] });
+      const [a, b] = this.root.querySelectorAll(".pic");
+      const show = a.classList.contains("on") ? b : a, hide = show === a ? b : a;
+      show.onload = () => { show.classList.add("on"); hide.classList.remove("on"); };
+      show.src = r.url;
+      this.root.querySelector(".count").textContent = `${this.i + 1} / ${this.items.length}`;
+    } catch (e) { /* this one failed: the next */ }
+    this.tm = setTimeout(() => this.next(), this.c.interval * 1000);
+  }
+  getCardSize() { return 6; }
+}
+
+class NinaVideoCard extends HTMLElement {
+  setConfig(c) {
+    this.c = Object.assign({ title: "Videos", icon: "mdi:youtube", mute: true, autoplay: true, loop: true, height: "320px" }, c || {});
+    if (!this.c.playlist && !this.c.video) throw new Error("nina-video-card: playlist or video");
+    const q = new URLSearchParams({ autoplay: this.c.autoplay ? 1 : 0, mute: this.c.mute ? 1 : 0, loop: this.c.loop ? 1 : 0,
+      playsinline: 1, rel: 0, modestbranding: 1 });
+    let src;
+    if (this.c.playlist) { q.set("list", this.c.playlist); src = `https://www.youtube-nocookie.com/embed/videoseries?${q}`; }
+    else { if (this.c.loop) q.set("playlist", this.c.video); src = `https://www.youtube-nocookie.com/embed/${this.c.video}?${q}`; }
+    if (!this.root) this.root = this.attachShadow({ mode: "open" });
+    this.root.innerHTML = `<style>${SCHEME}
+      ha-card { padding: 0; height: var(--h); background: #000; }
+      iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+      .bar { position: absolute; left: 0; top: 0; padding: 12px 16px; pointer-events: none; }
+    </style><ha-card><iframe allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen
+      referrerpolicy="strict-origin-when-cross-origin" title="${this.c.title}" src="${src}"></iframe>
+      ${this.c.show_title ? `<div class="bar"><div class="head"><div class="icon"><ha-icon icon="${this.c.icon}"></ha-icon></div><div class="title">${this.c.title}</div></div></div>` : ""}
+    </ha-card>`;
+    this.root.querySelector("ha-card").style.setProperty("--h", this.c.height);
+  }
+  set hass(h) {}
+  getCardSize() { return 6; }
+}
+
 // ---- activity ---------------------------------------------------------------------------------
 const TOOL_WORDS = { home_timers: "a timer", home_music: "the music", home_glow: "the bedroom light", home_lights: "the lights",
   home_air: "the air", home_comfort: "the air", home_agenda: "the agenda", calendar: "the calendar", lists: "the lists",
@@ -328,6 +419,8 @@ customElements.define("nina-settings-card", NinaSettingsCard);
 customElements.define("nina-activity-card", NinaActivityCard);
 customElements.define("nina-surprises-card", NinaSurprisesCard);
 customElements.define("nina-bubble-card", NinaBubbleCard);
+customElements.define("nina-photos-card", NinaPhotosCard);
+customElements.define("nina-video-card", NinaVideoCard);
 window.customCards = window.customCards || [];
 window.customCards.push(
   { type: "nina-settings-card", name: "Nina: settings", description: "Her name, persona, voice and temperament." },

@@ -147,6 +147,26 @@ views:
                 - {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
                 - {type: weather-forecast, entity: weather.home, forecast_type: hourly, show_current: false, show_forecast: true}
 
+  - title: Photos
+    path: photos
+    icon: mdi:image-multiple
+    type: panel
+    cards:
+      - type: horizontal-stack
+        cards:
+          - *nina
+          - {type: custom:nina-photos-card, album: "Nina's gallery", interval: 12, height: 584px}
+
+  - title: Videos
+    path: videos
+    icon: mdi:youtube
+    type: panel
+    cards:
+      - type: horizontal-stack
+        cards:
+          - *nina
+          - {type: custom:nina-video-card, title: Claudia, video: Z6_ENp_fO_Y, height: 584px}   # the playlist: when its full id comes
+
   - title: Surprises
     path: surprises
     icon: mdi:flag
