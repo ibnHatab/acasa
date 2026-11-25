@@ -1,0 +1,14 @@
+# ha-mcp for Nina's tasks (acasa live/ha-mcp/run.sh): Home Assistant's configuration (automations,
+# scripts, scenes, dashboards) over MCP, on 127.0.0.1:8086/mcp. Pascal: HA_URL default (127.0.0.1);
+# the Pi: Environment=HA_URL=http://homeassistant.local:8123 if its HA is not on loopback.
+[Unit]
+Description=ha-mcp: Home Assistant's configuration for Nina
+After=network-online.target
+
+[Service]
+ExecStart=%h/repo/acasa/live/ha-mcp/run.sh
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

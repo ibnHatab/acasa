@@ -26,7 +26,7 @@ tasks:                                    # System 2: delegate(goal) → a pi ta
     - {provider: google, model: gemini-3.5-flash, key: ~/.config/fsttm/gemini.key}
     - {provider: openrouter, model: deepseek/deepseek-v4.1-flash, key: ~/.config/metis/openrouter.env}
   max_turns: 10
-  timeout: 3m
+  timeout: 5m                            # configuration work takes turns (ha-mcp, 2026-11-25)
   transform: true                         # the world's lines before each request (read-only)
   steer: true                             # a used package's new conclusion, mid-run
   follow_up: true                         # a late outcome, after the run would end
@@ -40,7 +40,16 @@ search:                                   # web_search (nina-live websearch/), a
   daily: 300                              # searches a day at most (SearXNG's engines are polite to: they rate-limit)
 
 mcp:                                      # MCP servers whose tools her tasks use (nina-live mcp/; 2026-11-25)
-  - name: ha                              # Home Assistant's own MCP server (the mcp_server integration):
+  - name: assist                          # Home Assistant's own MCP server (the mcp_server integration):
     url: http://homeassistant.local:8123/api/mcp # its Assist API, the home's state (GetLiveContext) and its intents
     token_file: ~/.config/fsttm/hass.token
     domain: home
+    deny: [homeassistant__render_template, search__search]  # ha-mcp's ha_eval_template and ha_search do them
+  - name: hacfg                           # ha-mcp (acasa live/ha-mcp, service nina-ha-mcp): Home Assistant's
+    url: http://127.0.0.1:8086/mcp        # configuration; she edits automations, scripts and scenes herself
+    domain: home                          # (the user, 2026-11-25: no confirmation; the domain rules govern her)
+    bare: true                            # its tools by their own names (ha_config_set_automation)
+    allow: [ha_search, ha_get_state, ha_list_services, ha_eval_template, ha_get_skill_guide, # 15 of its 77: the rest's
+            ha_config_get_automation, ha_config_set_automation, ha_config_remove_automation, ha_get_automation_traces,
+            ha_config_get_script, ha_config_set_script, ha_config_remove_script,
+            ha_config_get_scene, ha_config_set_scene, ha_config_remove_scene]  # descriptions are ~30k tokens a turn
