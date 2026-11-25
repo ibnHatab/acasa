@@ -2,7 +2,7 @@
 // (fsttm-live's web plugin, :8770): awake or asleep, listening, thinking, speaking, the floor; the
 // mic and her voice, on and off (POST /api/prefs); the conversation as it happens (the event
 // stream), as chat bubbles. The bubbles take assist-chat-display's theme variables, so one theme
-// styles both. Config: panel (default: this host, port 8770), max_messages (20), message_max_age
+// styles both. Config: panel (default: this host, port 8770; on https, from the tailnet: this host, 443), max_messages (20), message_max_age
 // (s, 300; 0 keeps them), height (a CSS height: the card's, e.g. calc(100vh - 32px) on the panel),
 // face (the folder of one persona's frames, or "" for none), personas (the folders' names under
 // /local/nina/personas). Which one: ?persona=NAME in the address, else Nina's own (her temperament's
@@ -150,7 +150,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
 class NinaCard extends HTMLElement {
   setConfig(c) {
     this.c = Object.assign({ max_messages: 20, message_max_age: 300 }, c || {});
-    this.panel = this.c.panel || `${location.protocol}//${location.hostname}:8770`;
+    this.panel = this.c.panel || (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`);
     if (!this.root) {
       this.root = this.attachShadow({ mode: "open" });
       this.root.innerHTML = `
@@ -234,6 +234,10 @@ class NinaCard extends HTMLElement {
   .off { color: var(--secondary-text-color); font-size: .85em; text-align: center; }
   .hint { margin: auto; color: var(--secondary-text-color); text-align: center; line-height: 1.6; opacity: .8; }
   .chat:not(:empty) + .hint { display: none; }
+  .say { display: flex; gap: 8px; } .say[hidden] { display: none; }  /* typed to her (remote: away from her mic) */
+  .say input { flex: 1; min-width: 0; font: inherit; color: #fff; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.25);
+               border-radius: 999px; padding: 9px 14px; backdrop-filter: blur(6px); }
+  .say button { border: 0; border-radius: 999px; padding: 0 16px; background: var(--primary-color, #d97757); color: #fff; font: inherit; cursor: pointer; }
 </style>
 <ha-card>
   <div class="face" hidden><div class="rig"></div><div class="scenebox"></div></div>
@@ -242,9 +246,22 @@ class NinaCard extends HTMLElement {
     <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button></div></div>
   <div class="chat"></div>
   <div class="hint">Say “Nina”, or tap the mic.</div>
+  <form class="say" hidden><input placeholder="Write to Nina…" enterkeyhint="send" autocomplete="off"><button>Send</button></form>
   <div class="credit" hidden>Claudia by anabology · AI-generated</div>
 </ha-card>`;
       setTimeout(() => this.face(), 0); // after Home Assistant gives the card its states (her persona)
+      if (this.c.input) { // config input: true (her screen, remote): a line typed to her, as if said
+        const f = this.root.querySelector(".say"), i = f.querySelector("input");
+        f.hidden = false;
+        this.root.querySelector(".hint").textContent = "Write to her below.";
+        f.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const t = i.value.trim();
+          if (!t) return;
+          i.value = "";
+          this.api("/api/do", { action: "type", arg: t }).catch(() => {});
+        });
+      }
       if (this.c.height) this.root.querySelector("ha-card").style.height = this.c.height;
       this.root.querySelectorAll("button[data-p]").forEach((b) =>
         b.addEventListener("click", async () => {
@@ -403,6 +420,9 @@ class NinaCard extends HTMLElement {
     };
     this.gl = { start: () => { if (!this.raf) { last = performance.now(); this.raf = requestAnimationFrame(draw); } }, stop };
     document.addEventListener("visibilitychange", () => this.gl && (document.hidden ? this.gl.stop() : this.gl.start()));
+    // a resize clears a WebGL canvas: draw again, even asleep (her loop rests once settled; a page
+    // that settles its size after the first frames, as her remote screen does, showed black)
+    new ResizeObserver(() => { this.still = 0; this.gl?.start(); }).observe(cv);
     if (this.isConnected) this.gl.start();
   }
   mouth(name) { for (const m of ["talk-a", "talk-b"]) this.show(m, m === name); }

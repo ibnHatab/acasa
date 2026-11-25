@@ -10,7 +10,7 @@
 //                                       in the room; the distance calibration's points (room: 5, metres wide)
 const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
 const ASSETS = new URL(".", import.meta.url).pathname;
-const PANEL = `${location.protocol}//${location.hostname}:8770`;
+const PANEL = (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`);
 const api = (path, body) => fetch(PANEL + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}).then((r) => r.json());
 
 const SCHEME = `

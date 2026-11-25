@@ -12,7 +12,12 @@
 
      Served under homeassistant.local so the framed Home Assistant keeps its login (Firefox partitions
      a frame's storage by site; the port is not part of it). Home Assistant must allow being framed
-     (.storage/http: use_x_frame_options false). ?ha=URL: another Home Assistant. -->
+     (.storage/http: use_x_frame_options false). ?ha=URL: another Home Assistant.
+
+     Remote (2026-11-25, the user: from outside, through Tailscale, just Nina: no status panel; Home
+     Assistant behind the house button): on https (the tailnet's serve), a narrow screen or ?remote,
+     her card takes the whole page with a line to write to her, Home Assistant is the Pi's on the same
+     host's port 8443, loaded only when asked for and not sent back after ten minutes. -->
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Nina</title>
 <style>
@@ -43,6 +48,10 @@
           padding-bottom: 70px; background: rgba(0,0,0,.25); }
   #soon div { background: rgba(20,16,14,.9); padding: 14px 22px; border-radius: 14px; font-size: 1.1em; }
   body.soon #soon { display: flex; }
+  body.remote #nina { width: 100%; padding: 0; }
+  body.remote #side { display: none; }
+  body.remote.ha #side { display: block; }
+  body.remote #toHA { display: none; } /* her card's own ⌂ */
 </style></head>
 <body>
   <div id="nina"></div>
@@ -56,13 +65,15 @@
   <script type="module">
     import "./nina-card.js";
     const q = new URLSearchParams(location.search);
-    const HA = q.get("ha") || `${location.protocol}//${location.hostname}:8123`;
+    const REMOTE = q.has("remote") || location.protocol === "https:" || matchMedia("(max-width: 700px)").matches;
+    document.body.classList.toggle("remote", REMOTE);
+    const HA = q.get("ha") || (location.protocol === "https:" ? `https://${location.hostname}:8443` : `${location.protocol}//${location.hostname}:8123`);
     const SIDE = `${HA}/nina-side/home?kiosk`, FULL = `${HA}/home-panel/home`; // the full interface, in her scheme (dashboards/home.yaml)
     const STAY = (+q.get("stay") || 600) * 1000, WARN = 10; // ?stay=SECONDS (tests): how long Home Assistant stays up
 
     // Nina's card: her panel is this page's own origin
     const card = document.createElement("nina-card");
-    card.setConfig({ panel: location.origin, height: "calc(100vh - 16px)" });
+    card.setConfig({ panel: location.origin, height: REMOTE ? "100dvh" : "calc(100vh - 16px)", input: REMOTE });
     document.getElementById("nina").appendChild(card);
 
     // the clock while the house wakes up
@@ -85,13 +96,17 @@
     const probe = () => fetch(`${HA}/manifest.json?${Date.now()}`, { mode: "no-cors", cache: "no-store" })
       .then(() => { haUp = true; show(document.body.classList.contains("ha") ? FULL : SIDE); })
       .catch(() => setTimeout(probe, 2000));
-    probe();
+    if (!REMOTE) probe(); // remote: Home Assistant only when asked for
 
     // Nina ⇄ Home Assistant's full interface
     let back, warn;
     const mode = (m) => {
       clearTimeout(back); clearInterval(warn); document.body.classList.remove("soon");
       document.body.classList.toggle("ha", m === "ha");
+      if (REMOTE) { // Home Assistant full, kept until "Nina"; her screen alone otherwise
+        if (m === "ha") { haUp = true; frame.classList.add("up"); document.getElementById("wait").classList.add("gone"); show(FULL); }
+        return;
+      }
       if (haUp) show(m === "ha" ? FULL : SIDE);
       if (m === "ha") back = setTimeout(soon, STAY);
     };

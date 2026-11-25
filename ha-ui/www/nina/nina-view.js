@@ -28,7 +28,7 @@ const ninaStream = (panel) => ((window.__ninaStreams ||= {})[panel] ||= (() => {
   const home = conf.home || "home";
   const back = (conf.return_after || 90) * 1000;
   const tools = conf.tools || {};
-  const panel = conf.panel || `${location.protocol}//${location.hostname}:8770`;
+  const panel = conf.panel || (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`);
   let timer;
   const go = (view) => {
     const base = bases.find((b) => location.pathname.startsWith(b));

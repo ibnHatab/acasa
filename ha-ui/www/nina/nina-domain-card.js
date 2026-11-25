@@ -35,7 +35,7 @@ const SCENES = fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(
 
 // one connection to Nina's panel for every domain card on the page
 const bus = window.__ninaDomainBus || (window.__ninaDomainBus = {
-  cards: new Set(), started: false, panel: `${location.protocol}//${location.hostname}:8770`,
+  cards: new Set(), started: false, panel: (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`),
   start() {
     if (this.started) return;
     this.started = true;
