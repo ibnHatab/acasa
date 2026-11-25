@@ -19,6 +19,7 @@
 # token and keys, her role's catalog workspace and her service.
 set -euo pipefail
 R=$HOME/repo
+export PATH=$PATH:/usr/sbin:/sbin # a user's PATH on Debian lacks them (ha-pi-kiosk looks for plymouth-set-default-theme)
 GO_MINOR=${GO_MINOR:-1.26}
 HOST=$(hostname)
 step() { printf '\n== %s\n' "$*"; }
