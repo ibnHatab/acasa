@@ -35,7 +35,7 @@ sudo apt-get update -qq
 # (trixie: the docker command is docker-cli, only recommended by docker.io: named, recommends being off)
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
   build-essential cmake ocaml-nox docker.io docker-cli docker-compose pulseaudio-utils mpd mpc sqlite3 jq \
-  python3-usb ca-certificates >/dev/null
+  python3-usb ca-certificates grim >/dev/null # grim: a screenshot of the kiosk over SSH (support)
 id -nG | grep -qw docker || sudo usermod -aG docker "$USER"
 D="sudo docker" # this session is not in the docker group yet
 
