@@ -180,6 +180,7 @@ func (h *ha) dashboard(urlPath, title, icon string, conf any) error {
 		ID      string `json:"id"`
 		URLPath string `json:"url_path"`
 		Sidebar bool   `json:"show_in_sidebar"`
+		Icon    string `json:"icon"`
 	}
 	json.Unmarshal(raw, &ds)
 	sidebar := !strings.HasSuffix(urlPath, "-side") // the side dashboard is framed, never browsed
@@ -189,8 +190,8 @@ func (h *ha) dashboard(urlPath, title, icon string, conf any) error {
 			continue
 		}
 		found = true
-		if d.Sidebar != sidebar {
-			if _, err := h.call(map[string]any{"type": "lovelace/dashboards/update", "dashboard_id": d.ID, "show_in_sidebar": sidebar}); err != nil {
+		if d.Sidebar != sidebar || d.Icon != icon {
+			if _, err := h.call(map[string]any{"type": "lovelace/dashboards/update", "dashboard_id": d.ID, "show_in_sidebar": sidebar, "icon": icon}); err != nil {
 				return err
 			}
 		}
@@ -330,6 +331,10 @@ func main() {
 		if err := yaml.Unmarshal(b, &conf); err != nil {
 			log.Fatalf("%s: %v", f, err)
 		}
+		icon, _ := conf["x-icon"].(string) // the sidebar's icon (each its own: two alike read as two Ninas)
+		if icon == "" {
+			icon = "mdi:home-heart"
+		}
 		for k := range conf { // x-…: the YAML's own (anchors' holders), not the dashboard's
 			if strings.HasPrefix(k, "x-") {
 				delete(conf, k)
@@ -337,7 +342,7 @@ func main() {
 		}
 		name := strings.TrimSuffix(filepath.Base(f), ".yaml")
 		title, _ := conf["title"].(string)
-		if err := h.dashboard(name+"-panel", title, "mdi:home-heart", conf); err != nil {
+		if err := h.dashboard(name+"-panel", title, icon, conf); err != nil {
 			log.Fatalf("dashboard %s: %v", name, err)
 		}
 		log.Printf("dashboard /%s-panel", name)

@@ -6,6 +6,7 @@
 //   type: custom:nina-settings-card     her name, persona (automatic or pinned), voice, the temperament's tuning
 //   type: custom:nina-activity-card     what she did lately: her tools, her moods, who came by, surprises
 //   type: custom:nina-surprises-card    the loop workspace's surprises: open, taken, ruled (panel /metis/)
+const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
 const ASSETS = new URL(".", import.meta.url).pathname;
 const PANEL = `${location.protocol}//${location.hostname}:8770`;
 const api = (path, body) => fetch(PANEL + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}).then((r) => r.json());
@@ -52,6 +53,15 @@ class NinaBase extends HTMLElement {
       <div class="head"><div class="icon"><ha-icon icon="${icon}"></ha-icon></div><div><div class="title">${title}</div><div class="sub">${sub || ""}</div></div></div>
       <div class="content"></div></div></ha-card>`;
     if (this.c?.focus) this.root.querySelector("ha-card").style.setProperty("--focus", this.c.focus);
+    if (this.c?.expanded) this.root.querySelector("ha-card").style.minHeight = "min(70vh, 520px)"; // opened large: large
+    if (!this.c?.expanded) { // a single click on its icon: the card large
+      const ic = this.root.querySelector(".icon");
+      ic.style.cursor = "pointer"; ic.title = "Open large";
+      ic.addEventListener("click", async () => {
+        const { expand, card } = await EXPAND;
+        expand(card(this.localName, { ...this.c, expanded: true, list_height: "62vh" }));
+      });
+    }
     this.scene(scene, frames);
     return this.root.querySelector(".content");
   }

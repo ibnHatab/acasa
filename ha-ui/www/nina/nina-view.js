@@ -3,6 +3,20 @@
 // that shows it (views.json: the tool, or its intent, to a view); after a while without another,
 // the dashboard goes back home. Only on Nina's dashboards (nina-panel; nina-side, the right half of
 // Nina's own screen, shell.html): no other page is ever moved (Home Assistant's own, for editing).
+const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
+// one event stream to her panel per page, shared by all of Nina's modules (a browser keeps six
+// connections to a host: a stream each, on two pages, left none for her panel's other requests)
+const ninaStream = (panel) => ((window.__ninaStreams ||= {})[panel] ||= (() => {
+  const t = new EventTarget();
+  const open = () => {
+    const es = new EventSource(`${panel}/api/events`);
+    for (const k of ["ev", "status"]) es.addEventListener(k, (m) => t.dispatchEvent(new MessageEvent(k, { data: m.data })));
+    es.onopen = () => t.dispatchEvent(new Event("up"));
+    es.onerror = () => { es.close(); t.dispatchEvent(new Event("down")); setTimeout(open, 5000); };
+  };
+  open();
+  return t;
+})());
 (async () => {
   // loaded twice on Nina's dashboards (a dashboard resource, and frontend.extra_module_url for every
   // page: Home Assistant's own pages load no dashboard resources): once is enough
@@ -33,21 +47,13 @@
     if (typeof t === "string") return t;
     return t[(e.args || {}).intent] || t["*"] || null;
   };
-  const connect = () => {
-    const es = new EventSource(`${panel}/api/events`);
-    es.addEventListener("ev", (m) => {
-      const e = JSON.parse(m.data);
-      if (e.ev === "tool") {
-        const view = viewOf(e);
-        if (view) go(view);
-      }
-    });
-    es.onerror = () => {
-      es.close();
-      setTimeout(connect, 5000);
-    };
-  };
-  connect();
+  ninaStream(panel).addEventListener("ev", (m) => {
+    const e = JSON.parse(m.data);
+    if (e.ev === "tool") {
+      const view = viewOf(e);
+      if (view) go(view);
+    }
+  });
 
   // the way back: on a kiosk (a browser that opened Nina's dashboard with ?kiosk), any other Home
   // Assistant page (its full interface, opened by her card's ⌂) gets a floating Nina button. Not in
@@ -65,7 +71,12 @@
   const dot = document.createElement("span");
   Object.assign(dot.style, { width: "22px", height: "22px", borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #ffd9a8, #c96f2e)" });
   pill.prepend(dot);
-  pill.addEventListener("click", () => { location.href = `${bases[0]}${home}?kiosk`; });
+  pill.addEventListener("click", async () => { // a single click: her card large, her own screen one more tap
+    const { expand, card } = await EXPAND;
+    if (!customElements.get("nina-card")) { location.href = `${bases[0]}${home}?kiosk`; return; }
+    expand(card("nina-card", { type: "custom:nina-card", height: "min(86vh, 640px)", scenes: false, expanded: true }),
+      { actions: [{ label: "Her screen", run: () => { location.href = `${bases[0]}${home}?kiosk`; } }] });
+  });
   document.body.appendChild(pill);
   const place = () => {
     const k = new URLSearchParams(location.search).get("kiosk");

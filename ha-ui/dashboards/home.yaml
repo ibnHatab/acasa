@@ -3,6 +3,7 @@
 # the rooms' cards with the scenes as their backgrounds). Her card's ⌂ opens it (/home-panel); the
 # chrome stays (no kiosk_mode): here devices are added and configured. Applied by `go run ./cmd/ha-ui`.
 title: Home
+x-icon: mdi:view-dashboard-variant   # the sidebar's (ha-ui)
 
 views:
   - title: Home

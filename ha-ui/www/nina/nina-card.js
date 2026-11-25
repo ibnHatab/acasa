@@ -30,6 +30,20 @@
 // One hub per page load: one connection to her panel, one conversation, shared by every Nina card
 // (each page of the dashboard has its own card: the conversation goes on as the page changes).
 // The card's own folder (Home Assistant's /local/nina/, or Nina's panel's /nina/): the personas are there.
+const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
+// one event stream to her panel per page, shared by all of Nina's modules (a browser keeps six
+// connections to a host: a stream each, on two pages, left none for her panel's other requests)
+const ninaStream = (panel) => ((window.__ninaStreams ||= {})[panel] ||= (() => {
+  const t = new EventTarget();
+  const open = () => {
+    const es = new EventSource(`${panel}/api/events`);
+    for (const k of ["ev", "status"]) es.addEventListener(k, (m) => t.dispatchEvent(new MessageEvent(k, { data: m.data })));
+    es.onopen = () => t.dispatchEvent(new Event("up"));
+    es.onerror = () => { es.close(); t.dispatchEvent(new Event("down")); setTimeout(open, 5000); };
+  };
+  open();
+  return t;
+})());
 const ASSETS = new URL(".", import.meta.url).pathname;
 
 const hub = window.__ninaHub || (window.__ninaHub = {
@@ -54,10 +68,13 @@ const hub = window.__ninaHub || (window.__ninaHub = {
   start(panel) {
     if (this.started) return;
     this.started = true; this.panel = panel;
-    const connect = () => {
+    const stream = ninaStream(panel);
+    const connect = () => { // her state, at the start and on each reconnect
       fetch(panel + "/api/state").then((r) => r.json()).then((s) => { this.prefs = s.prefs; this.status = s.status; this.persona = s.facts?.persona?.artwork || this.persona; this.surprises = s.facts?.surprises || this.surprises; this.emit(); })
         .catch(() => { this.status = null; this.emit(); });
-      const es = new EventSource(panel + "/api/events");
+    };
+    {
+      const es = stream;
       es.addEventListener("status", (m) => { this.status = JSON.parse(m.data); this.emit(); });
       es.addEventListener("ev", (m) => {
         const e = JSON.parse(m.data);
@@ -85,8 +102,9 @@ const hub = window.__ninaHub || (window.__ninaHub = {
           case "tool": this.cue(e.name); break;
         }
       });
-      es.onerror = () => { es.close(); this.status = null; this.emit(); setTimeout(connect, 5000); };
-    };
+      es.addEventListener("down", () => { this.status = null; this.emit(); });
+      es.addEventListener("up", connect);
+    }
     connect();
   },
 });
@@ -190,6 +208,14 @@ class NinaCard extends HTMLElement {
       // ⚑: what surprised her (asked as if typed: she answers with the explain tool's SURPRISES)
       this.root.querySelector(".flag").addEventListener("click", () =>
         this.api("/api/do", { action: "type", arg: "What surprised you?" }).catch(() => {}));
+      if (!this.c.expanded) { // a single click on her orb: her card large
+        const orb = this.root.querySelector(".orb");
+        orb.style.cursor = "pointer"; orb.title = "Nina, large";
+        orb.addEventListener("click", async () => {
+          const { expand, card } = await EXPAND;
+          expand(card("nina-card", { ...this.c, expanded: true, height: "min(86vh, 640px)" }));
+        });
+      }
       this.root.querySelector("button.ha").addEventListener("click", () =>
         window.__ninaShell ? window.__ninaShell.mode("ha") : (location.href = "/home-panel/home"));
       hub.start(this.panel);

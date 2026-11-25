@@ -10,6 +10,7 @@
 # scene, her words) and collapses into its icon, which keeps a mark (a timer: its countdown). Her
 # face on the left stays hers alone.
 title: Nina
+x-icon: mdi:account-voice   # the sidebar's (ha-ui)
 
 # kiosk-mode (NemesisRE, v16): the panel's screen and the preview hide Home Assistant's chrome; a
 # desktop's full-size browser keeps it, for editing. ?disable_km brings it back anywhere.
@@ -36,6 +37,30 @@ x-fans: &fans
   cards:
     - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_supply_fan, name: Living room, icon: mdi:fan}
     - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_supply_fan, name: Bedroom, icon: mdi:fan}
+
+x-air-all: &air_all
+  type: vertical-stack
+  cards:
+    - {type: custom:bubble-card, card_type: separator, name: Living room, icon: mdi:sofa}
+    - type: horizontal-stack
+      cards:
+        - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_supply_fan, name: Supply, icon: mdi:fan}
+        - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_extract_fan, name: Extract, icon: mdi:fan-chevron-down}
+    - type: horizontal-stack
+      cards:
+        - {type: custom:bubble-card, card_type: button, button_type: switch, entity: switch.lab_heater, name: Heater, icon: mdi:radiator}
+        - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.lab_outside_temperature, name: Intake, icon: mdi:thermometer}
+    - {type: custom:bubble-card, card_type: separator, name: Bedroom, icon: mdi:bed}
+    - type: horizontal-stack
+      cards:
+        - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_supply_fan, name: Supply, icon: mdi:fan}
+        - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_extract_fan, name: Extract, icon: mdi:fan-chevron-down}
+    - type: horizontal-stack
+      cards:
+        - {type: custom:bubble-card, card_type: button, button_type: switch, entity: switch.bedroom_badriom_heater, name: Heater, icon: mdi:radiator}
+        - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.bedroom_badriom_outside_temperature, name: Intake, icon: mdi:thermometer}
+    - {type: custom:bubble-card, card_type: separator, name: Kitchen, icon: mdi:silverware-fork-knife}
+    - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.kitchen_vlad_s_echo_dot_temperature, name: Temperature, icon: mdi:thermometer}
 
 x-agenda-soon: &agenda_soon
   type: markdown
@@ -70,6 +95,7 @@ views:
                 title: Weather
                 icon: mdi:weather-partly-cloudy
                 card: {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
+                expand: {type: vertical-stack, cards: [{type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}, {type: weather-forecast, entity: weather.home, forecast_type: hourly, show_current: false, show_forecast: true}]}
               - type: custom:nina-domain-card
                 compact: true
                 scene: music
@@ -77,6 +103,7 @@ views:
                 title: Radio
                 icon: mdi:radio
                 card: {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
+                expand: {type: vertical-stack, cards: [{type: media-control, entity: media_player.music_player_daemon}, {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}]}
               - type: horizontal-stack
                 cards:
                   - type: custom:nina-domain-card
@@ -86,6 +113,7 @@ views:
                     title: Agenda
                     icon: mdi:calendar-heart
                     card: *agenda_soon
+                    expand: {type: vertical-stack, cards: [{type: calendar, initial_view: listWeek, entities: [calendar.nina, calendar.aaosdeveloper_gmail_com]}, {type: todo-list, entity: todo.my_tasks}]}
                   - type: custom:nina-domain-card
                     scene: timers
                     focus: "45% 78%"
@@ -100,6 +128,7 @@ views:
                 title: Air
                 icon: mdi:fan
                 card: *fans
+                expand: *air_all
 
   - title: Music
     path: music
@@ -173,29 +202,7 @@ views:
             title: Air
             icon: mdi:fan
             height: 584px
-            card:
-              type: vertical-stack
-              cards:
-                - {type: custom:bubble-card, card_type: separator, name: Living room, icon: mdi:sofa}
-                - type: horizontal-stack
-                  cards:
-                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_supply_fan, name: Supply, icon: mdi:fan}
-                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_extract_fan, name: Extract, icon: mdi:fan-chevron-down}
-                - type: horizontal-stack
-                  cards:
-                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: switch.lab_heater, name: Heater, icon: mdi:radiator}
-                    - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.lab_outside_temperature, name: Intake, icon: mdi:thermometer}
-                - {type: custom:bubble-card, card_type: separator, name: Bedroom, icon: mdi:bed}
-                - type: horizontal-stack
-                  cards:
-                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_supply_fan, name: Supply, icon: mdi:fan}
-                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_extract_fan, name: Extract, icon: mdi:fan-chevron-down}
-                - type: horizontal-stack
-                  cards:
-                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: switch.bedroom_badriom_heater, name: Heater, icon: mdi:radiator}
-                    - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.bedroom_badriom_outside_temperature, name: Intake, icon: mdi:thermometer}
-                - {type: custom:bubble-card, card_type: separator, name: Kitchen, icon: mdi:silverware-fork-knife}
-                - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.kitchen_vlad_s_echo_dot_temperature, name: Temperature, icon: mdi:thermometer}
+            card: *air_all
 
   - title: Agenda
     path: agenda

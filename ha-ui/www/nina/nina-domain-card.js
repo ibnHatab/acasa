@@ -16,6 +16,20 @@
 //   compact: true            # no header row: the icon small in the corner (a crowded page)
 //   focus: "15% 20%"         # the crop's centre (object-position): a small card shows the scene's object
 //   entities: [light.bedroom_led]  # their changes bloom it too (the domain used from Home Assistant, not by Nina)
+const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
+// one event stream to her panel per page, shared by all of Nina's modules (a browser keeps six
+// connections to a host: a stream each, on two pages, left none for her panel's other requests)
+const ninaStream = (panel) => ((window.__ninaStreams ||= {})[panel] ||= (() => {
+  const t = new EventTarget();
+  const open = () => {
+    const es = new EventSource(`${panel}/api/events`);
+    for (const k of ["ev", "status"]) es.addEventListener(k, (m) => t.dispatchEvent(new MessageEvent(k, { data: m.data })));
+    es.onopen = () => t.dispatchEvent(new Event("up"));
+    es.onerror = () => { es.close(); t.dispatchEvent(new Event("down")); setTimeout(open, 5000); };
+  };
+  open();
+  return t;
+})());
 const ASSETS = new URL(".", import.meta.url).pathname;
 const SCENES = fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => ({ frames: {}, tools: {}, events: {} }));
 
@@ -25,15 +39,10 @@ const bus = window.__ninaDomainBus || (window.__ninaDomainBus = {
   start() {
     if (this.started) return;
     this.started = true;
-    const connect = () => {
-      const es = new EventSource(`${this.panel}/api/events`);
-      es.addEventListener("ev", (m) => {
-        const e = JSON.parse(m.data);
-        if (e.ev === "tool") this.cards.forEach((c) => c.cue(e));
-      });
-      es.onerror = () => { es.close(); setTimeout(connect, 5000); };
-    };
-    connect();
+    ninaStream(this.panel).addEventListener("ev", (m) => {
+      const e = JSON.parse(m.data);
+      if (e.ev === "tool") this.cards.forEach((c) => c.cue(e));
+    });
   },
 });
 
@@ -67,6 +76,8 @@ class NinaDomainCard extends HTMLElement {
   .bg::after { content: ""; position: absolute; inset: 0;
                background: linear-gradient(to bottom, rgba(10,8,7,.72) 0, rgba(10,8,7,.18) 28%, rgba(10,8,7,.12) 60%, rgba(10,8,7,.7) 100%); }
   .head { position: relative; display: flex; align-items: center; gap: 10px; }
+  ha-card.expandable .icon, ha-card.expandable .title { cursor: pointer; }
+  ha-card.expandable .icon:hover { background: #d97757; }
   .icon { position: relative; width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center;
           background: rgba(0,0,0,.38); color: #fff; transition: background .6s, transform .6s; }
   .icon.mark { background: #d97757; }
@@ -106,6 +117,10 @@ class NinaDomainCard extends HTMLElement {
     if (this.c.compact) card.classList.add("compact");
     if (parseInt(this.c.height) >= 400) card.classList.add("tall");
     this.root.querySelector("ha-icon").setAttribute("icon", this.c.icon || "mdi:home");
+    if (!this.c.expanded) { // a single click on its icon or title: the card large (expand: a fuller card for it)
+      for (const s of [".icon", ".title"]) this.root.querySelector(s).addEventListener("click", (e) => { e.stopPropagation(); this.open(); });
+      card.classList.add("expandable");
+    }
     this.root.querySelector(".title").textContent = this.c.title || "";
     this.root.querySelector(".sub").textContent = this.c.subtitle || "";
     for (const s of this.c.swatches || []) {
@@ -129,6 +144,12 @@ class NinaDomainCard extends HTMLElement {
     });
     if (this.c.card) this.inner(this.c.card);
     bus.start();
+  }
+  async open() {
+    const { expand, card } = await EXPAND;
+    const conf = { ...this.c, compact: false, expanded: true, focus: undefined, height: "min(78vh, 560px)", card: this.c.expand || this.c.card };
+    delete conf.expand;
+    expand(card("nina-domain-card", conf));
   }
   async inner(conf) {
     const helpers = await window.loadCardHelpers?.();
