@@ -33,8 +33,7 @@ views:
             card: {type: calendar, initial_view: listWeek, entities: [calendar.nina_pero_tm_gmail_com]}
           - type: custom:nina-domain-card
             grid_options: {columns: full}
-            scene: agenda
-            focus: "90% 45%"
+            scene: glow   # the home's light card's background: not the agenda's twice (the user, 2026-11-25)
             title: Tasks
             icon: mdi:format-list-checks
             card: {type: todo-list, entity: todo.my_tasks}
