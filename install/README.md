@@ -134,6 +134,12 @@ says), about 20 cm apart, the speakers' knob at 50 %. Calibrate (`fsttm-live/scr
 README there): the array's AGC off, her level (`audio.level`, −36 dBFS RMS at the minimum), the
 bubble (`prefs.bubble`, the one sound knob for her voice and the music), the barge-in margin.
 
+A separate microphone and speakers (no array: the office's KT USB adapter) need PipeWire's echo
+canceller between them: `live/pipewire/echo-cancel.sh MIC_SOURCE SPEAKER_SINK` (`pactl list short
+sources` / `sinks` name them). Nina then listens to `pulse:nina_ec_source` and speaks to
+`pulse:nina_ec_sink` (her config's `audio.device`, `audio.out`; `ref: -1`), and the radio plays through
+the canceller as the default output. Its calibration: `fsttm-live/scripts/calib/softaec.py`.
+
 ## 7. Her role and her service
 
 - **The catalog**: at home, the repo's (`nina-live/catalog`). For another role (the office's
