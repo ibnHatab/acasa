@@ -14,6 +14,7 @@
 //   countdown: true          # a timer's minutes (the tool's args) counted down on the icon
 //   height: 180px            # optional
 //   compact: true            # no header row: the icon small in the corner (a crowded page)
+//   focus: "15% 20%"         # the crop's centre (object-position): a small card shows the scene's object
 const ASSETS = new URL(".", import.meta.url).pathname;
 const SCENES = fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => ({ frames: {}, tools: {}, events: {} }));
 
@@ -43,48 +44,53 @@ class NinaDomainCard extends HTMLElement {
     this.root = this.attachShadow({ mode: "open" });
     this.root.innerHTML = `
 <style>
+  /* Nina's card scheme (2026-11-25, the user: the scene is each card's background, the widgets on it
+     transparent; no semi-transparent panels splitting the picture) */
   :host { display: block; }
   ha-card { position: relative; overflow: hidden; padding: 12px 14px; box-sizing: border-box; min-height: 64px;
-            background: var(--ha-card-background, var(--card-background-color)); }
+            background: #14100e; color: #fff; border: 0;
+            --primary-text-color: #fff; --secondary-text-color: rgba(255,255,255,.78); --state-icon-color: #fff;
+            --ha-card-background: transparent; --card-background-color: transparent; --ha-card-box-shadow: none;
+            --ha-card-border-width: 0; --divider-color: rgba(255,255,255,.12);
+            --bubble-main-background-color: transparent; --bubble-button-main-background-color: transparent;
+            --bubble-media-player-main-background-color: transparent; --bubble-secondary-background-color: transparent;
+            --bubble-main-buttons-background-color: transparent; --bubble-button-background-color: transparent;
+            --bubble-icon-background-color: rgba(0,0,0,.35); --bubble-media-player-button-background-color: rgba(0,0,0,.35);
+            --bubble-sub-button-background-color: rgba(0,0,0,.35); --bubble-select-main-background-color: transparent; }
+  ha-card * { text-shadow: 0 1px 3px rgba(0,0,0,.65); }
   .bg { position: absolute; inset: 0; pointer-events: none; }
   .bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%;
-            opacity: 0; transition: opacity 1.2s ease, transform 6s ease; transform: scale(1.04); }
-  .bg img.on { opacity: .22; }
-  ha-card.bloom .bg img.on { opacity: 1; transform: scale(1.0); }
-  .bg::after { content: ""; position: absolute; inset: 0; transition: opacity 1.2s ease;
-               background: linear-gradient(to right, rgba(20,16,14,.92) 0, rgba(20,16,14,.55) 55%, rgba(20,16,14,.25) 100%); }
-  ha-card.bloom .bg::after { background: linear-gradient(to top, rgba(20,16,14,.85) 0, rgba(20,16,14,.05) 55%); }
+            opacity: 0; transform: scale(1.06); transition: opacity 1.6s ease, transform 9s ease-out; }
+  .bg img.on { opacity: 1; transform: scale(1.0); }
+  /* legible edges only: the picture stays whole in the middle */
+  .bg::after { content: ""; position: absolute; inset: 0;
+               background: linear-gradient(to bottom, rgba(10,8,7,.72) 0, rgba(10,8,7,.18) 28%, rgba(10,8,7,.12) 60%, rgba(10,8,7,.7) 100%); }
   .head { position: relative; display: flex; align-items: center; gap: 10px; }
   .icon { position: relative; width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center;
-          background: rgba(255,255,255,.08); color: var(--primary-text-color); transition: background .6s, transform .6s; }
-  .icon.mark { background: #d97757; color: #fff; }
+          background: rgba(0,0,0,.38); color: #fff; transition: background .6s, transform .6s; }
+  .icon.mark { background: #d97757; }
   ha-card.bloom .icon { transform: scale(1.15); }
   .icon .badge { position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 600;
-                 padding: 1px 6px; border-radius: 999px; background: #d97757; color: #fff; white-space: nowrap; }
+                 padding: 1px 6px; border-radius: 999px; background: #d97757; color: #fff; white-space: nowrap; text-shadow: none; }
   .icon .badge:empty { display: none; }
-  .title { font-weight: 500; color: var(--primary-text-color); }
-  .sub { font-size: .85em; color: var(--secondary-text-color); }
-  .caption { position: relative; margin-top: 8px; color: #fff; font-size: 1.05em; line-height: 1.35; text-shadow: 0 1px 4px rgba(0,0,0,.7);
+  .title { font-weight: 600; letter-spacing: .01em; }
+  .sub { font-size: .85em; color: rgba(255,255,255,.8); }
+  .caption { position: relative; margin-top: 8px; font-size: 1.05em; line-height: 1.35;
              max-height: 0; opacity: 0; overflow: hidden; transition: max-height .8s ease, opacity .8s ease; }
   ha-card.bloom .caption { max-height: 120px; opacity: 1; }
   .inner { position: relative; margin-top: 8px; }
   .inner:empty { display: none; margin: 0; }
-  .swatches { position: relative; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .swatches { position: relative; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
   .swatches:empty { display: none; }
-  .sw { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); cursor: pointer; padding: 0; }
+  .sw { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); cursor: pointer; padding: 0;
+        box-shadow: 0 1px 6px rgba(0,0,0,.5); }
   .sw:active { transform: scale(.92); }
-  /* a tall card (a page of its own): the scene shows in the space below the controls */
-  ha-card.tall .bg img.on { opacity: .55; }
-  ha-card.tall .bg::after { background: linear-gradient(to bottom, rgba(20,16,14,.95) 0, rgba(20,16,14,.8) 35%, rgba(20,16,14,.15) 100%); }
-  ha-card.tall.bloom .bg img.on { opacity: 1; }
   ha-card.compact { padding: 4px 6px; }
   ha-card.compact .head { position: absolute; top: 6px; right: 8px; z-index: 2; }
   ha-card.compact .head .title, ha-card.compact .head .sub { display: none; }
   ha-card.compact .icon { width: 26px; height: 26px; --mdc-icon-size: 16px; }
-  ha-card.compact .inner { margin-top: 0; margin-right: 30px; } /* room for the corner icon */
-  ha-card.compact .caption { position: absolute; left: 10px; right: 40px; bottom: 8px; margin: 0; z-index: 2; } /* over the scene: no jump */
-  /* the inner card sits on the scene: its own background goes */
-  .inner > * { --ha-card-background: transparent; --card-background-color: transparent; --ha-card-box-shadow: none; --ha-card-border-width: 0; }
+  ha-card.compact .inner { margin-top: 0; margin-right: 30px; }
+  ha-card.compact .caption { position: absolute; left: 10px; right: 40px; bottom: 8px; margin: 0; z-index: 2; }
 </style>
 <ha-card>
   <div class="bg"></div>
@@ -114,9 +120,10 @@ class NinaDomainCard extends HTMLElement {
       for (let i = 1; i <= n; i++) {
         const im = document.createElement("img");
         im.src = `${ASSETS}scenes/${this.c.scene}/${i}.webp`; im.alt = ""; im.loading = "lazy";
-        if (i === this.c.frame) im.classList.add("on");
+        if (this.c.focus) im.style.objectPosition = this.c.focus; // the crop's centre: on a small card, the scene's object, not her face
         bg.appendChild(im);
       }
+      this.play(); // as in the review: the first frame, a pause, the next
       this.tools = this.c.tools || Object.entries(sc.tools).filter(([, s]) => s === this.c.scene).map(([t]) => t);
     });
     if (this.c.card) this.inner(this.c.card);
@@ -136,21 +143,26 @@ class NinaDomainCard extends HTMLElement {
   say(text) {
     fetch(`${bus.panel}/api/do`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "type", arg: text }) }).catch(() => {});
   }
-  // cue: one of her tools: bloom (the scene up, its frames turning, her words), then collapse into the icon
+  // play: the scene's frames in turn (the first, a pause, the next…), held on the last
+  play() {
+    const imgs = [...this.root.querySelectorAll(".bg img")];
+    (this.tSteps || []).forEach(clearTimeout);
+    const step = (this.c.frame_seconds || 4) * 1000;
+    imgs.forEach((x, i) => x.classList.toggle("on", i === 0));
+    this.tSteps = imgs.slice(1).map((im, i) => setTimeout(() => imgs.forEach((x) => x.classList.toggle("on", x === im)), (i + 1) * step));
+  }
+  // cue: one of her tools: bloom (the scene replayed, her words), then collapse into the icon
   cue(e) {
     if (!this.tools?.includes(e.name)) return;
-    const card = this.root.querySelector("ha-card"), imgs = [...this.root.querySelectorAll(".bg img")];
+    const card = this.root.querySelector("ha-card");
     const text = e.result?.text || "";
     this.root.querySelector(".caption").textContent = text;
-    clearTimeout(this.tEnd); (this.tSteps || []).forEach(clearTimeout);
+    clearTimeout(this.tEnd);
     card.classList.add("bloom");
-    const step = (this.scene?.frame_seconds || 2.5) * 1000;
-    this.tSteps = imgs.map((im, i) => setTimeout(() => imgs.forEach((x) => x.classList.toggle("on", x === im)), i * step));
-    this.tEnd = setTimeout(() => {
-      card.classList.remove("bloom");
-      imgs.forEach((x, i) => x.classList.toggle("on", i + 1 === this.c.frame));
-      this.mark(e, text);
-    }, Math.max(this.c.show_seconds * 1000, imgs.length * step + 1500));
+    this.play();
+    const n = this.root.querySelectorAll(".bg img").length;
+    this.tEnd = setTimeout(() => { card.classList.remove("bloom"); this.mark(e, text); },
+      Math.max(this.c.show_seconds * 1000, n * (this.c.frame_seconds || 4) * 1000 + 1500));
   }
   // mark: what the collapse leaves on the icon; a timer counts down to its end
   mark(e, text) {

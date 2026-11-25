@@ -66,12 +66,14 @@ views:
               - type: custom:nina-domain-card
                 compact: true
                 scene: weather
+                focus: "12% 18%"
                 title: Weather
                 icon: mdi:weather-partly-cloudy
                 card: {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
               - type: custom:nina-domain-card
                 compact: true
                 scene: music
+                focus: "92% 55%"
                 title: Radio
                 icon: mdi:radio
                 card: {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
@@ -80,11 +82,13 @@ views:
                   - type: custom:nina-domain-card
                     compact: true
                     scene: agenda
+                    focus: "90% 45%"
                     title: Agenda
                     icon: mdi:calendar-heart
                     card: *agenda_soon
                   - type: custom:nina-domain-card
                     scene: timers
+                    focus: "45% 78%"
                     title: Timers
                     subtitle: none running
                     icon: mdi:timer-sand
@@ -92,6 +96,7 @@ views:
               - type: custom:nina-domain-card
                 compact: true
                 scene: air
+                focus: "8% 35%"
                 title: Air
                 icon: mdi:fan
                 card: *fans
