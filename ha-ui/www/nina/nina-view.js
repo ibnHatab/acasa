@@ -71,7 +71,8 @@
     const k = new URLSearchParams(location.search).get("kiosk");
     if (k === "off") localStorage.removeItem(KIOSK); // ?kiosk=off on any page: this browser is not a kiosk
     else if (mine() && k !== null) localStorage.setItem(KIOSK, "1");
-    pill.style.display = !framed && !mine() && localStorage.getItem(KIOSK) === "1" ? "flex" : "none";
+    const hers = location.pathname.startsWith("/home-panel/"); // the full mode's Home: her card is there
+    pill.style.display = !framed && !mine() && !hers && localStorage.getItem(KIOSK) === "1" ? "flex" : "none";
   };
   place();
   window.addEventListener("location-changed", place);

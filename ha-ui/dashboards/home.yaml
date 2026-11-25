@@ -1,0 +1,110 @@
+# Home Assistant's full mode in Nina's scheme (acasa ha-ui, 2026-11-25; the user: in the full mode a
+# Nina card, not a button, with her settings and her activities; the surprises a card of their own;
+# the rooms' cards with the scenes as their backgrounds). Her card's ⌂ opens it (/home-panel); the
+# chrome stays (no kiosk_mode): here devices are added and configured. Applied by `go run ./cmd/ha-ui`.
+title: Home
+
+views:
+  - title: Home
+    path: home
+    icon: mdi:home-heart
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - {type: heading, heading: Nina, icon: mdi:account-voice}
+          - {type: custom:nina-card, height: 380px, scenes: false, grid_options: {columns: full}}
+          - {type: custom:nina-activity-card, list_height: 260px, grid_options: {columns: full}}
+          - {type: custom:nina-surprises-card, list_height: 200px, grid_options: {columns: full}}
+
+      - type: grid
+        cards:
+          - {type: heading, heading: Bedroom, icon: mdi:bed}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: glow
+            title: LED Geiling lights
+            subtitle: through the kitchen Echo
+            icon: mdi:ceiling-light
+            entities: [light.bedroom_led]
+            swatches:
+              - {name: warm, color: "#f6c27a", say: "make the bedroom light warm white"}
+              - {name: amber, color: "#f0a03c", say: "make the bedroom light amber"}
+              - {name: sunset, color: "#e8743b", say: "make the bedroom light sunset"}
+              - {name: white, color: "#f4f1ea", say: "make the bedroom light white"}
+              - {name: cool, color: "#b9d4f0", say: "make the bedroom light cool white"}
+            card:
+              type: tile
+              entity: light.bedroom_led
+              name: Lamp
+              features_position: bottom
+              features: [{type: light-brightness}, {type: light-color-temp}]
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: air
+            focus: "8% 35%"
+            title: Air
+            icon: mdi:fan
+            card:
+              type: grid
+              columns: 3
+              square: false
+              cards:
+                - {type: tile, entity: fan.bedroom_badriom_supply_fan, name: Supply, icon: mdi:fan, vertical: true, hide_state: true}
+                - {type: tile, entity: fan.bedroom_badriom_extract_fan, name: Extract, icon: mdi:fan-chevron-down, vertical: true, hide_state: true}
+                - {type: tile, entity: switch.bedroom_badriom_heater, name: Heater, icon: mdi:radiator, vertical: true, hide_state: true}
+
+      - type: grid
+        cards:
+          - {type: heading, heading: Living room, icon: mdi:sofa}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: music
+            focus: "92% 55%"
+            title: Radio
+            icon: mdi:radio
+            card: {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: air
+            focus: "8% 35%"
+            title: Air
+            icon: mdi:fan
+            card:
+              type: grid
+              columns: 3
+              square: false
+              cards:
+                - {type: tile, entity: fan.lab_supply_fan, name: Supply, icon: mdi:fan, vertical: true, hide_state: true}
+                - {type: tile, entity: fan.lab_extract_fan, name: Extract, icon: mdi:fan-chevron-down, vertical: true, hide_state: true}
+                - {type: tile, entity: switch.lab_heater, name: Heater, icon: mdi:radiator, vertical: true, hide_state: true}
+          - {type: heading, heading: Outside, icon: mdi:weather-partly-cloudy}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: weather
+            focus: "12% 18%"
+            title: Weather
+            icon: mdi:weather-partly-cloudy
+            card: {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
+          - type: custom:nina-domain-card
+            grid_options: {columns: full}
+            scene: agenda
+            title: Agenda
+            icon: mdi:calendar-heart
+            card: {type: todo-list, entity: todo.my_tasks}
+
+  - title: Nina
+    path: nina
+    icon: mdi:account-cog
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - {type: heading, heading: Her settings, icon: mdi:account-cog}
+          - {type: custom:nina-settings-card, grid_options: {columns: full}}
+      - type: grid
+        cards:
+          - {type: heading, heading: What she did, icon: mdi:timeline-clock}
+          - {type: custom:nina-activity-card, list_height: 420px, grid_options: {columns: full}}

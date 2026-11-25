@@ -234,3 +234,16 @@ views:
               cards:
                 - {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
                 - {type: weather-forecast, entity: weather.home, forecast_type: hourly, show_current: false, show_forecast: true}
+
+  - title: Surprises
+    path: surprises
+    icon: mdi:flag
+    type: panel
+    cards:
+      - type: horizontal-stack
+        cards:
+          - *nina
+          - type: vertical-stack
+            cards:
+              - {type: custom:nina-surprises-card, list_height: 210px}
+              - {type: custom:nina-activity-card, list_height: 170px}

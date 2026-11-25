@@ -191,7 +191,7 @@ class NinaCard extends HTMLElement {
       this.root.querySelector(".flag").addEventListener("click", () =>
         this.api("/api/do", { action: "type", arg: "What surprised you?" }).catch(() => {}));
       this.root.querySelector("button.ha").addEventListener("click", () =>
-        window.__ninaShell ? window.__ninaShell.mode("ha") : (location.href = "/"));
+        window.__ninaShell ? window.__ninaShell.mode("ha") : (location.href = "/home-panel/home"));
       hub.start(this.panel);
       setInterval(() => this.render(), 5000);
     }

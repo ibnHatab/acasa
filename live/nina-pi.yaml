@@ -38,3 +38,9 @@ search:                                   # web_search (nina-live websearch/), a
                                           # has billing (429 "check your plan and billing"); then 5,000 a month free
   key: ~/.config/fsttm/gemini.key
   daily: 300                              # searches a day at most (SearXNG's engines are polite to: they rate-limit)
+
+mcp:                                      # MCP servers whose tools her tasks use (nina-live mcp/; 2026-11-25)
+  - name: ha                              # Home Assistant's own MCP server (the mcp_server integration):
+    url: http://homeassistant.local:8123/api/mcp # its Assist API, the home's state (GetLiveContext) and its intents
+    token_file: ~/.config/fsttm/hass.token
+    domain: home

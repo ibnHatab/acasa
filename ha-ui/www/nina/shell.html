@@ -57,7 +57,7 @@
     import "./nina-card.js";
     const q = new URLSearchParams(location.search);
     const HA = q.get("ha") || `${location.protocol}//${location.hostname}:8123`;
-    const SIDE = `${HA}/nina-side/home?kiosk`, FULL = `${HA}/`; // the full interface: its own default dashboard
+    const SIDE = `${HA}/nina-side/home?kiosk`, FULL = `${HA}/home-panel/home`; // the full interface, in her scheme (dashboards/home.yaml)
     const STAY = (+q.get("stay") || 600) * 1000, WARN = 10; // ?stay=SECONDS (tests): how long Home Assistant stays up
 
     // Nina's card: her panel is this page's own origin
