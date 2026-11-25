@@ -107,8 +107,9 @@ Then her look and feel: `cd ~/repo/acasa && go run ./cmd/ha-ui -url http://127.0
 The kiosk's login: a user of its own, not an admin and without a password, signed in only from the
 machine itself (the kiosk's Firefox opens `http://localhost:8123`). The person's owner session, in a
 browser: `config/auth/create` (name `Kiosk`, group `system-users`, local only); then
-`configuration.yaml`'s `homeassistant: auth_providers:` gets `homeassistant` and `trusted_networks`
-(`127.0.0.1` and `::1`, `trusted_users` both that user, `allow_bypass_login: true`). Anyone else,
+`configuration.yaml`'s `homeassistant: auth_providers:` gets `trusted_networks` **first** (`127.0.0.1`
+and `::1`, `trusted_users` both that user, `allow_bypass_login: true`: the login page takes the first
+provider it offers, and offers this one only to the machine itself), then `homeassistant`. Anyone else,
 through the tailnet's proxy too (its forwarded address counts), logs in as usual.
 
 Use the machine's name (`http://HOST.local:8123`), not its IP: the integrations keep the address
