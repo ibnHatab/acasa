@@ -171,7 +171,7 @@ func (h *ha) resource(url string) error {
 }
 
 // dashboard puts a storage dashboard at url_path and replaces its config.
-func (h *ha) dashboard(urlPath, title, icon string, conf any) error {
+func (h *ha) dashboard(urlPath, title, icon string, sidebar bool, conf any) error {
 	raw, err := h.call(map[string]any{"type": "lovelace/dashboards/list"})
 	if err != nil {
 		return err
@@ -183,7 +183,6 @@ func (h *ha) dashboard(urlPath, title, icon string, conf any) error {
 		Icon    string `json:"icon"`
 	}
 	json.Unmarshal(raw, &ds)
-	sidebar := !strings.HasSuffix(urlPath, "-side") // the side dashboard is framed, never browsed
 	found := false
 	for _, d := range ds {
 		if d.URLPath != urlPath {
@@ -332,6 +331,10 @@ func main() {
 			log.Fatalf("%s: %v", f, err)
 		}
 		icon, _ := conf["x-icon"].(string) // the sidebar's icon (each its own: two alike read as two Ninas)
+		sidebar := true                    // x-sidebar: false: not in the sidebar (reached by its address)
+		if v, ok := conf["x-sidebar"].(bool); ok {
+			sidebar = v
+		}
 		if icon == "" {
 			icon = "mdi:home-heart"
 		}
@@ -342,12 +345,12 @@ func main() {
 		}
 		name := strings.TrimSuffix(filepath.Base(f), ".yaml")
 		title, _ := conf["title"].(string)
-		if err := h.dashboard(name+"-panel", title, icon, conf); err != nil {
+		if err := h.dashboard(name+"-panel", title, icon, sidebar, conf); err != nil {
 			log.Fatalf("dashboard %s: %v", name, err)
 		}
 		log.Printf("dashboard /%s-panel", name)
 		if side, ok := sideOf(conf); ok { // the right half of Nina's own screen (shell.html): Nina's card taken out
-			if err := h.dashboard(name+"-side", title+" (side)", "mdi:page-layout-sidebar-right", side); err != nil {
+			if err := h.dashboard(name+"-side", title+" (side)", "mdi:page-layout-sidebar-right", false, side); err != nil {
 				log.Fatalf("dashboard %s-side: %v", name, err)
 			}
 			log.Printf("dashboard /%s-side", name)

@@ -11,6 +11,8 @@
 # face on the left stays hers alone.
 title: Nina
 x-icon: mdi:account-voice   # the sidebar's (ha-ui)
+x-sidebar: false            # the kiosk's screen, opened by its address (/nina-panel/home?kiosk): in Home Assistant's
+                            # full mode it only repeated the Home dashboard (the user, 2026-11-25: confusing)
 
 # kiosk-mode (NemesisRE, v16): the panel's screen and the preview hide Home Assistant's chrome; a
 # desktop's full-size browser keeps it, for editing. ?disable_km brings it back anywhere.
