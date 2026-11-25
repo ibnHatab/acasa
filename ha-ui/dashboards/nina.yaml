@@ -4,6 +4,11 @@
 # up the page that shows it (www/nina/views.json, www/nina/nina-view.js); after a while the
 # dashboard goes back home. Applied by `go run ./cmd/ha-ui` (the dashboard: /nina-panel).
 # Preview at the panel's size: /local/nina/preview.html?view=<page>.
+#
+# 2026-11-25 (the user's design 2): the right side is Nina's domain cards (www/nina/nina-domain-card.js):
+# each domain's Codex scene faint behind its card; when she uses the domain the card blooms (the
+# scene, her words) and collapses into its icon, which keeps a mark (a timer: its countdown). Her
+# face on the left stays hers alone.
 title: Nina
 
 # kiosk-mode (NemesisRE, v16): the panel's screen and the preview hide Home Assistant's chrome; a
@@ -15,7 +20,31 @@ kiosk_mode:
 x-nina: &nina
   type: custom:nina-card
   height: calc(100vh - 16px)
-  scenes: false   # her domain scenes over her face when a tool runs: true once reviewed (/local/nina/scenes.html)
+  scenes: false   # scenes over her face: off (design 2 puts them on the domain cards instead)
+
+x-swatches: &swatches   # the bedroom light's colours (Alexa's names): a swatch asks Nina, as if said
+  - {name: warm, color: "#f6c27a", say: "make the bedroom light warm white"}
+  - {name: amber, color: "#f0a03c", say: "make the bedroom light amber"}
+  - {name: sunset, color: "#e8743b", say: "make the bedroom light sunset"}
+  - {name: ember, color: "#b9442a", say: "make the bedroom light ember"}
+  - {name: white, color: "#f4f1ea", say: "make the bedroom light white"}
+  - {name: daylight, color: "#dfeaf5", say: "make the bedroom light daylight"}
+  - {name: cool, color: "#b9d4f0", say: "make the bedroom light cool white"}
+
+x-fans: &fans
+  type: horizontal-stack
+  cards:
+    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_supply_fan, name: Living room, icon: mdi:fan}
+    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_supply_fan, name: Bedroom, icon: mdi:fan}
+
+x-agenda-soon: &agenda_soon
+  type: markdown
+  text_only: true
+  content: >-
+    {% set ev = [('calendar.nina','Nina'), ('calendar.aaosdeveloper_gmail_com','You')] %}
+    {% for e, who in ev if state_attr(e, 'message') %}
+    **{{ as_timestamp(state_attr(e, 'start_time')) | timestamp_custom('%a %H:%M') }}** · {{ state_attr(e, 'message') }}<br>
+    {% else %}Nothing in the calendar soon.{% endfor %}
 
 views:
   - title: Home
@@ -32,27 +61,40 @@ views:
                 text_only: true
                 content: >-
                   <h1 style="font-size:3.2em;font-weight:300;margin:0;line-height:1">{{ now().strftime('%H:%M') }}</h1>
-                  {{ now().strftime('%A, %-d %B') }}
-              - type: weather-forecast
-                entity: weather.home
-                forecast_type: daily
-                show_current: true
-                show_forecast: true
-              - type: custom:bubble-card
-                card_type: media-player
-                entity: media_player.music_player_daemon
-                name: Radio
-              - type: markdown
-                text_only: true
-                content: >-
-                  {% set ev = [('calendar.nina','Nina'), ('calendar.aaosdeveloper_gmail_com','You')] %}
-                  {% for e, who in ev if state_attr(e, 'message') %}
-                  **{{ as_timestamp(state_attr(e, 'start_time')) | timestamp_custom('%a %H:%M') }}** · {{ state_attr(e, 'message') }}<br>
-                  {% else %}Nothing in the calendar soon.{% endfor %}
+                  {{ now().strftime('%A, %-d %B') }}{% if state_attr('sensor.nina_persona', 'mood') %}<span style="opacity:.6">
+                  · {{ state_attr('sensor.nina_persona', 'mood') }}, {{ state_attr('sensor.nina_persona', 'moon') }}</span>{% endif %}
+              - type: custom:nina-domain-card
+                compact: true
+                scene: weather
+                title: Weather
+                icon: mdi:weather-partly-cloudy
+                card: {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
+              - type: custom:nina-domain-card
+                compact: true
+                scene: music
+                title: Radio
+                icon: mdi:radio
+                card: {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
               - type: horizontal-stack
                 cards:
-                  - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_supply_fan, name: Living room, icon: mdi:fan}
-                  - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_supply_fan, name: Bedroom, icon: mdi:fan}
+                  - type: custom:nina-domain-card
+                    compact: true
+                    scene: agenda
+                    title: Agenda
+                    icon: mdi:calendar-heart
+                    card: *agenda_soon
+                  - type: custom:nina-domain-card
+                    scene: timers
+                    title: Timers
+                    subtitle: none running
+                    icon: mdi:timer-sand
+                    countdown: true
+              - type: custom:nina-domain-card
+                compact: true
+                scene: air
+                title: Air
+                icon: mdi:fan
+                card: *fans
 
   - title: Music
     path: music
@@ -62,17 +104,17 @@ views:
       - type: horizontal-stack
         cards:
           - *nina
-          - type: vertical-stack
-            cards:
-              - {type: custom:bubble-card, card_type: separator, name: Music, icon: mdi:radio}
-              - type: media-control
-                entity: media_player.music_player_daemon
-              - {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
-              - type: markdown
-                text_only: true
-                content: >-
-                  Ask Nina for a kind of music, a station by name, or "something": she learns
-                  what you keep on at each time of day.
+          - type: custom:nina-domain-card
+            scene: music
+            title: Music
+            subtitle: ask for a kind of music, a station, or "something"
+            icon: mdi:radio
+            height: 584px
+            card:
+              type: vertical-stack
+              cards:
+                - {type: media-control, entity: media_player.music_player_daemon}
+                - {type: custom:bubble-card, card_type: media-player, entity: media_player.music_player_daemon, name: Radio}
 
   - title: Light
     path: light
@@ -82,29 +124,28 @@ views:
       - type: horizontal-stack
         cards:
           - *nina
-          - type: vertical-stack
-            cards:
-              - {type: custom:bubble-card, card_type: separator, name: Bedroom light, icon: mdi:ceiling-light}
-              - type: horizontal-stack
-                cards:
-                  - type: custom:bubble-card
-                    card_type: button
-                    button_type: name
-                    name: Sunset
-                    icon: mdi:weather-sunset-down
-                    tap_action: {action: perform-action, perform_action: script.turn_on, target: {entity_id: script.bedroom_sunset_light}}
-                  - type: custom:bubble-card
-                    card_type: button
-                    button_type: name
-                    name: White
-                    icon: mdi:white-balance-sunny
-                    tap_action: {action: perform-action, perform_action: script.turn_on, target: {entity_id: script.bedroom_white_light}}
-              - type: markdown
-                text_only: true
-                content: >-
-                  The bedroom's LED lights live in Alexa: Nina sets their colour through the
-                  kitchen Echo, quietly. Ask her for warm, amber, sunset, ember, white, daylight
-                  or cool; "time for bed" fades them like a sunset.
+          - type: custom:nina-domain-card
+            scene: glow
+            title: Bedroom light
+            subtitle: a colour asks Nina, through the kitchen Echo; "time for bed" fades it like a sunset
+            icon: mdi:ceiling-light
+            height: 584px
+            swatches: *swatches
+            card:
+              type: horizontal-stack
+              cards:
+                - type: custom:bubble-card
+                  card_type: button
+                  button_type: name
+                  name: Sunset
+                  icon: mdi:weather-sunset-down
+                  tap_action: {action: perform-action, perform_action: script.turn_on, target: {entity_id: script.bedroom_sunset_light}}
+                - type: custom:bubble-card
+                  card_type: button
+                  button_type: name
+                  name: White
+                  icon: mdi:white-balance-sunny
+                  tap_action: {action: perform-action, perform_action: script.turn_on, target: {entity_id: script.bedroom_white_light}}
 
   - title: Air
     path: air
@@ -114,28 +155,34 @@ views:
       - type: horizontal-stack
         cards:
           - *nina
-          - type: vertical-stack
-            cards:
-              - {type: custom:bubble-card, card_type: separator, name: Living room, icon: mdi:sofa}
-              - type: horizontal-stack
-                cards:
-                  - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_supply_fan, name: Supply, icon: mdi:fan}
-                  - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_extract_fan, name: Extract, icon: mdi:fan-chevron-down}
-              - type: horizontal-stack
-                cards:
-                  - {type: custom:bubble-card, card_type: button, button_type: switch, entity: switch.lab_heater, name: Heater, icon: mdi:radiator}
-                  - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.lab_outside_temperature, name: Intake, icon: mdi:thermometer}
-              - {type: custom:bubble-card, card_type: separator, name: Bedroom, icon: mdi:bed}
-              - type: horizontal-stack
-                cards:
-                  - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_supply_fan, name: Supply, icon: mdi:fan}
-                  - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_extract_fan, name: Extract, icon: mdi:fan-chevron-down}
-              - type: horizontal-stack
-                cards:
-                  - {type: custom:bubble-card, card_type: button, button_type: switch, entity: switch.bedroom_badriom_heater, name: Heater, icon: mdi:radiator}
-                  - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.bedroom_badriom_outside_temperature, name: Intake, icon: mdi:thermometer}
-              - {type: custom:bubble-card, card_type: separator, name: Kitchen, icon: mdi:silverware-fork-knife}
-              - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.kitchen_vlad_s_echo_dot_temperature, name: Temperature, icon: mdi:thermometer}
+          - type: custom:nina-domain-card
+            scene: air
+            title: Air
+            icon: mdi:fan
+            height: 584px
+            card:
+              type: vertical-stack
+              cards:
+                - {type: custom:bubble-card, card_type: separator, name: Living room, icon: mdi:sofa}
+                - type: horizontal-stack
+                  cards:
+                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_supply_fan, name: Supply, icon: mdi:fan}
+                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.lab_extract_fan, name: Extract, icon: mdi:fan-chevron-down}
+                - type: horizontal-stack
+                  cards:
+                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: switch.lab_heater, name: Heater, icon: mdi:radiator}
+                    - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.lab_outside_temperature, name: Intake, icon: mdi:thermometer}
+                - {type: custom:bubble-card, card_type: separator, name: Bedroom, icon: mdi:bed}
+                - type: horizontal-stack
+                  cards:
+                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_supply_fan, name: Supply, icon: mdi:fan}
+                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: fan.bedroom_badriom_extract_fan, name: Extract, icon: mdi:fan-chevron-down}
+                - type: horizontal-stack
+                  cards:
+                    - {type: custom:bubble-card, card_type: button, button_type: switch, entity: switch.bedroom_badriom_heater, name: Heater, icon: mdi:radiator}
+                    - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.bedroom_badriom_outside_temperature, name: Intake, icon: mdi:thermometer}
+                - {type: custom:bubble-card, card_type: separator, name: Kitchen, icon: mdi:silverware-fork-knife}
+                - {type: custom:bubble-card, card_type: button, button_type: state, entity: sensor.kitchen_vlad_s_echo_dot_temperature, name: Temperature, icon: mdi:thermometer}
 
   - title: Agenda
     path: agenda
@@ -145,13 +192,16 @@ views:
       - type: horizontal-stack
         cards:
           - *nina
-          - type: vertical-stack
-            cards:
-              - type: calendar
-                initial_view: listWeek
-                entities: [calendar.nina, calendar.aaosdeveloper_gmail_com]
-              - type: todo-list
-                entity: todo.my_tasks
+          - type: custom:nina-domain-card
+            scene: agenda
+            title: Agenda
+            icon: mdi:calendar-heart
+            height: 584px
+            card:
+              type: vertical-stack
+              cards:
+                - {type: calendar, initial_view: listWeek, entities: [calendar.nina, calendar.aaosdeveloper_gmail_com]}
+                - {type: todo-list, entity: todo.my_tasks}
 
   - title: Weather
     path: weather
@@ -161,7 +211,13 @@ views:
       - type: horizontal-stack
         cards:
           - *nina
-          - type: vertical-stack
-            cards:
-              - {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
-              - {type: weather-forecast, entity: weather.home, forecast_type: hourly, show_current: false, show_forecast: true}
+          - type: custom:nina-domain-card
+            scene: weather
+            title: Weather
+            icon: mdi:weather-partly-cloudy
+            height: 584px
+            card:
+              type: vertical-stack
+              cards:
+                - {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
+                - {type: weather-forecast, entity: weather.home, forecast_type: hourly, show_current: false, show_forecast: true}
