@@ -3,7 +3,7 @@
 # rebuilt from her event log, Home Assistant as her tool.
 log: ~/.local/share/nina/nina.db          # her memory: every event, append only (SQLite)
 home:
-  root: ~/repo/nina-live/catalog           # the home world (moved from metis-worlds, 2026-11-24)
+  root: ~/repo/acasa/roles/secretary/catalog   # the office's workspace (imports the main catalog's packages)
   metisc: ~/repo/perotheia-packages/metis-lang/src/metisc
   beat: 1s
   checkpoint_every: 60                    # a world checkpoint every 60 beats (a rebuild checks it)
