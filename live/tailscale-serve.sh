@@ -6,7 +6,9 @@
 #                                           the remote layout: her card alone, a line to write to her)
 #   https://<host>.<tailnet>.ts.net:8443/   Home Assistant (her ⌂ button)
 #
-# NINA is where her panel runs (default: this machine; while she lives on Pascal: NINA=100.111.202.46, its tailnet address: fixed, where the LAN one is DHCP).
+# NINA is where her panel runs (default 127.0.0.1: this machine; while she lives on Pascal, the Pi's own
+# forward, nina-panel-forward, carries 127.0.0.1:8770 to Pascal's tailnet address: Tailscale serve
+# cannot proxy to a tailnet address itself, and Pascal's LAN one is DHCP).
 # Home Assistant must trust the proxy (configuration.yaml http: use_x_forwarded_for, trusted_proxies
 # 127.0.0.1 and ::1), and her panel must allow https://<host>.<tailnet>.ts.net:8443 (plugins.web
 # allow_origin) for her cards inside Home Assistant. Tailscale gives https only on 443, 8443, 10000.
