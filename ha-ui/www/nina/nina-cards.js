@@ -317,24 +317,66 @@ class NinaPhotosCard extends HTMLElement {
 
 class NinaVideoCard extends HTMLElement {
   setConfig(c) {
-    this.c = Object.assign({ title: "Videos", icon: "mdi:youtube", mute: true, autoplay: true, loop: true, height: "320px" }, c || {});
+    this.c = Object.assign({ title: "Videos", icon: "mdi:youtube", mute: true, autoplay: true, loop: true, height: "320px", close: false }, c || {});
     if (!this.c.playlist && !this.c.video) throw new Error("nina-video-card: playlist or video");
+    // enablejsapi: the player takes commands from this page (her controls below; the user, 2026-11-26:
+    // previous, next, play, mute, close)
     const q = new URLSearchParams({ autoplay: this.c.autoplay ? 1 : 0, mute: this.c.mute ? 1 : 0, loop: this.c.loop ? 1 : 0,
-      playsinline: 1, rel: 0, modestbranding: 1 });
+      playsinline: 1, rel: 0, modestbranding: 1, controls: 0, enablejsapi: 1, origin: location.origin });
     let src;
     if (this.c.playlist) { q.set("list", this.c.playlist); src = `https://www.youtube-nocookie.com/embed/videoseries?${q}`; }
     else { if (this.c.loop) q.set("playlist", this.c.video); src = `https://www.youtube-nocookie.com/embed/${this.c.video}?${q}`; }
     if (!this.root) this.root = this.attachShadow({ mode: "open" });
+    this.muted = !!this.c.mute; this.playing = !!this.c.autoplay;
     this.root.innerHTML = `<style>${SCHEME}
       ha-card { padding: 0; height: var(--h); background: #000; }
-      iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+      iframe { position: absolute; inset: 0; width: 100%; height: calc(100% - 52px); border: 0; }
       .bar { position: absolute; left: 0; top: 0; padding: 12px 16px; pointer-events: none; }
+      .ctl { position: absolute; left: 0; right: 0; bottom: 0; height: 52px; display: flex; align-items: center; justify-content: center;
+             gap: 10px; background: linear-gradient(to top, rgba(20,16,14,.95), rgba(20,16,14,.75)); }
+      .ctl button { width: 44px; height: 40px; padding: 0; border-radius: 999px; background: rgba(255,255,255,.12); font-size: 18px; line-height: 40px; }
+      .ctl button.main { width: 56px; background: var(--primary-color, #d97757); }
+      .ctl .x { position: absolute; right: 10px; }
     </style><ha-card><iframe allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen
       referrerpolicy="strict-origin-when-cross-origin" title="${this.c.title}" src="${src}"></iframe>
       ${this.c.show_title ? `<div class="bar"><div class="head"><div class="icon"><ha-icon icon="${this.c.icon}"></ha-icon></div><div class="title">${this.c.title}</div></div></div>` : ""}
-    </ha-card>`;
+      <div class="ctl">
+        <button data-f="previousVideo" title="Previous">⏮</button>
+        <button class="main" data-f="play" title="Play or pause">⏸</button>
+        <button data-f="nextVideo" title="Next">⏭</button>
+        <button data-f="mute" title="Sound on or off">🔇</button>
+        ${this.c.close ? `<button class="x" data-f="close" title="Close">✕</button>` : ""}
+      </div></ha-card>`;
     this.root.querySelector("ha-card").style.setProperty("--h", this.c.height);
+    const fr = this.root.querySelector("iframe");
+    const cmd = (func, args = []) => fr.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "*");
+    fr.addEventListener("load", () => fr.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*"));
+    this.root.querySelectorAll(".ctl button").forEach((b) => b.addEventListener("click", () => {
+      const f = b.dataset.f;
+      if (f === "play") cmd(this.playing ? "pauseVideo" : "playVideo");
+      else if (f === "mute") cmd(this.muted ? "unMute" : "mute"), this.show(undefined, !this.muted);
+      else if (f === "close") this.close();
+      else cmd(f);
+    }));
+    this.onMsg = (e) => { // the player's state: the play and mute buttons follow it
+      if (e.source !== fr.contentWindow) return;
+      let d; try { d = JSON.parse(e.data); } catch { return; }
+      const info = d.info || {};
+      this.show(info.playerState !== undefined ? info.playerState === 1 || info.playerState === 3 : undefined, info.muted);
+    };
   }
+  show(playing, muted) {
+    if (playing !== undefined) { this.playing = playing; this.root.querySelector('[data-f="play"]').textContent = playing ? "⏸" : "▶"; }
+    if (muted !== undefined) { this.muted = muted; this.root.querySelector('[data-f="mute"]').textContent = muted ? "🔇" : "🔊"; }
+  }
+  // close: her own screen's home page (this dashboard's), in Home Assistant's navigation (no reload)
+  close() {
+    const home = location.pathname.replace(/\/[^/]*$/, "/home") + location.search;
+    history.pushState(null, "", home);
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+  }
+  connectedCallback() { window.addEventListener("message", this.onMsg); }
+  disconnectedCallback() { window.removeEventListener("message", this.onMsg); }
   set hass(h) {}
   getCardSize() { return 6; }
 }

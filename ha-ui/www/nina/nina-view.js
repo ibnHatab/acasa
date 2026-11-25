@@ -71,7 +71,10 @@ const ninaStream = (panel) => ((window.__ninaStreams ||= {})[panel] ||= (() => {
   const dot = document.createElement("span");
   Object.assign(dot.style, { width: "22px", height: "22px", borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, #ffd9a8, #c96f2e)" });
   pill.prepend(dot);
-  pill.addEventListener("click", () => { location.href = `${bases[0]}${home}?kiosk`; }); // her own screen (the user: the button changes the layout; her card opens from the card)
+  pill.addEventListener("click", () => { // in Home Assistant's own navigation: no reload, no splash (the user, 2026-11-26)
+    history.pushState(null, "", `${bases[0]}${home}?kiosk`);
+    window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+  }); // her own screen (the user: the button changes the layout; her card opens from the card)
   document.body.appendChild(pill);
   const place = () => {
     const k = new URLSearchParams(location.search).get("kiosk");

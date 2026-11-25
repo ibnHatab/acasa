@@ -368,7 +368,8 @@ class NinaCard extends HTMLElement {
         });
       }
       this.root.querySelector("button.ha").addEventListener("click", () =>
-        window.__ninaShell ? window.__ninaShell.mode("ha") : (location.href = "/home-panel/home"));
+        window.__ninaShell ? window.__ninaShell.mode("ha") : (history.pushState(null, "", "/home-panel/home"), // no reload: no splash
+          window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }))));
       hub.start(this.panel);
       setInterval(() => this.render(), 5000);
     }
