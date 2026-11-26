@@ -89,7 +89,7 @@ views:
                     icon: mdi:timer-sand
                     countdown: true
               - {type: custom:nina-stage-card, videos: {playlist: PLSh0S6uPqqgA}, photos: {album: "Nina's gallery", interval: 12}, pause: media_player.music_player_daemon}   # the stage's launchers: videos and photos large on the screen (her tool "screen", or a tap)
-              - {type: custom:nina-chat-card, chat: Office, lines: 3}   # the office group on WhatsApp (read only; a tap: large)
+              - {type: custom:nina-chat-card, chat: Pero Theia, lines: 3}   # the office group on WhatsApp (read only; a tap: large)
 
   - title: Music
     path: music

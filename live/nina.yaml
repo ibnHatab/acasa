@@ -24,6 +24,8 @@ tasks:                                    # System 2: delegate(goal) → a pi ta
   key: ~/.config/fsttm/gemini.key         # the AI Studio key's file (GEMINI_API_KEY, or the bare key)
   fallback:                               # a one-shot ask (narration) when the model fails (Google's "high demand", a quota)
     - {provider: google, model: gemini-3.5-flash, key: ~/.config/fsttm/gemini.key}
+    - {provider: google, model: gemini-3.5-flash-lite, key: ~/.config/fsttm/gemini.key}   # 2026-11-26: the Flash models 503 ("high demand"),
+    - {provider: google, model: gemini-3.1-flash-lite, key: ~/.config/fsttm/gemini.key}   # the Flash-Lite ones answered
     - {provider: openrouter, model: deepseek/deepseek-v4.1-flash, key: ~/.config/metis/openrouter.env}
   max_turns: 10
   timeout: 5m                            # configuration work takes turns (ha-mcp, 2026-11-25)
