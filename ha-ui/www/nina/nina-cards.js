@@ -101,6 +101,7 @@ class NinaSettingsCard extends NinaBase {
       <div class="row"><label>Name</label><input class="name" placeholder="Nina"></div>
       <div class="row"><label>Persona</label><select class="persona"><option value="auto">automatic (her temperament)</option></select></div>
       <div class="row"><label>Voice</label><select class="voice"></select></div>
+      <div class="row wa" style="display:none"><label>WhatsApp</label><input class="wag" placeholder="groups on her screen, comma-separated"></div>
       <div class="row"><label>Temperament</label><input type="range" class="w0" min="0" max="1" step="0.05"><span class="val v0"></span></div>
       <div class="row"><label>The hour</label><input type="range" class="w1" min="0" max="1" step="0.05"><span class="val v1"></span></div>
       <div class="row"><label>Activity</label><input type="range" class="w2" min="0" max="1" step="0.05"><span class="val v2"></span></div>
@@ -115,6 +116,7 @@ class NinaSettingsCard extends NinaBase {
     const load = () => api("/api/state").then((s) => {
       const st = s.facts?.settings || {};
       q(".name").value = st.name || "";
+      if (st.whatsapp_show !== undefined) { q(".wa").style.display = ""; q(".wag").value = (st.whatsapp_show || []).join(", "); } // her WhatsApp's groups (the first: her card's)
       const ps = q(".persona");
       ps.querySelectorAll("option:not([value=auto])").forEach((o) => o.remove());
       for (const p of st.personas || []) { const [art, mood] = p.split(":"); const o = document.createElement("option"); o.value = art; o.textContent = `${art} (${mood})`; ps.appendChild(o); }
@@ -134,6 +136,7 @@ class NinaSettingsCard extends NinaBase {
         await api("/api/do", { action: "name", arg: q(".name").value });
         await api("/api/do", { action: "persona", arg: q(".persona").value });
         await api("/api/prefs", { voice_name: q(".voice").value });
+        if (q(".wa").style.display !== "none") await api("/api/do", { action: "whatsapp_show", arg: q(".wag").value });
         await api("/api/do", { action: "temperament", arg: JSON.stringify({ weights: [+q(".w0").value, +q(".w1").value, +q(".w2").value], min_stay: q(".ms").value + "m", advantage: +q(".adv").value }) });
         q(".msg").textContent = "saved"; setTimeout(() => (q(".msg").textContent = ""), 3000);
       } catch (e) { q(".msg").textContent = "not saved: " + e; }
@@ -679,11 +682,11 @@ class NinaMediaCard extends HTMLElement {
 // groups' recent messages) and its live "whatsapp" events.
 //
 //   type: custom:nina-chat-card
-//   chat: Office          # the group's name (nina.yaml whatsapp.show)
+//   chat: Office          # the group's name; none: the first of her settings' WhatsApp groups
 //   lines: 4              # messages in the card (default 4)
 class NinaChatCard extends HTMLElement {
   setConfig(c) {
-    this.c = Object.assign({ chat: "Office", title: "", icon: "mdi:whatsapp", lines: 4, scene: "agenda", height: "" }, c || {});
+    this.c = Object.assign({ chat: "", title: "", icon: "mdi:whatsapp", lines: 4, scene: "agenda", height: "" }, c || {}); // chat "": the first group of her settings
     this.panel = this.c.panel || (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`);
     if (this.root) return;
     this.root = this.attachShadow({ mode: "open" });
@@ -714,9 +717,12 @@ class NinaChatCard extends HTMLElement {
   say(t) { this.root.querySelector(".msgs").innerHTML = `<div class="empty">${t}</div>`; }
   take(f) {
     if (!f) return this.say("WhatsApp is not linked yet");
-    const chat = (f.chats || []).find((c) => (c.name || "").toLowerCase() === this.c.chat.toLowerCase());
+    const chats = f.chats || [];
+    const chat = this.c.chat ? chats.find((c) => (c.name || "").toLowerCase() === this.c.chat.toLowerCase()) : chats[0];
+    const name = this.c.chat || chat?.name || "";
+    this.root.querySelector(".title").textContent = this.c.title || name || "WhatsApp";
     this.msgs = chat?.messages || [];
-    if (!chat?.chat) return this.say(`not in a group named “${this.c.chat}”`);
+    if (!chat?.chat) return this.say(name ? `not in a group named “${name}”` : "no group chosen (her settings: WhatsApp)");
     this.render(this.root.querySelector(".msgs"), this.msgs.slice(-this.c.lines));
     this.big?.(this.msgs);
   }
@@ -737,7 +743,7 @@ class NinaChatCard extends HTMLElement {
       .h { font-weight: 600; font-size: 1.15em; margin-bottom: 10px; } .msgs { display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow-y: auto; overflow-x: hidden; } .m { overflow-wrap: anywhere; }
       .m { line-height: 1.35; } .m b { font-weight: 600; } .m .t { color: rgba(255,255,255,.5); font-size: .8em; margin-left: 6px; }
       .m.me b { color: #f0a37f; } .m.to b::after { content: " → Nina"; font-weight: 400; color: rgba(255,255,255,.5); } .empty { color: rgba(255,255,255,.6); }</style>
-      <div class="wrap"><div class="h">${this.c.title || this.c.chat} · WhatsApp</div><div class="msgs"></div></div>`;
+      <div class="wrap"><div class="h">${this.root.querySelector(".title").textContent} · WhatsApp</div><div class="msgs"></div></div>`;
     const box = el.querySelector(".msgs");
     this.big = (msgs) => { this.render(box, msgs || []); box.scrollTop = box.scrollHeight; };
     this.big(this.msgs);
