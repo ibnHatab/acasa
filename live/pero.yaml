@@ -20,6 +20,7 @@ audio:
   barge: -1 # no reference to tell her echo from a voice by level
   vad_mode: 3
   hang: 700ms # silence that ends an utterance
+  min_level: -58 # dBFS: quieter "voices" are the radio left behind the canceller (-68), not a person (-39) (2026-11-26)
   max_utterance: 25s
 dialog:
   follow_up: 30s # without her name, meant for her this long after she spoke; later: an aside (0: all, while awake)
