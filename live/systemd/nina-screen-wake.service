@@ -1,0 +1,11 @@
+[Unit]
+Description=Nina's activity wakes the kiosk's screen (acasa live/screen-wake.sh)
+After=nina.service
+
+[Service]
+ExecStart=%h/repo/acasa/live/screen-wake.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
