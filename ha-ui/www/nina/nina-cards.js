@@ -214,7 +214,8 @@ class NinaBubbleCard extends NinaBase {
     q(".minus").addEventListener("click", () => act("quieter"));
     q(".plus").addEventListener("click", () => act("louder"));
     q(".hear").addEventListener("click", () => act("sample"));
-    q(".here").addEventListener("click", () => act("bubble_here", q(".d").value).then((r) => !r?.error && say("saved")));
+    q(".d").addEventListener("input", () => { this.dTyped = true; });
+    q(".here").addEventListener("click", () => act("bubble_here", q(".d").value).then((r) => { if (!r?.error) { say("saved"); this.dTyped = false; } }));
     q(".reset").addEventListener("click", () => act("bubble_reset"));
     this.load();
     this.tw = setInterval(() => this.who(), 5000);
@@ -248,7 +249,9 @@ class NinaBubbleCard extends NinaBase {
       const ev = (r || []).filter((e) => e.ev === "presence").pop();
       const d = ev?.distance;
       const c = this.root.querySelector(".who");
-      if (d && ev.kind !== "left") { c.setAttribute("cx", this.at[0] + d); this.root.querySelector(".d").value = (+d).toFixed(1); }
+      // the field follows the radar until the person types in it (it was reset every 5 s to a stale 0.5 m:
+      // the user, 2026-11-26); Save gives it back to the radar
+      if (d && ev.kind !== "left") { c.setAttribute("cx", this.at[0] + d); if (!this.dTyped) this.root.querySelector(".d").value = (+d).toFixed(1); }
       else c.setAttribute("cx", -9);
     }).catch(() => {});
   }

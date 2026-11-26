@@ -46,6 +46,9 @@ music:                                    # one knob for the radio and her voice
                                           # software mixer's lagged her duck by ~1 s: its output buffer)
   languages: [english]                    # the stations' languages, asked first (Radio Browser's; 2026-11-26)
 
+radar: false   # the radar (the first Pi's) is not where this laptop's speakers are: its distance does not aim her voice
+               # (2026-11-26: a reading of 0.54 m from the day before held her bubble at its minimum)
+
 mcp:                                      # Home Assistant's two MCP servers (nina-live mcp/), the backends of Nina's own three
                                           # tools (hatools: ha_find, ha_automation, ha_diagnose; ~450 tokens, her tasks only).
                                           # Their own tools are not given to Flash (~30k tokens a turn); raw: true gives them
