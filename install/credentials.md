@@ -17,9 +17,8 @@ the agents that will do it next (a skill set). What worked, in order, and what f
 
 ## Google: one Cloud project per account
 
-Pascal (home) uses the account aaosdeveloper@gmail.com; pero (the office) nina.pero.tm@gmail.com,
-project "Default Gemini Project" (gen-lang-client-0762983881). Each machine's Home Assistant signs in
-to its own account.
+Each machine's Home Assistant signs in to its own Google account (the home's, the office's), with its own
+Cloud project; which account a machine uses is in its private notes, not here.
 
 ### 1. Gemini API key (her voice, ears, task model)
 
@@ -81,8 +80,7 @@ to its own account.
 
 ## WhatsApp (nina-live whatsapp/: whatsmeow, a linked device)
 
-- **Unofficial client:** WhatsApp can ban a number for it. A spare number (pero: +40 799 911 247,
-  "Nina Pero TM") is safe to risk; the person's primary number only by their choice (Pascal).
+- **Unofficial client:** WhatsApp can ban a number for it. A spare number (the office's) is safe to risk; the person's primary number only by their choice (Pascal).
 - **Register the number** in WhatsApp on a phone first (the phone stays the account's primary device;
   it must come online at least every 14 days).
 - **Link by QR**, Nina stopped or not (an unlinked Nina does not connect):
