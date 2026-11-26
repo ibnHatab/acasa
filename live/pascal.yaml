@@ -8,15 +8,21 @@ models:
   mind: gemini-3.1-flash-live-preview # the voice+mind: text turns in, audio out
   vocab: [Nina, Prana, lab, bedroom, living room, ventilation, night mode, boost]
 audio:
-  device: hw:ArrayUAC10 # capture: ALSA, or pulse:SOURCE
-  channels: 6 # the ReSpeaker's 6-channel firmware
-  speech: 0 # its processed speech channel
-  ref: 5 # its echo reference channel (-1: none)
-  out: pulse:alsa_output.usb-SEEED_ReSpeaker_4_Mic_Array__UAC1.0_-00.analog-stereo # the speakers on the array's jack
-      # (2026-11-25), through PulseAudio so the radio (MPD) mixes in: both in the echo canceller's reference
+  # the laptop's own microphone and speakers while the ReSpeaker array is away (2026-11-26), PulseAudio's
+  # echo canceller between them (live/pulse/echo-cancel-pulse.sh; as pero's). With the array back:
+  #   device: hw:ArrayUAC10, channels: 6, speech: 0, ref: 5,
+  #   out: pulse:alsa_output.usb-SEEED_ReSpeaker_4_Mic_Array__UAC1.0_-00.analog-stereo (its jack), and
+  #   echo-cancel-pulse.sh off; MPD's sink back to the array's
+  device: pulse:nina_ec_source # the laptop's microphone, her echo cancelled
+  channels: 1
+  speech: 0
+  ref: -1 # no reference channel: the canceller works before she hears it
+  out: pulse:nina_ec_sink # the laptop's speakers, through the canceller (its reference: her voice and the radio)
   level: -36 # her speech out, dBFS RMS, at a 1 m bubble: as loud at the array as the person (fsttm-live scripts/calib)
   vad_mode: 3
   hang: 700ms # silence that ends an utterance
+  min_level: -60 # dBFS: quieter "voices" are not a person (the laptop, through the canceller: floor -78, her echo -74 median, -56 at most; 2026-11-26)
+  barge_level: -52 # dBFS: a voice this loud over hers is the person's: she ducks at once (her echo there: -56 at most)
   max_utterance: 25s
 dialog:
   follow_up: 30s # without her name, meant for her this long after she spoke; later: an aside (0: all, while awake)
