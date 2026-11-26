@@ -223,7 +223,8 @@ class NinaBubbleCard extends NinaBase {
   disconnectedCallback() { clearInterval(this.tw); }
   connectedCallback() { if (this.root && !this.tw) this.tw = setInterval(() => this.who(), 5000); }
   slope() { return this.p?.bubble_slope || 6; }
-  max() { return Math.pow(2, MAX_GAIN / this.slope()); }
+  off() { return this.p?.bubble_offset || 0; } // the distance calibration's dB at 1 m
+  max() { return Math.pow(2, (MAX_GAIN - this.off()) / this.slope()); }
   clamp(b) { return Math.max(0.5, Math.min(this.max(), b)); }
   load() {
     return api("/api/state").then((s) => { this.p = s.prefs || {}; this.draw(this.p.bubble || 1); this.who(); })
@@ -235,7 +236,7 @@ class NinaBubbleCard extends NinaBase {
     for (const c of this.root.querySelectorAll(".fill, .edge")) c.setAttribute("r", b);
     for (const a of this.root.querySelectorAll(".ripple animate[attributeName=r]")) a.setAttribute("to", b);
     q(".limit").setAttribute("r", this.max());
-    const g = this.slope() * Math.log2(b);
+    const g = this.off() + this.slope() * Math.log2(b);
     q(".r").textContent = `${b.toFixed(1)} m · ${g >= 0 ? "+" : ""}${g.toFixed(1)} dB over the minimum · ${this.slope()} dB per doubling · limit ${this.max().toFixed(1)} m`;
     const [nx, ny] = this.at;
     q(".pts").innerHTML = (this.p?.bubble_points || []).map(([d], i) => {
