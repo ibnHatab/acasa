@@ -294,7 +294,12 @@ class NinaPhotosCard extends HTMLElement {
       }
     } catch (e) { this.root.querySelector(".sub").textContent = "Google Photos: " + (e.message || e); }
     this.loading = false;
-    if (!this.items?.length) { this.root.querySelector(".sub").textContent = `no album "${this.c.album}"`; return; }
+    if (!this.items?.length) {
+      // Google Photos' first answer after Home Assistant restarted came back empty (pero, 2026-11-26):
+      // twice more, 4 s apart, before saying so
+      if ((this.tries = (this.tries || 0) + 1) < 3) { setTimeout(() => this.isConnected && this.load(), 4000); return; }
+      this.root.querySelector(".sub").textContent = `no album "${this.c.album}"`; return;
+    }
     for (let i = this.items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.items[i], this.items[j]] = [this.items[j], this.items[i]]; }
     this.i = -1; this.next();
   }
