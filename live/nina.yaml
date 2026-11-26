@@ -18,7 +18,7 @@ voice: ~/repo/nina-live/prompts/voice.md     # the voice's protocol: with the pe
 tasks:                                    # System 2: delegate(goal) → a pi task (sky-valley/pi), its result a NOTE
   enabled: true
   provider: google                        # 2026-11-24: back to Google's Flash through pi-ai (the user); pi-ai is checked
-  model: gemini-3.8-flash                 # 10/12 in the experiment grid. OpenRouter, for roles to come (key ~/.config/metis/openrouter.env):
+  model: gemini-3.8-flash                 # 10/12 in the experiment grid. OpenRouter, for roles to come (key ~/.config/nina/openrouter.env):
                                           #   deepseek/deepseek-v4.1-flash (cheap), z-ai/glm-5.3-flash (intent extraction, typed
                                           #   propositions), qwen/qwen3.8-flash (multilingual)
   key: ~/.config/fsttm/gemini.key         # the AI Studio key's file (GEMINI_API_KEY, or the bare key)
@@ -26,7 +26,7 @@ tasks:                                    # System 2: delegate(goal) → a pi ta
     - {provider: google, model: gemini-3.5-flash, key: ~/.config/fsttm/gemini.key}
     - {provider: google, model: gemini-3.5-flash-lite, key: ~/.config/fsttm/gemini.key}   # 2026-11-26: the Flash models 503 ("high demand"),
     - {provider: google, model: gemini-3.1-flash-lite, key: ~/.config/fsttm/gemini.key}   # the Flash-Lite ones answered
-    - {provider: openrouter, model: deepseek/deepseek-v4.1-flash, key: ~/.config/metis/openrouter.env}
+    - {provider: openrouter, model: deepseek/deepseek-v4.1-flash, key: ~/.config/nina/openrouter.env}
   max_turns: 10
   timeout: 5m                            # configuration work takes turns (ha-mcp, 2026-11-25)
   transform: true                         # the world's lines before each request (read-only)

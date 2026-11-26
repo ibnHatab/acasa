@@ -111,5 +111,7 @@ views:
         cards:
           - {type: heading, heading: Her WhatsApp, icon: mdi:whatsapp}
           - {type: custom:nina-whatsapp-card, grid_options: {columns: full}}   # linked device (QR), the groups on her screen (the second column, the user)
+          - {type: heading, heading: Her models, icon: mdi:brain}
+          - {type: custom:nina-models-card, grid_options: {columns: full}}   # her tasks' model chain (her config's models, on/off, order)
           - {type: heading, heading: What she did, icon: mdi:timeline-clock}
           - {type: custom:nina-activity-card, list_height: 420px, grid_options: {columns: full}}

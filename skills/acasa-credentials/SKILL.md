@@ -13,7 +13,7 @@ Source: `acasa/install/credentials.md` (how Pascal and pero were set up). One sk
 | Google OAuth client (+ Cloud APIs, consent screen) | `~/.config/nina/<account>-google-oauth-client.json`; HA's application credentials | HA Google Calendar, Tasks, Photos, YouTube | `acasa-cred-google-oauth` |
 | YouTube API key | `~/.config/nina/youtube.key` | her video search | `acasa-cred-youtube-key` |
 | Home Assistant token | `~/.config/fsttm/hass.token` | everything she does in HA; ha-ui; MCP | `acasa-cred-ha-token` |
-| OpenRouter key (optional) | `~/.config/metis/openrouter.env` | fallback task models | `acasa-cred-openrouter` |
+| OpenRouter key (backup model) | `~/.config/nina/openrouter.env` | her tasks' backup when Google is busy | `acasa-cred-openrouter` |
 | WhatsApp linked device | `~/.local/share/nina/whatsapp.db` | her WhatsApp channel | `acasa-cred-whatsapp-link` |
 
 ## Rules for every credential

@@ -950,6 +950,71 @@ class NinaWhatsAppCard extends NinaBase {
   }
 }
 
+// ---- her task models: the chain her tasks (and her WhatsApp answers) use, in order (2026-11-26) ----
+// The models of her config (the model and its fallbacks: their keys are there), each on or off and
+// moved up or down; the first on is tried first, a busy or silent one hands over to the next. Saved
+// with her settings; "Her config's" goes back to the file's order.
+class NinaModelsCard extends NinaBase {
+  get style() {
+    return `
+      .ml { background: rgba(0,0,0,.35); border-radius: 10px; padding: 4px 8px; }
+      .m { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: .92em; }
+      .m input { flex: none; width: 16px; height: 16px; min-width: 0; margin: 0; padding: 0; accent-color: #d97757; }
+      .m .n { flex: 1; } .m .p { color: rgba(255,255,255,.6); font-size: .85em; }
+      .m button { flex: none; width: 30px; height: 26px; padding: 0; } .m.off .n { opacity: .5; }`;
+  }
+  setConfig(c) {
+    this.c = c || {};
+    if (this.root) return;
+    const el = this.frame("explain", 2, "mdi:brain", "Her models", "which models her tasks use, in order");
+    el.innerHTML = `<div class="ml"></div>
+      <div class="row"><button class="save">Save</button><button class="ghost reset">Her config's</button><span class="note msg"></span></div>
+      <div class="note">Her tasks and her WhatsApp answers start on the first model that is on; a busy or silent one (45 s) hands over to the next. Only models with a key in her config are listed.</div>`;
+    const q = (x) => this.root.querySelector(x);
+    q(".save").addEventListener("click", () => this.save(this.rows.filter((r) => r.on).map((r) => r.id).join(", ")));
+    q(".reset").addEventListener("click", () => { this.dirty = false; this.save(""); });
+  }
+  connectedCallback() {
+    if (this.listening) return;
+    this.listening = true;
+    api("/api/state").then((s) => this.take(s.facts?.settings)).catch(() => (this.root.querySelector(".ml").textContent = "her panel is not reachable"));
+    stageStream(PANEL).addEventListener("ev", (m) => { const e = JSON.parse(m.data); if (e.ev === "settings") this.take(e); });
+  }
+  async save(arg) {
+    const msg = this.root.querySelector(".msg");
+    if (this.rows && arg !== "" && !this.rows.some((r) => r.on)) { msg.textContent = "at least one model on"; return; }
+    const r = await api("/api/do", { action: "task_models", arg });
+    msg.textContent = r.error ? "not saved: " + r.error : "saved";
+    this.dirty = false;
+    setTimeout(() => (msg.textContent = ""), 3000);
+  }
+  take(st) {
+    const tm = st?.task_models;
+    if (!tm) { if (st) this.root.querySelector(".ml").textContent = "no task runner in her config"; return; }
+    if (this.dirty) return;
+    const on = tm.active || [], all = tm.all || [];
+    this.rows = [...on.map((id) => ({ id, on: true })), ...all.filter((id) => !on.includes(id)).map((id) => ({ id, on: false }))];
+    this.list();
+  }
+  list() {
+    const box = this.root.querySelector(".ml");
+    box.replaceChildren();
+    this.rows.forEach((r, i) => {
+      const row = document.createElement("div"); row.className = "m" + (r.on ? "" : " off");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = r.on;
+      cb.addEventListener("change", () => { r.on = cb.checked; this.dirty = true; this.list(); });
+      const [prov, ...rest] = r.id.split("/");
+      const n = document.createElement("span"); n.className = "n"; n.textContent = rest.join("/") + " ";
+      const p = document.createElement("span"); p.className = "p"; p.textContent = prov; n.appendChild(p);
+      const up = document.createElement("button"); up.className = "ghost"; up.textContent = "↑"; up.disabled = i === 0;
+      up.addEventListener("click", () => { [this.rows[i - 1], this.rows[i]] = [this.rows[i], this.rows[i - 1]]; this.dirty = true; this.list(); });
+      const dn = document.createElement("button"); dn.className = "ghost"; dn.textContent = "↓"; dn.disabled = i === this.rows.length - 1;
+      dn.addEventListener("click", () => { [this.rows[i + 1], this.rows[i]] = [this.rows[i], this.rows[i + 1]]; this.dirty = true; this.list(); });
+      row.append(cb, n, up, dn); box.appendChild(row);
+    });
+  }
+}
+
 customElements.define("nina-settings-card", NinaSettingsCard);
 customElements.define("nina-activity-card", NinaActivityCard);
 customElements.define("nina-surprises-card", NinaSurprisesCard);
@@ -960,9 +1025,11 @@ customElements.define("nina-stage-card", NinaStageCard);
 customElements.define("nina-media-card", NinaMediaCard);
 customElements.define("nina-chat-card", NinaChatCard);
 customElements.define("nina-whatsapp-card", NinaWhatsAppCard);
+customElements.define("nina-models-card", NinaModelsCard);
 window.customCards = window.customCards || [];
 window.customCards.push(
   { type: "nina-settings-card", name: "Nina: settings", description: "Her name, persona, voice and temperament." },
   { type: "nina-activity-card", name: "Nina: activity", description: "What she did lately." },
   { type: "nina-surprises-card", name: "Nina: surprises", description: "The loop workspace's surprises." },
-  { type: "nina-whatsapp-card", name: "Nina: WhatsApp", description: "Her linked device (link by QR, unlink) and the groups on her screen." });
+  { type: "nina-whatsapp-card", name: "Nina: WhatsApp", description: "Her linked device (link by QR, unlink) and the groups on her screen." },
+  { type: "nina-models-card", name: "Nina: her models", description: "The models her tasks use, in order (her config's, each on or off)." });
