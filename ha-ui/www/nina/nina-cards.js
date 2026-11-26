@@ -14,7 +14,10 @@
 const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
 const ASSETS = new URL(".", import.meta.url).pathname;
 const PANEL = (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`);
-const api = (path, body) => fetch(PANEL + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}).then((r) => r.json());
+// every answer read as text, then JSON; an error comes as {error} (a plain-text one was "Unexpected token…
+// is not valid JSON" on the bubble card, 2026-11-26)
+const api = (path, body) => fetch(PANEL + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {})
+  .then(async (r) => { const t = await r.text(); try { return JSON.parse(t); } catch { return { error: t || r.statusText }; } });
 
 const SCHEME = `
   :host { display: block; }

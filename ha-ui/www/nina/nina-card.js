@@ -615,7 +615,8 @@ class NinaCard extends HTMLElement {
   getCardSize() { return 5; }
   async api(path, body) {
     const r = await fetch(this.panel + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
-    return r.json();
+    const t = await r.text(); // an error comes as {error}; a plain-text one is kept as one
+    try { return JSON.parse(t); } catch { return { error: t || r.statusText }; }
   }
   async toggle(p) {
     if (this.c.remote) { // this device's microphone and speaker, not the room's
