@@ -15,7 +15,18 @@ primary number she answers only its own "Message yourself" chat.
 - The number is registered in WhatsApp on a phone first. The phone stays the primary device and must
   come online at least every 14 days.
 
-## Link by QR
+## Link by QR: her WhatsApp card (preferred)
+
+Home Assistant → **Home → Nina** → *Her WhatsApp* (`nina-whatsapp-card`; `whatsapp.enabled: true` in her
+config, Nina running). It shows linked / connected / the number's last digits. **Link a device** shows
+a QR from her panel (a new one every ~20 s): on the phone, Settings → Linked devices → Link a device →
+scan. She connects and lists her groups by herself. **Unlink** asks twice, then logs her out of the
+number. The groups she is in are listed with a filter: tick the ones for her screen (the first ticked
+is her WhatsApp card's; ticked groups are kept), **Save**; *Read her groups again* after she is added
+to a new group. Her answer mode is shown, never changed there (`whatsapp.answer` in her config: on a
+primary number a screen must not switch her to answering its contacts).
+
+## Link by QR: the command line (fallback)
 
 ```sh
 ~/repo/nina-live/bin/nina-whatsapp link-qr
@@ -42,8 +53,8 @@ whatsapp:
   per_hour: 30
 ```
 
-Group names: stop Nina, `~/repo/nina-live/bin/nina-whatsapp groups`, start her (two connections of
-one device kick each other off).
+Group names: her WhatsApp card lists them (or: stop Nina, `~/repo/nina-live/bin/nina-whatsapp groups`,
+start her — two connections of one device kick each other off).
 
 ## Check
 
