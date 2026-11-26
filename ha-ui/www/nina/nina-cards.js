@@ -101,7 +101,6 @@ class NinaSettingsCard extends NinaBase {
       <div class="row"><label>Name</label><input class="name" placeholder="Nina"></div>
       <div class="row"><label>Persona</label><select class="persona"><option value="auto">automatic (her temperament)</option></select></div>
       <div class="row"><label>Voice</label><select class="voice"></select></div>
-      <div class="row wa" style="display:none"><label>WhatsApp</label><input class="wag" placeholder="groups on her screen, comma-separated"></div>
       <div class="row"><label>Temperament</label><input type="range" class="w0" min="0" max="1" step="0.05"><span class="val v0"></span></div>
       <div class="row"><label>The hour</label><input type="range" class="w1" min="0" max="1" step="0.05"><span class="val v1"></span></div>
       <div class="row"><label>Activity</label><input type="range" class="w2" min="0" max="1" step="0.05"><span class="val v2"></span></div>
@@ -116,7 +115,6 @@ class NinaSettingsCard extends NinaBase {
     const load = () => api("/api/state").then((s) => {
       const st = s.facts?.settings || {};
       q(".name").value = st.name || "";
-      if (st.whatsapp_show !== undefined) { q(".wa").style.display = ""; q(".wag").value = (st.whatsapp_show || []).join(", "); } // her WhatsApp's groups (the first: her card's)
       const ps = q(".persona");
       ps.querySelectorAll("option:not([value=auto])").forEach((o) => o.remove());
       for (const p of st.personas || []) { const [art, mood] = p.split(":"); const o = document.createElement("option"); o.value = art; o.textContent = `${art} (${mood})`; ps.appendChild(o); }
@@ -136,7 +134,6 @@ class NinaSettingsCard extends NinaBase {
         await api("/api/do", { action: "name", arg: q(".name").value });
         await api("/api/do", { action: "persona", arg: q(".persona").value });
         await api("/api/prefs", { voice_name: q(".voice").value });
-        if (q(".wa").style.display !== "none") await api("/api/do", { action: "whatsapp_show", arg: q(".wag").value });
         await api("/api/do", { action: "temperament", arg: JSON.stringify({ weights: [+q(".w0").value, +q(".w1").value, +q(".w2").value], min_stay: q(".ms").value + "m", advantage: +q(".adv").value }) });
         q(".msg").textContent = "saved"; setTimeout(() => (q(".msg").textContent = ""), 3000);
       } catch (e) { q(".msg").textContent = "not saved: " + e; }
@@ -849,6 +846,110 @@ class NinaSurprisesCard extends NinaBase {
   }
 }
 
+// ---- WhatsApp: her linked device and the groups on her screen (2026-11-26) ---------------------
+// Linked or not, connected, the number; Link a device (a QR from her panel, scanned on the phone:
+// Linked devices → Link a device), Unlink (asked twice); the groups she is in, ticked for her screen
+// (the first ticked: the WhatsApp card's); how she answers is her config's (whatsapp.answer), shown
+// only: on a person's own number she must never start answering their contacts from a screen.
+class NinaWhatsAppCard extends NinaBase {
+  get style() { // the shadow root's own rules (a getter: HTMLElement.style is the host's inline style)
+    return `
+      .st { font-size: .95em; margin: 4px 0 8px; } .st b { font-weight: 600; }
+      .qr { display: none; text-align: center; margin: 8px 0; } .qr img { width: 240px; height: 240px; background: #fff; padding: 10px; border-radius: 12px; }
+      .groups { max-height: var(--gh, 220px); overflow: auto; background: rgba(0,0,0,.35); border-radius: 10px; padding: 6px 10px; }
+      .g { display: flex; align-items: center; justify-content: flex-start; gap: 8px; padding: 3px 0; font-size: .92em; cursor: pointer; width: auto; color: #fff; }
+      .g input { flex: none; width: 16px; height: 16px; min-width: 0; margin: 0; padding: 0; accent-color: #d97757; }
+      .g span { flex: 1; text-align: left; }
+      .filter { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
+      .danger { background: #a3402a; }`;
+  }
+  setConfig(c) {
+    this.c = c || {};
+    if (this.root) return;
+    const el = this.frame("agenda", 2, "mdi:whatsapp", "WhatsApp", "her linked device and the groups on her screen");
+    el.innerHTML = `
+      <div class="st">…</div>
+      <div class="row acts"><button class="link">Link a device</button><button class="ghost unlink">Unlink</button><button class="danger sure" style="display:none">Unlink: sure?</button><span class="note msg"></span></div>
+      <div class="qr"><img alt="QR code to scan"><div class="note qrn"></div></div>
+      <div class="gsec">
+        <div class="row"><label>On her screen</label><input class="filter" placeholder="find a group"></div>
+        <div class="groups"></div>
+        <div class="row"><button class="save">Save</button><button class="ghost refresh">Read her groups again</button><span class="note gmsg"></span></div>
+        <div class="note">Ticked groups appear on her WhatsApp card (the first ticked is the card's) and are kept. How she answers is set in her config: <span class="mode"></span>.</div>
+      </div>`;
+    if (this.c.expanded) this.root.querySelector(".groups").style.setProperty("--gh", this.c.list_height || "50vh");
+    const q = (x) => this.root.querySelector(x);
+    q(".link").addEventListener("click", () => this.act("whatsapp_link", "waiting for the code…"));
+    q(".unlink").addEventListener("click", () => { q(".sure").style.display = ""; setTimeout(() => (q(".sure").style.display = "none"), 6000); });
+    q(".sure").addEventListener("click", () => { q(".sure").style.display = "none"; this.act("whatsapp_unlink", "unlinking…"); });
+    q(".refresh").addEventListener("click", () => this.act("whatsapp_refresh", "reading…", ".gmsg"));
+    q(".filter").addEventListener("input", () => this.list());
+    q(".save").addEventListener("click", async () => {
+      const r = await api("/api/do", { action: "whatsapp_show", arg: this.ticked().join(", ") });
+      q(".gmsg").textContent = r.error ? "not saved: " + r.error : "saved";
+      setTimeout(() => (q(".gmsg").textContent = ""), 3000);
+    });
+  }
+  connectedCallback() {
+    if (this.listening) return;
+    this.listening = true;
+    api("/api/state").then((s) => this.take(s.facts?.settings)).catch(() => (this.root.querySelector(".st").textContent = "her panel is not reachable"));
+    stageStream(PANEL).addEventListener("ev", (m) => {
+      const e = JSON.parse(m.data);
+      if (e.ev === "settings") this.take(e);
+      else if (e.ev === "wa_status") this.status(e);
+    });
+  }
+  async act(action, wait, where = ".msg") {
+    const q = (x) => this.root.querySelector(x);
+    q(where).textContent = wait;
+    const r = await api("/api/do", { action });
+    q(where).textContent = r.error ? r.error : "";
+  }
+  take(st) {
+    if (!st) return;
+    const w = st.whatsapp, q = (x) => this.root.querySelector(x);
+    if (!w) { q(".st").textContent = "WhatsApp is not enabled in her config (whatsapp.enabled)"; q(".acts").style.display = q(".gsec").style.display = "none"; return; }
+    this.w = w;
+    if (!this.chosen || !this.dirty) this.chosen = (st.whatsapp_show || w.show || []).slice();
+    const who = w.linked ? `linked${w.name ? " as <b></b>" : ""}${w.number ? ` · number ending ${String(w.number).slice(-4)}` : ""} · ${w.connected ? "connected" : "not connected"}` : "not linked";
+    q(".st").innerHTML = who; if (w.name) q(".st b").textContent = w.name;
+    q(".link").style.display = w.linked ? "none" : ""; q(".unlink").style.display = w.linked ? "" : "none";
+    q(".gsec").style.display = w.linked ? "" : "none";
+    q(".mode").textContent = { named: "named (direct messages, and groups that name her)", self: "self (only the number's own \"Message yourself\" chat)", none: "none (reads only)" }[w.answer] || w.answer;
+    if (w.linked) q(".qr").style.display = "none";
+    this.list();
+  }
+  status(e) {
+    const q = (x) => this.root.querySelector(x);
+    if (e.state === "qr" && e.png) {
+      q(".qr").style.display = ""; q(".qr img").src = e.png;
+      q(".qrn").textContent = `On the phone: WhatsApp → Settings → Linked devices → Link a device, and scan (code ${e.n}; a new one every ~20 s).`;
+      q(".msg").textContent = "";
+    } else if (e.state === "linked") { q(".qr").style.display = "none"; q(".msg").textContent = "linked"; }
+    else if (e.state === "link_ended") { q(".qr").style.display = "none"; q(".msg").textContent = "not linked (" + (e.reason || "ended") + "): try again"; }
+    else if (e.state === "logged_out") { q(".msg").textContent = "unlinked"; }
+  }
+  ticked() { return this.chosen || []; }
+  list() {
+    const box = this.root.querySelector(".groups"), f = this.root.querySelector(".filter").value.toLowerCase();
+    const all = [...new Set([...(this.chosen || []), ...(this.w?.groups || [])])];
+    box.replaceChildren();
+    if (!all.length) { box.textContent = "in no group yet: add her number to one, then read her groups again"; return; }
+    for (const name of all) {
+      if (f && !name.toLowerCase().includes(f)) continue;
+      const lab = document.createElement("label"); lab.className = "g";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = this.chosen.includes(name);
+      cb.addEventListener("change", () => {
+        this.dirty = true;
+        this.chosen = cb.checked ? [...this.chosen, name] : this.chosen.filter((x) => x !== name);
+      });
+      const t = document.createElement("span"); t.textContent = name + (this.chosen[0] === name ? "  (her card's)" : "");
+      lab.append(cb, t); box.appendChild(lab);
+    }
+  }
+}
+
 customElements.define("nina-settings-card", NinaSettingsCard);
 customElements.define("nina-activity-card", NinaActivityCard);
 customElements.define("nina-surprises-card", NinaSurprisesCard);
@@ -858,8 +959,10 @@ customElements.define("nina-video-card", NinaVideoCard);
 customElements.define("nina-stage-card", NinaStageCard);
 customElements.define("nina-media-card", NinaMediaCard);
 customElements.define("nina-chat-card", NinaChatCard);
+customElements.define("nina-whatsapp-card", NinaWhatsAppCard);
 window.customCards = window.customCards || [];
 window.customCards.push(
   { type: "nina-settings-card", name: "Nina: settings", description: "Her name, persona, voice and temperament." },
   { type: "nina-activity-card", name: "Nina: activity", description: "What she did lately." },
-  { type: "nina-surprises-card", name: "Nina: surprises", description: "The loop workspace's surprises." });
+  { type: "nina-surprises-card", name: "Nina: surprises", description: "The loop workspace's surprises." },
+  { type: "nina-whatsapp-card", name: "Nina: WhatsApp", description: "Her linked device (link by QR, unlink) and the groups on her screen." });
