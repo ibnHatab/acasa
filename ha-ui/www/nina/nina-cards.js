@@ -923,7 +923,7 @@ class NinaWhatsAppCard extends NinaBase {
   status(e) {
     const q = (x) => this.root.querySelector(x);
     if (e.state === "qr" && e.png) {
-      q(".qr").style.display = ""; q(".qr img").src = e.png;
+      q(".qr").style.display = "block"; q(".qr img").src = e.png; // block: its rule hides it
       q(".qrn").textContent = `On the phone: WhatsApp → Settings → Linked devices → Link a device, and scan (code ${e.n}; a new one every ~20 s).`;
       q(".msg").textContent = "";
     } else if (e.state === "linked") { q(".qr").style.display = "none"; q(".msg").textContent = "linked"; }
