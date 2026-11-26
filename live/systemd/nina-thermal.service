@@ -1,0 +1,6 @@
+[Unit]
+Description=Nina's thermal guard: Nina and Home Assistant stopped when the Pi runs hot (acasa live/thermal-guard.sh)
+
+[Service]
+Type=oneshot
+ExecStart=%h/repo/acasa/live/thermal-guard.sh
