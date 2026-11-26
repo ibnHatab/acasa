@@ -11,7 +11,7 @@
 # Idempotent: run it again after a failure, it skips what is done. It installs and starts:
 #   the locale; the packages (cmake, OCaml, Docker, PulseAudio's tools, MPD, …); Go (go.dev's
 #   tarball, its sha256 checked); the repos from GitHub; metisc, nina and the radar built
-#   (pi-update.sh); Home Assistant (Docker, a fresh config: the person makes its owner account);
+#   (nina-live's persona-build.sh); Home Assistant (Docker, a fresh config: the person makes its owner account);
 #   SearXNG (Docker, local only); the kiosk (ha-pi-kiosk: Firefox on Nina's dashboard, alone on
 #   the screen, from boot; its boot splash with Nina's logo; Raspberry Pi Connect); user services
 #   kept running without a login (linger).
@@ -97,8 +97,8 @@ $D inspect searxng >/dev/null 2>&1 ||
   $D run -d --name searxng --restart unless-stopped -p 127.0.0.1:8888:8080 -v "$HOME/searxng:/etc/searxng" searxng/searxng:latest >/dev/null
 echo "searxng: $($D inspect -f '{{.State.Status}}' searxng)"
 
-step "the build: metisc, nina, the radar (pi-update.sh; the look and feel waits for Home Assistant's token)"
-bash "$R/nina-live/scripts/pi-update.sh" 2>&1 | grep -v "^go: downloading"
+step "the persona's build: metisc, nina, the radar (nina-live scripts/persona-build.sh; the look and feel waits for Home Assistant's token: install/update.sh applies it)"
+REPO_ROOT=$R bash "$R/nina-live/scripts/persona-build.sh" 2>&1 | grep -v "^go: downloading"
 
 step "MPD (her radio: a user service on the default output; Home Assistant's MPD integration at 127.0.0.1)"
 sudo systemctl disable --now mpd.service mpd.socket >/dev/null 2>&1 || true # the system-wide one: not hers

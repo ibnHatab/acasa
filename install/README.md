@@ -48,7 +48,8 @@ One idempotent command (run it again after a failure: it skips what is done):
 - Home Assistant in Docker (`~/homeassistant`, a fresh config with Nina's theme folder, framing
   allowed for her own screen, the local proxy trusted for Tailscale), and SearXNG in Docker
   (127.0.0.1:8888 only, its own secret);
-- the build through `nina-live/scripts/pi-update.sh`: `metisc`, `nina`, the radar;
+- the persona's build through `nina-live/scripts/persona-build.sh`: `metisc`, `nina`, the radar (nothing of
+  Home Assistant: the look and feel comes with `install/update.sh` once its token exists);
 - the kiosk: ha-pi-kiosk (vendored: `ha-ui/kiosk/ha-pi-kiosk`, see its `VENDOR.md`): `nina` logged
   in on tty1 at boot straight into a bare labwc session, Firefox alone on the screen (maximized, no
   title bar), the on-screen keyboard, the idle dimming, its boot splash with Nina's logo (the
@@ -150,7 +151,7 @@ the canceller as the default output. Its calibration: `fsttm-live/scripts/calib/
 - **Her screens**: her role's dashboards, where they differ from the home's
   (`ha-ui/roles/ROLE/dashboards/`, e.g. the office's `secretary`: no home lights or air, the office
   account's Google calendar and tasks): `echo ROLE > ~/.config/nina/role`, then `go run ./cmd/ha-ui
-  -url http://127.0.0.1:8123` (and every `pi-update.sh`) applies them.
+  -url http://127.0.0.1:8123` (and every `install/update.sh`) applies them.
 - **Her config**: `acasa/live/nina-HOST.yaml` (the core: the log, the catalog, Home Assistant at
   `http://127.0.0.1:8123`, the tasks, the search, the MCP servers) and `acasa/live/HOST.yaml` (the
   dialogue: the sound, the models, the prefs, the panel with `remote: /nina/shell.html` and the
@@ -167,6 +168,9 @@ screen at `http://HOST.local:8770/nina/shell.html` shows her awake when someone 
 
 ## 8. Updates
 
-Develop on the desktop, push to GitHub; on each machine: `~/repo/nina-live/scripts/pi-update.sh`
-(`--kiosk` when the kiosk's files changed): it pulls, rebuilds, applies the look and feel to this
-machine's own Home Assistant, restarts what is enabled.
+Develop on the desktop, push to GitHub; on each machine: `~/repo/acasa/install/update.sh`
+(`--kiosk` when the kiosk's files changed): it pulls acasa, builds the persona (`nina-live/scripts/persona-build.sh
+--pull`: nina-live, fsttm-live, Metis), applies the look and feel to this machine's own Home Assistant, restarts
+what is enabled (`nina`, `acasa-nina`, `nina-radar`). A failed step stops it before any restart.
+`nina-live/scripts/pi-update.sh` is a shim to it (the old name). The persona alone, without the home:
+`nina-live/scripts/persona-build.sh [--pull]`.
