@@ -88,6 +88,7 @@ views:
                     subtitle: none running
                     icon: mdi:timer-sand
                     countdown: true
+              - {type: custom:nina-stage-card, videos: {playlist: PLSh0S6uPqqgA}, photos: {album: "Nina's gallery", interval: 12}, pause: media_player.music_player_daemon}   # the stage's launchers: videos and photos large on the screen (her tool "screen", or a tap)
 
   - title: Music
     path: music
@@ -146,26 +147,6 @@ views:
               cards:
                 - {type: weather-forecast, entity: weather.home, forecast_type: daily, show_current: true, show_forecast: true}
                 - {type: weather-forecast, entity: weather.home, forecast_type: hourly, show_current: false, show_forecast: true}
-
-  - title: Photos
-    path: photos
-    icon: mdi:image-multiple
-    type: panel
-    cards:
-      - type: horizontal-stack
-        cards:
-          - *nina
-          - {type: custom:nina-photos-card, album: "Nina's gallery", interval: 12, height: 584px}
-
-  - title: Videos
-    path: videos
-    icon: mdi:youtube
-    type: panel
-    cards:
-      - type: horizontal-stack
-        cards:
-          - *nina
-          - {type: custom:nina-video-card, title: Claudia, playlist: PLSh0S6uPqqgA, height: 584px, close: true}   # the office channel's "Claudia" (33 videos, unlisted)
 
   - title: Surprises
     path: surprises

@@ -123,6 +123,7 @@ views:
                     subtitle: none running
                     icon: mdi:timer-sand
                     countdown: true
+              - {type: custom:nina-stage-card, videos: {playlist: PLSh0S6uPqqgA}, pause: media_player.music_player_daemon}   # the stage: the Claudia videos large on the screen on request (her tool "screen", or a tap), closed with ✕
               - type: custom:nina-domain-card
                 compact: true
                 scene: air

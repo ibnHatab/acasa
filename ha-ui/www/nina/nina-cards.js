@@ -298,6 +298,9 @@ class NinaPhotosCard extends HTMLElement {
     for (let i = this.items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.items[i], this.items[j]] = [this.items[j], this.items[i]]; }
     this.i = -1; this.next();
   }
+  // step: d photos on (-1 the previous); pause: the slideshow held or going on
+  step(d) { if (!this.items?.length) return; this.i = (this.i + d - 1 + 2 * this.items.length) % this.items.length; this.next(); }
+  pause(on) { this.paused = on; if (on) clearTimeout(this.tm); else this.next(); }
   async next() {
     clearTimeout(this.tm);
     if (!this.isConnected || !this.items?.length) return;
@@ -310,7 +313,7 @@ class NinaPhotosCard extends HTMLElement {
       show.src = r.url;
       this.root.querySelector(".count").textContent = `${this.i + 1} / ${this.items.length}`;
     } catch (e) { /* this one failed: the next */ }
-    this.tm = setTimeout(() => this.next(), this.c.interval * 1000);
+    if (!this.paused) this.tm = setTimeout(() => this.next(), this.c.interval * 1000);
   }
   getCardSize() { return 6; }
 }
@@ -381,11 +384,177 @@ class NinaVideoCard extends HTMLElement {
   getCardSize() { return 6; }
 }
 
+
+// ---- the stage: videos and photos on request (the user, 2026-11-26) --------------------------------
+// Not cards on the screen all the time: a picture in picture over the right side of Nina's screen,
+// large (more room than a card) or shrunk to a corner, closed with its ✕. It opens when she is asked
+// (her tool "screen": show videos, photos, or close) or from its launchers, a slim row in her right
+// column. Videos: YouTube's player with its own controls (previous, play, next, a volume slider,
+// mute), ducked under her voice and under the person speaking to her, as the radio is; the radio
+// paused while one plays. Photos: the gallery (nina-photos-card) with previous, pause, next. While a
+// video plays the screen stays awake (Firefox holds it); closed, nothing does.
+//
+//   type: custom:nina-stage-card
+//   videos: {playlist: PLSh0S6uPqqgA}          # or video: <id>
+//   photos: {album: "Nina's gallery", interval: 10}
+//   pause: media_player.music_player_daemon    # paused when a video starts (optional)
+const stageStream = (panel) => ((window.__ninaStreams ||= {})[panel] ||= (() => {
+  const t = new EventTarget();
+  const open = () => {
+    const es = new EventSource(`${panel}/api/events`);
+    for (const k of ["ev", "status"]) es.addEventListener(k, (m) => t.dispatchEvent(new MessageEvent(k, { data: m.data })));
+    es.onopen = () => t.dispatchEvent(new Event("up"));
+    es.onerror = () => { es.close(); t.dispatchEvent(new Event("down")); setTimeout(open, 5000); };
+  };
+  open();
+  return t;
+})());
+
+const Stage = window.__ninaStage ||= {
+  conf: null, el: null, what: null, big: true, vol: 60, duck: false,
+  hass() { return document.querySelector("home-assistant")?.hass; },
+  listen(panel) {
+    if (this.panel) return;
+    this.panel = panel;
+    const s = stageStream(panel);
+    s.addEventListener("ev", (m) => {
+      const e = JSON.parse(m.data);
+      if (e.ev !== "tool" || e.name !== "screen") return;
+      const w = (e.args || {}).show;
+      if (w === "close") this.close(); else if (w === "videos" || w === "photos") this.open(w);
+    });
+    s.addEventListener("status", (m) => { // ducked while she speaks, or the person speaks to her
+      const st = JSON.parse(m.data);
+      const d = !!(st.speaking || st.replying || (st.awake && String(st.floor || "").startsWith("USER")));
+      if (d !== this.duck) { this.duck = d; this.volume(); }
+    });
+  },
+  open(what) {
+    if (!this.conf || !this.conf[what]) return;
+    if (this.what === what) return;
+    this.close();
+    this.what = what;
+    const host = document.createElement("div");
+    host.id = "nina-stage";
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = `<style>
+      .pip { position: fixed; z-index: 9000; right: 8px; top: 8px; bottom: 8px; width: 64vw; background: #000; border-radius: 16px;
+             overflow: hidden; box-shadow: 0 6px 28px rgba(0,0,0,.6); transition: all .35s ease; font: 15px system-ui, sans-serif; }
+      .pip.small { top: auto; width: 34vw; height: calc(34vw * 9 / 16 + 52px); }
+      .body { position: absolute; left: 0; right: 0; top: 0; bottom: 52px; }
+      .body iframe, .body > * { width: 100%; height: 100%; border: 0; display: block; }
+      .ctl { position: absolute; left: 0; right: 0; bottom: 0; height: 52px; display: flex; align-items: center; gap: 8px; padding: 0 10px;
+             background: linear-gradient(to top, rgba(20,16,14,.97), rgba(20,16,14,.8)); color: #f3ece6; }
+      button { width: 42px; height: 38px; border: 0; border-radius: 999px; background: rgba(255,255,255,.13); color: inherit; font-size: 17px; cursor: pointer; }
+      button.main { width: 54px; background: #d97757; color: #fff; }
+      .sp { flex: 1; }
+      input[type=range] { width: 22%; min-width: 90px; accent-color: #d97757; }
+      .pip.small input[type=range] { display: none; }
+    </style><div class="pip"><div class="body"></div><div class="ctl">
+      <button data-f="prev" title="Previous">⏮</button><button class="main" data-f="play" title="Play or pause">⏸</button>
+      <button data-f="next" title="Next">⏭</button>
+      ${what === "videos" ? `<button data-f="mute" title="Sound on or off">🔊</button><input type="range" min="0" max="100" value="${this.vol}" title="Volume">` : ""}
+      <span class="sp"></span><button data-f="size" title="Smaller or larger">⤡</button><button data-f="close" title="Close">✕</button></div></div>`;
+    this.root = root;
+    const body = root.querySelector(".body");
+    const pip = root.querySelector(".pip");
+    pip.classList.toggle("small", !this.big);
+    if (what === "videos") this.video(body); else this.photos(body);
+    root.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => this.act(b.dataset.f)));
+    root.querySelector("input")?.addEventListener("input", (ev) => { this.vol = +ev.target.value; this.muted = false; this.volume(); });
+    document.body.appendChild(host);
+    this.el = host;
+  },
+  video(body) {
+    const c = this.conf.videos;
+    const q = new URLSearchParams({ autoplay: 1, mute: 0, loop: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, enablejsapi: 1, origin: location.origin });
+    let src;
+    if (c.playlist) { q.set("list", c.playlist); src = `https://www.youtube-nocookie.com/embed/videoseries?${q}`; }
+    else { q.set("playlist", c.video); src = `https://www.youtube-nocookie.com/embed/${c.video}?${q}`; }
+    body.innerHTML = `<iframe allow="autoplay; encrypted-media; fullscreen" referrerpolicy="strict-origin-when-cross-origin" title="Videos" src="${src}"></iframe>`;
+    const fr = body.querySelector("iframe");
+    this.cmd = (func, args = []) => fr.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "*");
+    fr.addEventListener("load", () => fr.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*"));
+    this.playing = true; this.muted = false;
+    this.onMsg = (e) => {
+      if (e.source !== fr.contentWindow) return;
+      let d; try { d = JSON.parse(e.data); } catch { return; }
+      if (d.event === "onReady" || (d.event === "initialDelivery")) this.volume();
+      const i = d.info || {};
+      if (i.playerState !== undefined) { this.playing = i.playerState === 1 || i.playerState === 3; this.mark(); }
+    };
+    window.addEventListener("message", this.onMsg);
+    setTimeout(() => this.volume(), 1500);
+    if (this.conf.pause) { // the radio stops for the video
+      const h = this.hass(), st = h?.states[this.conf.pause]?.state;
+      if (st === "playing") h.callService("media_player", "media_pause", { entity_id: this.conf.pause });
+    }
+  },
+  photos(body) {
+    const p = document.createElement("nina-photos-card");
+    p.setConfig(Object.assign({ title: "Gallery", height: "100%" }, this.conf.photos));
+    body.appendChild(p);
+    const h = this.hass();
+    if (h) p.hass = h;
+    this.pics = p; this.playing = true;
+  },
+  volume() { // the slider's level, a quarter of it while she or the person speaks
+    if (!this.cmd || this.what !== "videos") return;
+    if (this.muted) { this.cmd("mute"); return; }
+    this.cmd("unMute");
+    this.cmd("setVolume", [Math.round(this.duck ? this.vol / 4 : this.vol)]);
+  },
+  mark() {
+    const r = this.root; if (!r) return;
+    r.querySelector('[data-f="play"]').textContent = this.playing ? "⏸" : "▶";
+    const m = r.querySelector('[data-f="mute"]'); if (m) m.textContent = this.muted ? "🔇" : "🔊";
+  },
+  act(f) {
+    if (f === "close") return this.close();
+    if (f === "size") { this.big = !this.big; this.root.querySelector(".pip").classList.toggle("small", !this.big); return; }
+    if (this.what === "videos") {
+      if (f === "prev") this.cmd("previousVideo");
+      else if (f === "next") this.cmd("nextVideo");
+      else if (f === "play") this.cmd(this.playing ? "pauseVideo" : "playVideo");
+      else if (f === "mute") { this.muted = !this.muted; this.volume(); this.mark(); }
+    } else {
+      if (f === "prev") this.pics.step(-1);
+      else if (f === "next") this.pics.step(1);
+      else if (f === "play") { this.playing = !this.playing; this.pics.pause(!this.playing); this.mark(); }
+    }
+  },
+  close() {
+    if (this.onMsg) window.removeEventListener("message", this.onMsg);
+    this.el?.remove();
+    this.el = this.root = this.cmd = this.onMsg = this.pics = null;
+    this.what = null;
+  },
+};
+
+class NinaStageCard extends HTMLElement {
+  setConfig(c) {
+    this.c = c || {};
+    Stage.conf = this.c;
+    Stage.listen(this.c.panel || (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`));
+    if (this.root) return;
+    this.root = this.attachShadow({ mode: "open" });
+    this.root.innerHTML = `<style>${SCHEME}
+      ha-card { padding: 6px 10px; display: flex; gap: 8px; align-items: center; }
+      button { flex: 1; height: 38px; border-radius: 999px; background: rgba(255,255,255,.09); font-size: 15px; }
+    </style><ha-card>
+      ${this.c.videos ? `<button data-w="videos" title="Videos, large on the screen">▶ Videos</button>` : ""}
+      ${this.c.photos ? `<button data-w="photos" title="The gallery, large on the screen">🖼 Photos</button>` : ""}</ha-card>`;
+    this.root.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => Stage.open(b.dataset.w)));
+  }
+  set hass(h) { if (Stage.pics && !Stage.pics._hass) Stage.pics.hass = h; }
+  getCardSize() { return 1; }
+}
+
 // ---- activity ---------------------------------------------------------------------------------
 const TOOL_WORDS = { home_timers: "a timer", home_music: "the music", home_glow: "the bedroom light", home_lights: "the lights",
   home_air: "the air", home_comfort: "the air", home_agenda: "the agenda", calendar: "the calendar", lists: "the lists",
   weather: "the weather", web_search: "the web", narrate: "herself", home_persona: "her mood", home_habits: "a habit",
-  home_scenes: "a scene", delegate: "a task" };
+  home_scenes: "a scene", delegate: "a task", screen: "the screen" };
 class NinaActivityCard extends NinaBase {
   setConfig(c) {
     this.c = c || {};
@@ -463,6 +632,7 @@ customElements.define("nina-surprises-card", NinaSurprisesCard);
 customElements.define("nina-bubble-card", NinaBubbleCard);
 customElements.define("nina-photos-card", NinaPhotosCard);
 customElements.define("nina-video-card", NinaVideoCard);
+customElements.define("nina-stage-card", NinaStageCard);
 window.customCards = window.customCards || [];
 window.customCards.push(
   { type: "nina-settings-card", name: "Nina: settings", description: "Her name, persona, voice and temperament." },

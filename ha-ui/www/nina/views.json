@@ -1,5 +1,5 @@
 {
-  "_doc": "Nina's view (2026-11-24): which page of the kiosk dashboard each of her tool calls brings up; an intent can choose among several; '*' the rest. After return_after seconds without another call, the dashboard goes back home.",
+  "_doc": "Nina's view (2026-11-24): which page of the kiosk dashboard each of her tool calls brings up; an intent can choose among several; '*' the rest. After return_after seconds without another call, the dashboard goes back home. The tool 'screen' moves no page: the stage (nina-stage-card) opens over the one shown.",
   "dashboard": "nina-panel",
   "home": "home",
   "return_after": 90,

@@ -49,7 +49,10 @@ fi
 # the dark scheme (2026-11-25, the user: Pascal's dark looks much better; the Pi's desktop always
 # reports light, so Home Assistant's Nina theme took its light mode): pages see prefers-color-scheme
 # dark. Ensured on every start, so an existing profile gets it too.
-for pref in 'user_pref("layout.css.prefers-color-scheme.content-override", 0);' 'user_pref("ui.systemUsesDarkTheme", 1);'; do
+# And media may start with sound by itself (2026-11-26: the stage's videos, opened by Nina at the person's
+# request, would otherwise start silent until a tap).
+for pref in 'user_pref("layout.css.prefers-color-scheme.content-override", 0);' 'user_pref("ui.systemUsesDarkTheme", 1);' \
+  'user_pref("media.autoplay.default", 0);' 'user_pref("media.autoplay.blocking_policy", 0);'; do
   grep -qF "$pref" "$PROFILE_DIR/user.js" 2>/dev/null || echo "$pref" >>"$PROFILE_DIR/user.js"
 done
 
