@@ -28,7 +28,7 @@ dialog:
     model: ~/repo/fsttm-live/models/oww # its shared models
     word: ~/repo/fsttm-live/models/oww/nina.onnx # Nina's own (trained on Paradee's voices)
     label: NINA
-    threshold: 0.5 # lower hears more (the log's oww_peak: each utterance's best score)
+    threshold: 0.3 # lower hears more (the log's oww_peak: each utterance's best score); 0.3: 0.28 false wakes an hour, the person's names at 0.34-0.94 (2026-11-26)
     # the sherpa spotter instead: engine: kws, model: ~/models/sherpa-kws/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01,
     # keywords: ~/repo/fsttm-live/testdata/kws-keywords.txt, threshold: 0.25
 # SOURCES: the systems Nina draws on. Metis (metis-home): its tools, and its REASONING through the
