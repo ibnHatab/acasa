@@ -197,7 +197,7 @@ class NinaDomainCard extends HTMLElement {
     card.classList.add("bloom");
     this.play();
     const n = this.root.querySelectorAll(".bg img").length;
-    this.tEnd = setTimeout(() => { card.classList.remove("bloom"); this.mark(e, text); },
+    this.tEnd = setTimeout(() => { card.classList.remove("bloom"); if (e.args?.intent !== "QUERY") this.mark(e, text); }, // a query says nothing of its own (its list is hers): the card keeps what is set
       Math.max(this.c.show_seconds * 1000, n * (this.c.frame_seconds || 4) * 1000 + 1500));
   }
   // mark: what the collapse leaves on the icon; a timer counts down to its end
@@ -205,13 +205,20 @@ class NinaDomainCard extends HTMLElement {
     const icon = this.root.querySelector(".icon"), badge = this.root.querySelector(".badge");
     clearInterval(this.tCount); clearTimeout(this.tMark);
     this.root.querySelector(".sub").textContent = text.length > 60 ? text.slice(0, 57) + "…" : text;
-    const mins = +e.args?.minutes || 0;
-    if (this.c.countdown && mins > 0 && (e.args?.intent || "SET") === "SET") {
+    let mins = +e.args?.minutes || 0;
+    const intent = e.args?.intent || "SET";
+    if (intent === "ALARM" && /^\d{1,2}:\d{2}$/.test(e.args?.at || "")) { // an alarm: the countdown to its clock time (today, else tomorrow)
+      const [h, m] = e.args.at.split(":").map(Number), t = new Date();
+      t.setHours(h, m, 0, 0);
+      if (t <= new Date()) t.setDate(t.getDate() + 1);
+      mins = (t - Date.now()) / 60000;
+    }
+    if (this.c.countdown && mins > 0 && (intent === "SET" || intent === "ALARM")) {
       const end = Date.now() + mins * 60000;
       icon.classList.add("mark");
       const tick = () => {
         const s = Math.max(0, Math.round((end - Date.now()) / 1000));
-        badge.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+        badge.textContent = s >= 3600 ? `${Math.floor(s / 3600)}h${String(Math.floor(s / 60) % 60).padStart(2, "0")}` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
         if (!s) { clearInterval(this.tCount); badge.textContent = ""; icon.classList.remove("mark"); }
       };
       tick(); this.tCount = setInterval(tick, 1000);
