@@ -1,5 +1,13 @@
 # acasa — the flat as a metis domain, with a voice
 
+> **Today acasa is the adaptation of Nina the persona ([nina-live](https://github.com/ibnHatab/nina-live)) to a
+> home or a role**: Home Assistant (`hass/`), her look and feel (`ha-ui/`, roles in `ha-ui/roles/`), the
+> machines' install and update (`install/`: `machine.sh`, `update.sh`), the per-machine configs (`live/`).
+> The way to do each of these is kept as agent skills in [`skills/`](skills/) (`skills/link.sh` links them into
+> `~/.claude/skills`): `acasa-machine-install`, `acasa-machine-update`, `acasa-role`, `acasa-ha-dashboards`,
+> and the credentials (`acasa-credentials`, one `acasa-cred-*` per credential). The sections below are the
+> earlier NUC setup, kept for its history.
+
 A voice-driven home assistant on the NUC (`nuc`): a small local model (Gemma 4 E2B) turns what
 you say into one typed intent, the metis rules of `domains/home` decide what happens and what is
 said back, and Home Assistant is only the pipe to the devices. The page (`web/`) is the dashboard
