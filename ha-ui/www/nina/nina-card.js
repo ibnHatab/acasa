@@ -118,12 +118,12 @@ const hub = window.__ninaHub || (window.__ninaHub = {
             else if (/^SAY: /.test(e.text)) { /* Nina's own words handed to her voice (a narration): shown as her reply, not as the person's */ }
             else if (!e.typed_shown) {
               const t = e.text.replace(/^\((You were|You are)[^)]*\)\n/, "").trim(), last = this.msgs[this.msgs.length - 1];
-              if (this.cur) { // heard as it was spoken: the turn's text settles it (her echo stripped, utterances joined)
+              if (this.cur && t) { // heard as it was spoken: the turn's text settles it (her echo stripped, utterances joined)
                 const norm = (x) => x.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").replace(/\s+/g, " ").trim();
                 if (norm(this.cur.parts.map((p) => p.text).join(" ")) !== norm(t)) this.cur.parts = [{ seq: 0, text: t, final: true }];
                 this.cur.parts.forEach((p) => (p.final = true));
                 this.cur.live = false; this.joined(); this.cur = null; this.listening = null; this.emit();
-              } else if (!(last && last.cls === "user" && last.text === t && Date.now() - last.t < 5000)) this.add("user", t); // a typed line: shown already
+              } else if (t && !(last && last.cls === "user" && last.text === t && Date.now() - last.t < 5000)) this.add("user", t); // a typed line: shown already; empty: only her note
             }
             this.nina = null; this.said = ""; break;
           case "said":
