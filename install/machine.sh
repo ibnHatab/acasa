@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# machine.sh: a Nina machine from a fresh Raspberry Pi OS (trixie) card (install/README.md, step 2;
+# machine.sh: a Nina machine from a fresh Raspberry Pi OS (trixie) card (skill acasa-machine-install, step 2;
 # written on the office Pi "pero", 2026-11-25). Run on the Pi as nina, from a clone of acasa:
 #
 #   sudo apt-get install -y -qq git && git clone -q https://github.com/ibnHatab/acasa.git ~/repo/acasa && ~/repo/acasa/install/machine.sh

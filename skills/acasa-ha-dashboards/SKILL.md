@@ -46,6 +46,22 @@ bubbles **over** a fixed expanded card that Chrome stacked correctly — the use
 now drop backdrop blur in Firefox (`:host([gecko])`, `#nina-expand.gecko`). Prefer opaque layers for
 overlays; test overlays on the kiosk itself.
 
+## Home Assistant settings the screens rely on
+
+- **Her own screen frames Home Assistant** (`www/nina/shell.html`, served by her panel at
+  `http://HOST:8770/nina/shell.html`): Home Assistant keeps its http settings in `.storage/http` (the
+  YAML is ignored) and needs `use_x_frame_options: false` there.
+- **The way back to Nina**: on a kiosk every other Home Assistant page gets a floating "Nina" button;
+  dashboard resources load only on dashboards, so `configuration.yaml` has `frontend: extra_module_url:
+  [/local/nina/nina-boot.js]` (a loader that never changes and imports `nina-view.js` fresh).
+- **The boot splash**: `kiosk/logo.png` (Plymouth's ha-pi-kiosk theme; a Pi 4 boots `initramfs8`:
+  `update-initramfs -u -k all`), `kiosk/starting.html` ("Nina is waking up") until Home Assistant answers
+  (~70 s after a Pi's boot).
+- **Start time**: `go run ./cmd/ha-startup` lists the integrations' start times, `cmd/ha-entries` lists
+  config entries and disables/enables one; `default_config` may be trimmed to what the place uses
+  (keep `my:` for Google OAuth).
+- Design on a desktop: `ha-ui/preview.sh [view]` opens the dashboard at the kiosk's size.
+
 ## Pitfalls
 
 - A tool result line is not always meant for display (a timers QUERY's "Here is what is set."):

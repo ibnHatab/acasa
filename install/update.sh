@@ -42,7 +42,7 @@ echo "== the look and feel (this machine's Home Assistant)"
 if [ -s "$HOME/.config/fsttm/hass.token" ]; then
   (cd "$R/acasa" && go run ./cmd/ha-ui -url http://127.0.0.1:8123 -config "$HOME/homeassistant/config" 2>&1 | grep -E "dashboard|themes|rror" || true)
 else
-  echo "no Home Assistant token yet (~/.config/fsttm/hass.token): the look and feel waits for it (install/README step 4)"
+  echo "no Home Assistant token yet (~/.config/fsttm/hass.token): the look and feel waits for it (skill acasa-cred-ha-token)"
 fi
 
 if [ "$KIOSK" = 1 ]; then
@@ -53,7 +53,7 @@ if [ "$KIOSK" = 1 ]; then
   sudo install -D -m 644 "$K/starting.html" /usr/local/share/ha-pi-kiosk/starting.html
   sudo install -m 644 "$K/logo.png" /usr/local/share/ha-pi-kiosk/logo.png
   # the kiosk shows this machine's own Home Assistant (the repo's file names the first Pi's): the
-  # address as this machine has it (localhost: its own kiosk user, install/README; the first Pi:
+  # address as this machine has it (localhost: its own kiosk user, skill acasa-machine-install; the first Pi:
   # homeassistant.local); a new machine: localhost
   KH=$(grep -o 'KIOSK_URL="http://[^:/"]*' /etc/ha-pi-kiosk/config.env 2>/dev/null | sed 's|.*//||'); KH=${KH:-localhost}
   sed "s|homeassistant.local|$KH|g" "$K/config.env" | sudo install -D -m 644 /dev/stdin /etc/ha-pi-kiosk/config.env
@@ -72,4 +72,4 @@ sleep 8
 for s in nina acasa-nina nina-radar; do
   systemctl --user is-enabled -q "$s" 2>/dev/null && echo "$s: $(systemctl --user is-active "$s")"
 done
-[ "$any" = 1 ] || echo "no Nina service enabled here (built, not started: install/README step 7)"
+[ "$any" = 1 ] || echo "no Nina service enabled here (built, not started: skill acasa-machine-install, step 7)"

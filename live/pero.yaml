@@ -1,4 +1,4 @@
-# pero: Nina in the office (the secretary; acasa install/README step 7, 2026-11-25): fsttm-live's
+# pero: Nina in the office (the secretary; acasa skill acasa-role, 2026-11-25): fsttm-live's
 # config (her sound, models, attention, prefs, panel). From the first Pi's (pi.yaml).
 # The Raspberry Pi 4 (2026-11-24): the ReSpeaker on USB (card ArrayUAC10), playback on the default output until the speakers come; otherwise as pascal.yaml.
 # nina-live: the machine's settings, the person's preferences, the plugins.

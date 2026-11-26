@@ -15,7 +15,7 @@ UNITS="acasa-nina.service"
 sc() { systemctl --user "$@"; }
 case "${1:-start}" in
 install)
-	if [ -n "${OLD:-}" ]; then (cd "$FSTTM_LIVE" && go build -o bin/nina-live ./cmd/nina-live); else "$HOME/repo/nina-live/build.sh"; fi
+	if [ -n "${OLD:-}" ]; then (cd "$FSTTM_LIVE" && go build -o bin/nina-live ./cmd/nina-live); else REPO_ROOT="$HOME/repo" bash "$HOME/repo/nina-live/scripts/persona-build.sh"; fi   # the persona's own build
 	for u in $UNITS; do sc link "$HERE/systemd/$u"; done
 	sc daemon-reload
 	sc enable --now $UNITS

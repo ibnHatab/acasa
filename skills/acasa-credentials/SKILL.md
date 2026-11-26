@@ -5,7 +5,7 @@ description: The rules and the map for every credential a Nina machine needs (Ge
 
 # Credentials for a Nina machine
 
-Source: `acasa/install/credentials.md` (how Pascal and pero were set up). One skill per credential:
+How the first machines were set up, as one skill per credential:
 
 | credential | file (chmod 600) | used by | skill |
 |---|---|---|---|

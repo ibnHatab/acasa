@@ -11,7 +11,6 @@ Develop on a desktop, merge to main, push. Then on each machine (over SSH for a 
 ~/repo/acasa/install/update.sh            # pull acasa + nina-live, persona build (--pull), look and feel, restart
 ~/repo/acasa/install/update.sh --kiosk    # also the kiosk's files (launcher, start page, logo) and its Firefox
 ~/repo/acasa/install/update.sh --no-pull  # what is checked out (testing a local change)
-~/repo/nina-live/scripts/pi-update.sh     # the old name: a shim to update.sh
 ```
 
 What it does, in order — and a failed step stops it **before** any restart, so the running Nina
@@ -24,8 +23,9 @@ stays as she was:
 4. `--kiosk`: files to `/usr/local/...`, `/etc/ha-pi-kiosk/config.env`, Firefox restarted;
 5. restarts the user services enabled here: `nina` (Pi), `acasa-nina` (desktop), `nina-radar`.
 
-A script that updates itself: when the update changes `update.sh` or `pi-update.sh`, the run that
-pulled it may finish as the old version — run it once more to exercise the new path.
+A script that updates itself: when the update changes `update.sh`, the run that pulled it may finish
+as the old version — run it once more to exercise the new path. (The old `nina-live/scripts/pi-update.sh`
+is gone: the persona's repo no longer calls the deployment.)
 
 ## Check after
 

@@ -5,7 +5,8 @@ description: Install a new Nina machine from scratch — a Raspberry Pi 4 (card,
 
 # Installing a Nina machine
 
-The full reference is `acasa/install/README.md`; this is the path and what to check at each step.
+The path and what to check at each step (the scripts: `install/sd-firstboot.sh`, `install/machine.sh`,
+`install/update.sh`; the configs: `live/`).
 Throughout: **the person signs in, types passwords and Wi-Fi secrets, approves logins and
 downloads**; the agent runs commands and fills non-secret fields.
 
