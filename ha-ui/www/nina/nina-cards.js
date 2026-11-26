@@ -454,6 +454,10 @@ const Stage = window.__ninaStage ||= {
       const e = JSON.parse(m.data);
       if (e.ev === "stage") { // what her screen tool found: videos (ids), a playlist, an album
         if (e.show === "close") this.close();
+        else if (this.el && ({ next: 1, previous: 1, pause: 1, play: 1 })[e.show]) { // on what is shown: its ⏭ ⏮ ⏸ ▶
+          if (e.show === "next" || e.show === "previous") this.act(e.show === "next" ? "next" : "prev");
+          else if ((e.show === "pause") === !!this.playing) this.act("play");
+        }
         else if (e.show === "videos" || e.show === "photos") this.open(e.show, { videos: e.videos, playlist: e.playlist, album: e.album, title: e.title });
         return;
       }
