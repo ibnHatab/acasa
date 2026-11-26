@@ -277,12 +277,16 @@ class NinaPhotosCard extends HTMLElement {
     this.root.querySelector("ha-card").style.setProperty("--h", this.c.height);
   }
   set hass(h) { this._hass = h; if (!this.items && !this.loading) this.load(); }
-  connectedCallback() { if (this.items && !this.tm) this.next(); }
+  connectedCallback() { if (this.items && !this.tm) this.next(); else if (this.c.scenes && !this.items && !this.loading) this.load(); }
   disconnectedCallback() { clearTimeout(this.tm); this.tm = null; }
   async load() {
     this.loading = true;
     const ws = (id) => this._hass.callWS({ type: "media_source/browse_media", media_content_id: id });
-    try {
+    if (this.c.scenes) { // the Codex scenes (www/nina/scenes): the gallery where there is no Google Photos (Pascal)
+      const sc = await fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => ({ frames: {} }));
+      this.items = Object.entries(sc.frames || {}).flatMap(([k, n]) => Array.from({ length: n }, (_, i) => `${ASSETS}scenes/${k}/${i + 1}.webp`));
+      this.root.querySelector(".sub").textContent = this.c.sub || "Nina's scenes";
+    } else try {
       const root = await ws("media-source://google_photos");
       for (const acct of root.children || []) {
         const albums = await ws(acct.media_content_id);
@@ -311,7 +315,8 @@ class NinaPhotosCard extends HTMLElement {
     if (!this.isConnected || !this.items?.length) return;
     this.i = (this.i + 1) % this.items.length;
     try {
-      const r = await this._hass.callWS({ type: "media_source/resolve_media", media_content_id: this.items[this.i] });
+      const id = this.items[this.i];
+      const r = id.startsWith("/") || id.startsWith("http") ? { url: id } : await this._hass.callWS({ type: "media_source/resolve_media", media_content_id: id });
       const [a, b] = this.root.querySelectorAll(".pic");
       const show = a.classList.contains("on") ? b : a, hide = show === a ? b : a;
       show.onload = () => { show.classList.add("on"); hide.classList.remove("on"); };
@@ -417,6 +422,19 @@ const stageStream = (panel) => ((window.__ninaStreams ||= {})[panel] ||= (() => 
 
 const Stage = window.__ninaStage ||= {
   conf: null, el: null, what: null, big: true, vol: 60, duck: false,
+  cards: {}, confs: {}, // the docked cards (nina-media-card) and their configs, by what they show
+  cfg(what) { return this.confs[what] || this.conf?.[what]; },
+  pauseOf(what) { return this.confs[what + ":pause"] || this.conf?.pause; },
+  // where it flies: large over the right side (all of a narrow page: her own screen's right half), or
+  // small in the corner
+  rect(big) {
+    const W = innerWidth, H = innerHeight, m = 8;
+    if (big) { const w = W < 760 ? W - 2 * m : Math.round(W * 0.64); return { left: W - m - w, top: m, width: w, height: H - 2 * m }; }
+    const w = Math.round(W < 760 ? W * 0.62 : W * 0.34); const h = Math.round(w * 9 / 16 + 52);
+    return { left: W - m - w, top: H - m - h, width: w, height: h };
+  },
+  place(r) { const p = this.root?.querySelector(".pip"); if (p) for (const k of ["left", "top", "width", "height"]) p.style[k] = r[k] + "px"; },
+  docked(what) { const c = this.cards[what]; return c && c.isConnected && c.getBoundingClientRect().width > 0 ? c : null; },
   hass() { return document.querySelector("home-assistant")?.hass; },
   listen(panel) {
     if (this.panel) return;
@@ -435,17 +453,20 @@ const Stage = window.__ninaStage ||= {
     });
   },
   open(what) {
-    if (!this.conf || !this.conf[what]) return;
-    if (this.what === what) return;
-    this.close();
+    if (!this.cfg(what)) return;
+    if (this.what === what) { if (!this.big) this.act("size"); return; }
+    this.close(true);
     this.what = what;
     const host = document.createElement("div");
     host.id = "nina-stage";
     const root = host.attachShadow({ mode: "open" });
     root.innerHTML = `<style>
-      .pip { position: fixed; z-index: 9000; right: 8px; top: 8px; bottom: 8px; width: 64vw; background: #000; border-radius: 16px;
-             overflow: hidden; box-shadow: 0 6px 28px rgba(0,0,0,.6); transition: all .35s ease; font: 15px system-ui, sans-serif; }
-      .pip.small { top: auto; width: 34vw; height: calc(34vw * 9 / 16 + 52px); }
+      .pip { position: fixed; z-index: 9000; background: #000; border-radius: 16px; overflow: hidden;
+             box-shadow: 0 6px 28px rgba(0,0,0,.6); font: 15px system-ui, sans-serif;
+             transition: left .45s cubic-bezier(.2,.8,.2,1), top .45s cubic-bezier(.2,.8,.2,1), width .45s cubic-bezier(.2,.8,.2,1),
+                         height .45s cubic-bezier(.2,.8,.2,1), border-radius .45s ease, opacity .3s ease; }
+      .pip.docked { border-radius: 12px; }
+      .pip.docked .ctl { opacity: 0; } .ctl { transition: opacity .3s ease .2s; }
       .body { position: absolute; left: 0; right: 0; top: 0; bottom: 52px; }
       .body iframe, .body > * { width: 100%; height: 100%; border: 0; display: block; }
       .ctl { position: absolute; left: 0; right: 0; bottom: 0; height: 52px; display: flex; align-items: center; gap: 8px; padding: 0 10px;
@@ -467,11 +488,18 @@ const Stage = window.__ninaStage ||= {
     if (what === "videos") this.video(body); else this.photos(body);
     root.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => this.act(b.dataset.f)));
     root.querySelector("input")?.addEventListener("input", (ev) => { this.vol = +ev.target.value; this.muted = false; this.volume(); });
+    // it flies out of its card (where one is docked on this page), or appears where it goes
+    const card = this.docked(what);
+    if (card) { const r = card.getBoundingClientRect(); this.place(r); pip.classList.add("docked"); card.away(true); }
+    else { this.place(this.rect(this.big)); pip.style.opacity = 0; }
     document.body.appendChild(host);
     this.el = host;
+    requestAnimationFrame(() => requestAnimationFrame(() => { pip.classList.remove("docked"); pip.style.opacity = 1; this.place(this.rect(this.big)); }));
+    this.onResize ||= () => this.place(this.rect(this.big));
+    addEventListener("resize", this.onResize);
   },
   video(body) {
-    const c = this.conf.videos;
+    const c = this.cfg("videos");
     // muted at the start: unmuted at the slider's level once the player is ready (no second at YouTube's own)
     const q = new URLSearchParams({ autoplay: 1, mute: 1, loop: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, enablejsapi: 1, origin: location.origin });
     let src;
@@ -491,17 +519,19 @@ const Stage = window.__ninaStage ||= {
       if (!ready) { ready = true; clearInterval(hello); this.volume(); this.cmd("playVideo"); }
       const i = d.info || {};
       if (i.playerState !== undefined) { this.playing = i.playerState === 1 || i.playerState === 3; this.mark(); }
+      if (i.videoData?.video_id) { localStorage.setItem("nina-last-video", i.videoData.video_id); this.cards.videos?.thumb?.(); }
     };
     this.stopHello = () => clearInterval(hello);
     window.addEventListener("message", this.onMsg);
-    if (this.conf.pause) { // the radio stops for the video
-      const h = this.hass(), st = h?.states[this.conf.pause]?.state;
-      if (st === "playing") h.callService("media_player", "media_pause", { entity_id: this.conf.pause });
+    const pause = this.pauseOf("videos");
+    if (pause) { // the radio stops for the video
+      const h = this.hass(), st = h?.states[pause]?.state;
+      if (st === "playing") h.callService("media_player", "media_pause", { entity_id: pause });
     }
   },
   photos(body) {
     const p = document.createElement("nina-photos-card");
-    p.setConfig(Object.assign({ title: "Gallery", height: "100%" }, this.conf.photos));
+    p.setConfig(Object.assign({ title: "Gallery", height: "100%" }, this.cfg("photos")));
     body.appendChild(p);
     const h = this.hass();
     if (h) p.hass = h;
@@ -520,7 +550,7 @@ const Stage = window.__ninaStage ||= {
   },
   act(f) {
     if (f === "close") return this.close();
-    if (f === "size") { this.big = !this.big; this.root.querySelector(".pip").classList.toggle("small", !this.big); return; }
+    if (f === "size") { this.big = !this.big; this.root.querySelector(".pip").classList.toggle("small", !this.big); this.place(this.rect(this.big)); return; }
     if (this.what === "videos") {
       if (f === "prev") this.cmd("previousVideo");
       else if (f === "next") this.cmd("nextVideo");
@@ -532,12 +562,22 @@ const Stage = window.__ninaStage ||= {
       else if (f === "play") { this.playing = !this.playing; this.pics.pause(!this.playing); this.mark(); }
     }
   },
-  close() {
+  // close: back into its card (where one is docked), or faded; now: at once (another opens)
+  close(now) {
+    if (!this.el) return;
     this.stopHello?.();
     if (this.onMsg) window.removeEventListener("message", this.onMsg);
-    this.el?.remove();
+    removeEventListener("resize", this.onResize);
+    const el = this.el, what = this.what, pip = this.root?.querySelector(".pip"), card = this.docked(what);
     this.el = this.root = this.cmd = this.onMsg = this.pics = this.stopHello = null;
     this.what = null;
+    if (now || !pip) { el.remove(); this.cards[what]?.away(false); return; }
+    if (card) {
+      const r = card.getBoundingClientRect();
+      pip.classList.add("docked");
+      for (const k of ["left", "top", "width", "height"]) pip.style[k] = r[k] + "px";
+      setTimeout(() => { el.remove(); card.away(false); }, 460);
+    } else { pip.style.opacity = 0; setTimeout(() => el.remove(), 320); }
   },
 };
 
@@ -558,6 +598,72 @@ class NinaStageCard extends HTMLElement {
   }
   set hass(h) { if (Stage.pics && !Stage.pics._hass) Stage.pics.hass = h; }
   getCardSize() { return 1; }
+}
+
+// The dynamic cards (the user, 2026-11-26): Videos and Photos as cards of her column, like the
+// others; asked for (her tool "screen", or a tap) the card leaves the panel and grows into the picture
+// in picture with its controls, its place kept; closed, it flies back into it.
+//
+//   type: custom:nina-media-card
+//   show: videos | photos
+//   videos: {playlist: PLSh0S6uPqqgA}       # show: videos
+//   photos: {album: "Nina's gallery"} | {scenes: true}   # show: photos (Google Photos, or her scenes)
+//   pause: media_player.music_player_daemon # paused when a video starts (optional)
+//   title, icon, scene (the background where there is no picture yet), height (default 108px)
+class NinaMediaCard extends HTMLElement {
+  setConfig(c) {
+    const v = c?.show === "photos";
+    this.c = Object.assign({ show: "videos", title: v ? "Photos" : "Videos", icon: v ? "mdi:image-multiple" : "mdi:youtube",
+      scene: v ? "fortune" : "music", height: "108px" }, c || {});
+    const w = this.c.show;
+    Stage.cards[w] = this;
+    Stage.confs[w] = this.c[w];
+    if (this.c.pause) Stage.confs[w + ":pause"] = this.c.pause;
+    Stage.listen(this.c.panel || (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`));
+    if (this.root) return;
+    this.root = this.attachShadow({ mode: "open" });
+    this.root.innerHTML = `<style>${SCHEME}
+      ha-card { height: var(--h); padding: 12px 14px; cursor: pointer; transition: opacity .3s ease; }
+      .bg img { opacity: 1; transform: none; transition: opacity 1.2s ease; }
+      .bg img.off { opacity: 0; }
+      .go { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; padding: 0; border-radius: 50%; font-size: 17px; }
+      .gone { position: absolute; inset: 0; display: none; place-items: center; border: 2px dashed rgba(255,255,255,.35);
+              border-radius: inherit; color: rgba(255,255,255,.8); font-size: .9em; background: rgba(10,8,7,.55); }
+      ha-card.away .gone { display: grid; } ha-card.away .body, ha-card.away .go { visibility: hidden; }
+    </style><ha-card><div class="bg"><img alt=""><img class="off" alt=""></div>
+      <div class="body"><div class="head"><div class="icon"><ha-icon icon="${this.c.icon}"></ha-icon></div>
+        <div><div class="title">${this.c.title}</div><div class="sub"></div></div></div></div>
+      <button class="go" title="Large on the screen">${w === "photos" ? "⤢" : "▶"}</button>
+      <div class="gone">on the screen ↗</div></ha-card>`;
+    const card = this.root.querySelector("ha-card");
+    card.style.setProperty("--h", this.c.height);
+    card.addEventListener("click", () => Stage.open(w));
+    this.root.querySelector(".sub").textContent = w === "photos" ? (this.c.photos?.album || "her scenes") : "ask Nina, or tap";
+    this.thumb();
+  }
+  // the background: the last video's still (videos), the gallery turning slowly (photos), or the scene
+  async thumb() {
+    const imgs = this.root.querySelectorAll(".bg img");
+    const show = (url) => { const [a, b] = imgs; const on = a.classList.contains("off") ? a : b, off = on === a ? b : a;
+      on.onload = () => { on.classList.remove("off"); off.classList.add("off"); }; on.src = url; };
+    if (this.c.show === "videos") {
+      const id = localStorage.getItem("nina-last-video");
+      show(id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : `${ASSETS}scenes/${this.c.scene}/1.webp`);
+      return;
+    }
+    clearInterval(this.turn);
+    const sc = await fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => ({ frames: {} }));
+    const urls = Object.entries(sc.frames || {}).flatMap(([k, n]) => Array.from({ length: n }, (_, i) => `${ASSETS}scenes/${k}/${i + 1}.webp`));
+    if (!urls.length) return;
+    let i = Math.floor(Math.random() * urls.length);
+    show(urls[i]);
+    this.turn = setInterval(() => this.isConnected && show(urls[(i = (i + 1) % urls.length)]), 9000);
+  }
+  away(on) { this.root?.querySelector("ha-card").classList.toggle("away", on); }
+  connectedCallback() { if (Stage.what === this.c?.show) this.away(true); if (this.root && !this.turn && this.c.show === "photos") this.thumb(); }
+  disconnectedCallback() { clearInterval(this.turn); this.turn = null; }
+  set hass(h) { if (Stage.pics && !Stage.pics._hass) Stage.pics.hass = h; }
+  getCardSize() { return 2; }
 }
 
 // ---- activity ---------------------------------------------------------------------------------
@@ -643,6 +749,7 @@ customElements.define("nina-bubble-card", NinaBubbleCard);
 customElements.define("nina-photos-card", NinaPhotosCard);
 customElements.define("nina-video-card", NinaVideoCard);
 customElements.define("nina-stage-card", NinaStageCard);
+customElements.define("nina-media-card", NinaMediaCard);
 window.customCards = window.customCards || [];
 window.customCards.push(
   { type: "nina-settings-card", name: "Nina: settings", description: "Her name, persona, voice and temperament." },

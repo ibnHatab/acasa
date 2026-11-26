@@ -123,7 +123,10 @@ views:
                     subtitle: none running
                     icon: mdi:timer-sand
                     countdown: true
-              - {type: custom:nina-stage-card, videos: {playlist: PLSh0S6uPqqgA}, pause: media_player.music_player_daemon}   # the stage: the Claudia videos large on the screen on request (her tool "screen", or a tap), closed with ✕
+              - type: horizontal-stack   # the dynamic cards (2026-11-26): asked for, each leaves the column and grows into the picture in picture; closed, it comes back
+                cards:
+                  - {type: custom:nina-media-card, show: videos, videos: {playlist: PLSh0S6uPqqgA}, pause: media_player.music_player_daemon}   # the Claudia videos (unlisted)
+                  - {type: custom:nina-media-card, show: photos, photos: {scenes: true, interval: 10}}   # her Codex scenes (no Google Photos here)
               - type: custom:nina-domain-card
                 compact: true
                 scene: air
