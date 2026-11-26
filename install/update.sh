@@ -32,6 +32,7 @@ if [ -n "$PULL" ]; then
   git -C "$R/acasa" pull -q --ff-only
   after=$(git -C "$R/acasa" rev-parse HEAD)
   printf '%-34s %s%s\n' acasa "${after:0:7}" "$([ "$before" != "$after" ] && echo "  (was ${before:0:7})")"
+  git -C "$R/nina-live" pull -q --ff-only   # first: the persona's build script as it is now, not the last one
 fi
 
 echo "== the persona"
