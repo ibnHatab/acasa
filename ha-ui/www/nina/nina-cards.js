@@ -210,11 +210,11 @@ class NinaBubbleCard extends NinaBase {
       catch (err) { say(String(err)); }
       this.load();
     });
-    const act = (a, arg) => api("/api/do", { action: a, arg: arg || "" }).then((r) => { if (r?.error) say(r.error); setTimeout(() => this.load(), 300); }).catch((e) => say(String(e)));
+    const act = (a, arg) => api("/api/do", { action: a, arg: arg || "" }).then((r) => { if (r?.error) say(r.error); setTimeout(() => this.load(), 300); return r; }).catch((e) => { say(String(e)); return { error: e }; });
     q(".minus").addEventListener("click", () => act("quieter"));
     q(".plus").addEventListener("click", () => act("louder"));
     q(".hear").addEventListener("click", () => act("sample"));
-    q(".here").addEventListener("click", () => act("bubble_here", q(".d").value).then(() => say("saved")));
+    q(".here").addEventListener("click", () => act("bubble_here", q(".d").value).then((r) => !r?.error && say("saved")));
     q(".reset").addEventListener("click", () => act("bubble_reset"));
     this.load();
     this.tw = setInterval(() => this.who(), 5000);
