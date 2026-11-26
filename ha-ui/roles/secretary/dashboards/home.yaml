@@ -69,6 +69,7 @@ views:
         cards:
           - {type: heading, heading: Gallery, icon: mdi:image-multiple}
           - {type: custom:nina-stage-card, videos: {playlist: PLSh0S6uPqqgA}, photos: {album: "Nina's gallery", interval: 12}, pause: media_player.music_player_daemon}   # videos (the office channel's "Claudia", 33, unlisted) and photos: large on request, closed with ✕ (the user, 2026-11-26: not on the screen all the time)
+          - {type: custom:nina-chat-card, chat: Office, lines: 6, grid_options: {columns: full}}   # the office group on WhatsApp (read only)
 
   - title: Nina
     path: nina

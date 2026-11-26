@@ -673,6 +673,82 @@ class NinaMediaCard extends HTMLElement {
   getCardSize() { return 2; }
 }
 
+
+// The office group on her screen (WhatsApp, nina-live whatsapp/; the user, 2026-11-26): read only. Its
+// last messages, newest at the bottom; a tap opens it large. Her panel's "whatsapp" fact (the shown
+// groups' recent messages) and its live "whatsapp" events.
+//
+//   type: custom:nina-chat-card
+//   chat: Office          # the group's name (nina.yaml whatsapp.show)
+//   lines: 4              # messages in the card (default 4)
+class NinaChatCard extends HTMLElement {
+  setConfig(c) {
+    this.c = Object.assign({ chat: "Office", title: "", icon: "mdi:whatsapp", lines: 4, scene: "agenda", height: "" }, c || {});
+    this.panel = this.c.panel || (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`);
+    if (this.root) return;
+    this.root = this.attachShadow({ mode: "open" });
+    this.root.innerHTML = `<style>${SCHEME}
+      ha-card { cursor: pointer; padding: 12px 14px; }
+      .bg img { opacity: .55; transform: none; }
+      .msgs { display: flex; flex-direction: column; gap: 5px; }
+      .m { font-size: .9em; line-height: 1.3; } .m b { font-weight: 600; } .m .t { color: rgba(255,255,255,.55); font-size: .8em; margin-left: 6px; }
+      .m.me b { color: #f0a37f; } .m.to b::after { content: " → Nina"; font-weight: 400; color: rgba(255,255,255,.55); }
+      .empty { color: rgba(255,255,255,.65); font-size: .9em; }
+    </style><ha-card><div class="bg"><img alt="" src="${ASSETS}scenes/${this.c.scene}/1.webp"></div><div class="body">
+      <div class="head"><div class="icon"><ha-icon icon="${this.c.icon}"></ha-icon></div>
+        <div><div class="title">${this.c.title || this.c.chat}</div><div class="sub">WhatsApp</div></div></div>
+      <div class="msgs"><div class="empty">…</div></div></div></ha-card>`;
+    if (this.c.height) this.root.querySelector("ha-card").style.minHeight = this.c.height;
+    this.root.querySelector("ha-card").addEventListener("click", () => this.open());
+  }
+  connectedCallback() {
+    if (this.listening) return;
+    this.listening = true;
+    fetch(`${this.panel}/api/state`).then((r) => r.json()).then((s) => this.take(s.facts?.whatsapp)).catch(() => this.say("her panel is not reachable"));
+    stageStream(this.panel).addEventListener("ev", (m) => {
+      const e = JSON.parse(m.data);
+      if (e.ev === "whatsapp") this.take(e);
+      else if (e.ev === "wa_status") this.root.querySelector(".sub").textContent = `WhatsApp · ${e.state.replace("_", " ")}`;
+    });
+  }
+  say(t) { this.root.querySelector(".msgs").innerHTML = `<div class="empty">${t}</div>`; }
+  take(f) {
+    if (!f) return this.say("WhatsApp is not linked yet");
+    const chat = (f.chats || []).find((c) => (c.name || "").toLowerCase() === this.c.chat.toLowerCase());
+    this.msgs = chat?.messages || [];
+    if (!chat?.chat) return this.say(`not in a group named “${this.c.chat}”`);
+    this.render(this.root.querySelector(".msgs"), this.msgs.slice(-this.c.lines));
+    this.big?.(this.msgs);
+  }
+  render(el, msgs) {
+    const esc = (t) => String(t || "").replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[ch]);
+    if (!msgs.length) { el.innerHTML = `<div class="empty">nothing written yet</div>`; return; }
+    el.innerHTML = msgs.map((m) => {
+      const t = new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const body = m.text ? esc(m.text) : `<i>[${esc(m.kind)}]</i>`;
+      return `<div class="m${m.me ? " me" : ""}${m.to_her ? " to" : ""}"><b>${esc(m.me ? "Nina" : m.from || "someone")}</b> ${body}<span class="t">${t}</span></div>`;
+    }).join("");
+  }
+  // large: all its recent messages, kept up to date while open
+  async open() {
+    const { expand } = await EXPAND;
+    const el = document.createElement("div");
+    el.innerHTML = `<style>.wrap { background: #14100e; color: #fff; padding: 16px 18px; font: 15px system-ui, sans-serif; }
+      .h { font-weight: 600; font-size: 1.15em; margin-bottom: 10px; } .msgs { display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow-y: auto; overflow-x: hidden; } .m { overflow-wrap: anywhere; }
+      .m { line-height: 1.35; } .m b { font-weight: 600; } .m .t { color: rgba(255,255,255,.5); font-size: .8em; margin-left: 6px; }
+      .m.me b { color: #f0a37f; } .m.to b::after { content: " → Nina"; font-weight: 400; color: rgba(255,255,255,.5); } .empty { color: rgba(255,255,255,.6); }</style>
+      <div class="wrap"><div class="h">${this.c.title || this.c.chat} · WhatsApp</div><div class="msgs"></div></div>`;
+    const box = el.querySelector(".msgs");
+    this.big = (msgs) => { this.render(box, msgs || []); box.scrollTop = box.scrollHeight; };
+    this.big(this.msgs);
+    const close = expand(el);
+    const was = close;
+    this.closeBig = () => { this.big = null; was?.(); };
+  }
+  set hass(h) {}
+  getCardSize() { return 3; }
+}
+
 // ---- activity ---------------------------------------------------------------------------------
 const TOOL_WORDS = { home_timers: "a timer", home_music: "the music", home_glow: "the bedroom light", home_lights: "the lights",
   home_air: "the air", home_comfort: "the air", home_agenda: "the agenda", calendar: "the calendar", lists: "the lists",
@@ -757,6 +833,7 @@ customElements.define("nina-photos-card", NinaPhotosCard);
 customElements.define("nina-video-card", NinaVideoCard);
 customElements.define("nina-stage-card", NinaStageCard);
 customElements.define("nina-media-card", NinaMediaCard);
+customElements.define("nina-chat-card", NinaChatCard);
 window.customCards = window.customCards || [];
 window.customCards.push(
   { type: "nina-settings-card", name: "Nina: settings", description: "Her name, persona, voice and temperament." },
