@@ -17,7 +17,7 @@
 # A step that fails stops the update before anything is restarted: the running Nina stays as she was.
 set -euo pipefail
 R=${REPO_ROOT:-$HOME/repo}
-export PATH=/usr/local/go/bin:$PATH GOTOOLCHAIN=${GOTOOLCHAIN:-local} GOFLAGS=${GOFLAGS:--mod=mod}
+export PATH=/usr/local/go/bin:$PATH GOFLAGS=${GOFLAGS:--mod=mod}   # GOTOOLCHAIN as the machine has it: auto fetches the go.mod release where the installed Go is older (Pascal: 1.22)
 KIOSK=0; PULL=--pull
 for a in "$@"; do
   case "$a" in
