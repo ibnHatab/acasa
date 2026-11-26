@@ -35,15 +35,12 @@
   button.round { position: absolute; z-index: 5; border: 0; border-radius: 999px; cursor: pointer;
                  background: rgba(20, 16, 14, .55); color: #e9ddd3; backdrop-filter: blur(6px);
                  box-shadow: 0 1px 4px rgba(0,0,0,.4); font: inherit; }
-  #toHA { right: 10px; bottom: 10px; width: 40px; height: 40px; font-size: 20px; opacity: .55; }
-  #toHA:hover, #toHA:active { opacity: 1; }
   #toNina { left: 50%; transform: translateX(-50%); bottom: 12px; padding: 10px 16px 10px 12px; display: none; align-items: center; gap: 8px;
             z-index: 12; background: var(--clay); color: #fff; font-weight: 500; }
   #toNina::before { content: ""; width: 22px; height: 22px; border-radius: 50%;
                     background: radial-gradient(circle at 35% 35%, #ffd9a8, #c96f2e); }
   body.ha #side { left: 0; z-index: 10; }
   body.ha #toNina { display: flex; }
-  body.ha #toHA { display: none; }
   #soon { position: absolute; inset: 0; z-index: 13; display: none; align-items: flex-end; justify-content: center;
           padding-bottom: 70px; background: rgba(0,0,0,.25); }
   #soon div { background: rgba(20,16,14,.9); padding: 14px 22px; border-radius: 14px; font-size: 1.1em; }
@@ -51,7 +48,6 @@
   body.remote #nina { width: 100%; padding: 0; }
   body.remote #side { display: none; }
   body.remote.ha #side { display: block; }
-  body.remote #toHA { display: none; } /* her card's own ⌂ */
 </style></head>
 <body>
   <div id="nina"></div>
@@ -59,7 +55,6 @@
     <div id="wait"><div class="time" id="time"></div><div id="date"></div><div id="msg">The house is waking up…</div></div>
     <iframe id="ha" title="Home Assistant" allow="autoplay; fullscreen"></iframe>
   </div>
-  <button class="round" id="toHA" title="Home Assistant">⌂</button>
   <button class="round" id="toNina">Nina</button>
   <div id="soon"><div>Back to Nina in <span id="secs">10</span> s: tap to stay in Home Assistant</div></div>
   <script type="module">
@@ -120,7 +115,6 @@
       }, 1000);
     };
     document.getElementById("soon").addEventListener("click", () => mode("ha"));
-    document.getElementById("toHA").addEventListener("click", () => mode("ha"));
     window.__ninaShell = { mode }; // the card's ⌂ button
     document.getElementById("toNina").addEventListener("click", () => mode("nina"));
     // the panel's ui action (her voice, a button): {"ev":"ui","mode":"ha"|"nina"}

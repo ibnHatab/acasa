@@ -286,9 +286,12 @@ class NinaCard extends HTMLElement {
   .name { font-size: 1.25em; font-weight: 500; color: var(--primary-text-color); }
   .state { color: var(--secondary-text-color); font-size: .9em; }
   .toggles { display: flex; gap: 8px; }
+  /* fallbacks: on her own screen (shell.html) there is no Home Assistant theme, and the buttons had no
+     background at all: on or off could not be told (the user, 2026-11-26) */
   button { border: 0; border-radius: 999px; padding: 8px 14px; font: inherit; cursor: pointer;
-           background: var(--secondary-background-color); color: var(--secondary-text-color); }
-  button.on { background: var(--primary-color); color: var(--text-primary-color, #fff); }
+           background: var(--secondary-background-color, rgba(255,255,255,.14)); color: var(--secondary-text-color, rgba(255,255,255,.72));
+           box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+  button.on { background: var(--primary-color, #d97757); color: var(--text-primary-color, #fff); }
   button:disabled { opacity: .35; cursor: default; }
   button.ha { padding: 6px 11px; font-size: 1.15em; line-height: 1; }
   .flag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: .7em; font-weight: 600;
