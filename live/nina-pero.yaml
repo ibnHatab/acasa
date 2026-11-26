@@ -47,6 +47,7 @@ music: # one knob for the radio and her voice (as at home; her level is not cali
   top: -19
   under: 10
   curve: pulse
+  languages: [english] # the stations' languages here, asked first (Radio Browser's; add romanian etc.); 2026-11-26: "news" had found a French station
 
 mcp:                                      # Home Assistant's two MCP servers, the backends of her three tools (ha_find,
                                           # ha_automation, ha_diagnose): its own (the mcp_server integration) and ha-mcp
