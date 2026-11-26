@@ -117,7 +117,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
             if (e.note) this.add("note", e.text.replace(/^NOTE \((\w+)\): /, ""));
             else if (/^SAY: /.test(e.text)) { /* Nina's own words handed to her voice (a narration): shown as her reply, not as the person's */ }
             else if (!e.typed_shown) {
-              const t = e.text.replace(/^\(You were interrupted[^)]*\)\n/, "").trim(), last = this.msgs[this.msgs.length - 1];
+              const t = e.text.replace(/^\((You were|You are)[^)]*\)\n/, "").trim(), last = this.msgs[this.msgs.length - 1];
               if (this.cur) { // heard as it was spoken: the turn's text settles it (her echo stripped, utterances joined)
                 const norm = (x) => x.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").replace(/\s+/g, " ").trim();
                 if (norm(this.cur.parts.map((p) => p.text).join(" ")) !== norm(t)) this.cur.parts = [{ seq: 0, text: t, final: true }];
