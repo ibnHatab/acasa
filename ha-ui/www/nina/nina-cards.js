@@ -461,6 +461,7 @@ const Stage = window.__ninaStage ||= {
         else if (e.show === "videos" || e.show === "photos") this.open(e.show, { videos: e.videos, playlist: e.playlist, album: e.album, title: e.title });
         return;
       }
+      if (e.ev === "attention" && e.awake === false && e.told) { this.close(); return; } // told to sleep: closed (asleep by itself: kept)
       if (e.ev !== "tool" || e.name !== "screen") return;
       const a = e.args || {};
       if (a.query || a.playlist || a.album) return; // its stage event says what (an older nina-live: the plain one)
