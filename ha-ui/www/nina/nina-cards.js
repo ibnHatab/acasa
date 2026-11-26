@@ -300,7 +300,8 @@ class NinaPhotosCard extends HTMLElement {
       const root = await ws("media-source://google_photos");
       for (const acct of root.children || []) {
         const albums = await ws(acct.media_content_id);
-        const al = (albums.children || []).find((a) => a.title === this.c.album);
+        const key = (t) => String(t || "").toLowerCase().replace(/['’‘`]/g, "").replace(/\s+/g, " ").trim(); // "Nina's Gallery" as said
+        const al = (albums.children || []).find((a) => key(a.title) === key(this.c.album));
         if (!al) continue;
         const pics = await ws(al.media_content_id);
         this.items = (pics.children || []).filter((p) => p.media_class === "image").map((p) => p.media_content_id);
