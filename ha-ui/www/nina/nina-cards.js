@@ -147,7 +147,7 @@ class NinaSettingsCard extends NinaBase {
 // put the bubble and she operates in that space). Her voice and the music carry to its edge: 1 m is
 // the acoustic calibration's minimum (as loud at the array as a person), each doubling `slope` dB
 // more, up to the echo canceller's limit (+12 dB). The distance calibration: stand somewhere, set
-// the bubble until she is comfortable there, "comfortable here": the slope is fitted to the points.
+// the bubble until she is comfortable there, Save: the slope is fitted to the points.
 const MAX_GAIN = 12; // fsttm-live audio.MaxGain
 class NinaBubbleCard extends NinaBase {
   get style() {
@@ -194,8 +194,8 @@ class NinaBubbleCard extends NinaBase {
       <div class="row"><button class="ghost minus" title="quieter: her last words again">−</button><button class="ghost plus" title="louder: her last words again">+</button>
         <button class="ghost hear">▶ Hear her</button><span class="note msg"></span></div>
       <div class="row"><label>Comfortable at</label><input class="d" type="number" min="0.5" max="12" step="0.1" value="2"> m
-        <button class="here">Comfortable here</button><button class="ghost reset" title="forget the distance points">Reset</button></div>
-      <div class="note">Drag the bubble's edge, or − and +: her voice and the music carry to it. To calibrate, stand where you sit, size the bubble until she is comfortable there, then "Comfortable here". The dashed ring is the echo canceller's limit.</div>`;
+        <button class="here save" title="she is comfortable at this distance: the point is kept">Save</button><button class="ghost reset" title="forget the distance points">Reset</button></div>
+      <div class="note">Drag the bubble's edge, or − and +: her voice and the music carry to it. To calibrate, stand where you sit, size the bubble until she is comfortable there, then Save. The dashed ring is the echo canceller's limit.</div>`;
     const q = (s) => this.root.querySelector(s);
     const svg = q(".plan");
     const say = (t) => { q(".msg").textContent = t; clearTimeout(this.tm); this.tm = setTimeout(() => (q(".msg").textContent = ""), 4000); };
@@ -214,7 +214,7 @@ class NinaBubbleCard extends NinaBase {
     q(".minus").addEventListener("click", () => act("quieter"));
     q(".plus").addEventListener("click", () => act("louder"));
     q(".hear").addEventListener("click", () => act("sample"));
-    q(".here").addEventListener("click", () => act("bubble_here", q(".d").value).then(() => say("noted")));
+    q(".here").addEventListener("click", () => act("bubble_here", q(".d").value).then(() => say("saved")));
     q(".reset").addEventListener("click", () => act("bubble_reset"));
     this.load();
     this.tw = setInterval(() => this.who(), 5000);
