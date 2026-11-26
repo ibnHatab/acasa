@@ -48,6 +48,12 @@ music:                                    # one knob for the radio and her voice
                                           # software mixer's lagged her duck by ~1 s: its output buffer)
   languages: [english]                    # the stations' languages, asked first (Radio Browser's; 2026-11-26)
 
+whatsapp:          # the person's primary number, linked (nina-live whatsapp/; the user, 2026-11-26): she answers only
+  enabled: true    # in its own "Message yourself" chat ("Nina: …"), never anyone else; keeps only that chat
+  answer: self
+  keep: [self]     # add group names to keep them (her card's, "what did they write?")
+  min_gap: 3s
+
 radar: false   # the radar (the first Pi's) is not where this laptop's speakers are: its distance does not aim her voice
                # (2026-11-26: a reading of 0.54 m from the day before held her bubble at its minimum)
 
