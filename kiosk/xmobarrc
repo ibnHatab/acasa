@@ -1,8 +1,0 @@
-Config { 
-    position = Top,
-    lowerOnStart = False,
-    persistent = True,
-    hideOnStart = False,
-    allDesktops = True,
-    overrideRedirect = False
-}

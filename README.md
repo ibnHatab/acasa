@@ -31,8 +31,9 @@ Metis; nothing of Home Assistant). acasa deploys it:
 YouTube key, Home Assistant token, OpenRouter key, WhatsApp link). The persona's own skills are in nina-live
 (`nina-persona-build`, `-domains`, `-testing`, `-integration`).
 
-## Legacy (the first prototype on the NUC)
+## History
 
-`run.sh`, `serve.py`, `domains/home/`, `web/` (metis-agent's Python service with Gemma and a Chrome page) and
-`kiosk/` (the NUC's xmonad session) predate Nina's single service (`acasa-nina`, 2026-11-24) and are not
-used by it; `live/run.sh install` installs her service on a desktop. Research notes: `docs/`, `paper/`.
+The first prototype on the NUC (metis-agent's Python service with Gemma, a Chrome page, an xmonad kiosk:
+`run.sh`, `serve.py`, `domains/home/`, `web/`, `kiosk/`) was removed on 2026-11-27; it is in the git
+history before that date. Nina's single service (`acasa-nina`, since 2026-11-24) replaced it; `live/run.sh
+install` installs that service on a desktop. Research notes: `docs/`, `paper/`.

@@ -1,9 +1,0 @@
-{
-  "ha": {"url": "http://127.0.0.1:8123", "token_file": "~/.config/acasa/ha-token"},
-  "devices": {
-    "light": {"entity": null},
-    "tv": {"entity": null},
-    "vent_bedroom": {"entity": null},
-    "vent_lab": {"entity": null}
-  }
-}
