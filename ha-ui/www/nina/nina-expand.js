@@ -12,10 +12,12 @@ export function expand(el, { actions = [] } = {}) {
   host.querySelector("#nina-expand")?.remove();
   const o = document.createElement("div");
   o.id = "nina-expand";
+  if (/Firefox\//.test(navigator.userAgent)) o.classList.add("gecko");
   o.innerHTML = `<style>
     #nina-expand { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center;
                    background: rgba(8,6,5,.62); backdrop-filter: blur(6px); opacity: 0; transition: opacity .25s ease; }
     #nina-expand.on { opacity: 1; }
+    #nina-expand.gecko { backdrop-filter: none; background: rgba(8,6,5,.86); } /* Firefox: blurred layers under it were painted over it */
     #nina-expand .wrap { display: flex; flex-direction: column; gap: 8px; width: min(94vw, 680px); }
     #nina-expand .box { position: relative; width: 100%; max-height: calc(94vh - 42px); overflow: auto; border-radius: 18px;
                         box-shadow: 0 12px 48px rgba(0,0,0,.6); transform: scale(.92); transition: transform .3s cubic-bezier(.2,.9,.3,1.2); }

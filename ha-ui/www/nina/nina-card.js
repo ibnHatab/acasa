@@ -273,6 +273,11 @@ class NinaCard extends HTMLElement {
   .face:not([hidden]) ~ .chat .user { background: color-mix(in srgb, var(--assist-chat-display-user-bubble-background, #3b6ea5) 62%, transparent); }
   .face:not([hidden]) ~ .chat .nina { background: color-mix(in srgb, var(--assist-chat-display-assistant-bubble-background, var(--primary-color)) 66%, transparent); }
   .face:not([hidden]) ~ .chat .note { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  /* Firefox (the tablet's kiosk, pero 2026-11-26): its renderer painted the blurred bubbles over a card
+     expanded above the page (nina-expand) and the stage; no blur there, the bubbles nearly opaque */
+  :host([gecko]) .chat .b, :host([gecko]) .say input { backdrop-filter: none !important; }
+  :host([gecko]) .face:not([hidden]) ~ .chat .user { background: color-mix(in srgb, var(--assist-chat-display-user-bubble-background, #3b6ea5) 90%, #000); }
+  :host([gecko]) .face:not([hidden]) ~ .chat .nina { background: color-mix(in srgb, var(--assist-chat-display-assistant-bubble-background, var(--primary-color)) 90%, #000); }
   .face:not([hidden]) ~ .hint { margin: auto 0 18px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
   .top { display: flex; align-items: center; gap: 12px; }
   .orb { width: 42px; height: 42px; border-radius: 50%; flex: none;
@@ -377,7 +382,7 @@ class NinaCard extends HTMLElement {
       setInterval(() => this.render(), 5000);
     }
   }
-  connectedCallback() { hub.cards.add(this); if (this.root) this.render(); this.animate(true); this.gl?.start(); }
+  connectedCallback() { if (/Firefox\//.test(navigator.userAgent)) this.setAttribute("gecko", ""); hub.cards.add(this); if (this.root) this.render(); this.animate(true); this.gl?.start(); }
   disconnectedCallback() { hub.cards.delete(this); this.animate(false); this.gl?.stop(); }
   // face builds the frames' stack (the base, then the overlays).
   face(want) {
