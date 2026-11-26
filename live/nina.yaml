@@ -44,6 +44,7 @@ music:                                    # one knob for the radio and her voice
   under: 10                               # (dBFS RMS, measured); while anyone talks, the music this many dB under her
   curve: pulse                            # MPD's mixer_type hardware: the volume at PulseAudio's mix, heard at once (the
                                           # software mixer's lagged her duck by ~1 s: its output buffer)
+  languages: [english]                    # the stations' languages, asked first (Radio Browser's; 2026-11-26)
 
 mcp:                                      # Home Assistant's two MCP servers (nina-live mcp/), the backends of Nina's own three
                                           # tools (hatools: ha_find, ha_automation, ha_diagnose; ~450 tokens, her tasks only).
