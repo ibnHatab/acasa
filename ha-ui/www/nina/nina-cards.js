@@ -452,9 +452,15 @@ const Stage = window.__ninaStage ||= {
     const s = stageStream(panel);
     s.addEventListener("ev", (m) => {
       const e = JSON.parse(m.data);
+      if (e.ev === "stage") { // what her screen tool found: videos (ids), a playlist, an album
+        if (e.show === "close") this.close();
+        else if (e.show === "videos" || e.show === "photos") this.open(e.show, { videos: e.videos, playlist: e.playlist, album: e.album, title: e.title });
+        return;
+      }
       if (e.ev !== "tool" || e.name !== "screen") return;
-      const w = (e.args || {}).show;
-      if (w === "close") this.close(); else if (w === "videos" || w === "photos") this.open(w);
+      const a = e.args || {};
+      if (a.query || a.playlist || a.album) return; // its stage event says what (an older nina-live: the plain one)
+      if (a.show === "close") this.close(); else if (a.show === "videos" || a.show === "photos") this.open(a.show);
     });
     s.addEventListener("status", (m) => { // ducked while she speaks, or the person speaks to her
       const st = JSON.parse(m.data);
@@ -462,9 +468,11 @@ const Stage = window.__ninaStage ||= {
       if (d !== this.duck) { this.duck = d; this.volume(); }
     });
   },
-  open(what) {
-    if (!this.cfg(what)) return;
-    if (this.what === what) { if (!this.big) this.act("size"); return; }
+  open(what, opts) {
+    const o = opts && (opts.videos?.length || opts.playlist || opts.album) ? opts : null; // something found, not the card's own
+    if (!this.cfg(what) && !o) return;
+    if (this.what === what && !o) { if (!this.big) this.act("size"); return; }
+    this.opts = o;
     this.close(true);
     this.what = what;
     const host = document.createElement("div");
@@ -509,11 +517,13 @@ const Stage = window.__ninaStage ||= {
     addEventListener("resize", this.onResize);
   },
   video(body) {
-    const c = this.cfg("videos");
+    const c = this.cfg("videos") || {};
+    const o = this.opts || {};
     // muted at the start: unmuted at the slider's level once the player is ready (no second at YouTube's own)
     const q = new URLSearchParams({ autoplay: 1, mute: 1, loop: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, enablejsapi: 1, origin: location.origin });
     let src;
-    if (c.playlist) { q.set("list", c.playlist); src = `https://www.youtube-nocookie.com/embed/videoseries?${q}`; }
+    if (o.videos?.length) { q.set("playlist", o.videos.join(",")); src = `https://www.youtube-nocookie.com/embed/${o.videos[0]}?${q}`; } // a search's: ⏮ ⏭ go through them
+    else if (o.playlist || c.playlist) { q.set("list", o.playlist || c.playlist); src = `https://www.youtube-nocookie.com/embed/videoseries?${q}`; }
     else { q.set("playlist", c.video); src = `https://www.youtube-nocookie.com/embed/${c.video}?${q}`; }
     body.innerHTML = `<iframe allow="autoplay; encrypted-media; fullscreen" referrerpolicy="strict-origin-when-cross-origin" title="Videos" src="${src}"></iframe>`;
     const fr = body.querySelector("iframe");
@@ -541,7 +551,9 @@ const Stage = window.__ninaStage ||= {
   },
   photos(body) {
     const p = document.createElement("nina-photos-card");
-    p.setConfig(Object.assign({ title: "Gallery", height: "100%" }, this.cfg("photos")));
+    const pc = Object.assign({ title: "Gallery", height: "100%" }, this.cfg("photos"));
+    if (this.opts?.album) { pc.album = this.opts.album; delete pc.scenes; } // an album asked for by name
+    p.setConfig(pc);
     body.appendChild(p);
     const h = this.hass();
     if (h) p.hass = h;

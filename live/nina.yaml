@@ -69,3 +69,8 @@ mcp:                                      # Home Assistant's two MCP servers (ni
     role: config
     url: http://127.0.0.1:8086/mcp
     bare: true
+
+youtube:           # her screen's videos (nina-live youtube/; 2026-11-26): a search from any channel needs an API key
+  key: ~/.config/nina/youtube.key   # (Google Cloud → Credentials → API key, restricted to the YouTube Data API v3)
+  playlists:       # her own, by name (unlisted ones too: the key cannot list them)
+    Claudia: PLSh0S6uPqqgA
