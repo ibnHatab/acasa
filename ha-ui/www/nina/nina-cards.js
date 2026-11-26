@@ -467,24 +467,28 @@ const Stage = window.__ninaStage ||= {
   },
   video(body) {
     const c = this.conf.videos;
-    const q = new URLSearchParams({ autoplay: 1, mute: 0, loop: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, enablejsapi: 1, origin: location.origin });
+    // muted at the start: unmuted at the slider's level once the player is ready (no second at YouTube's own)
+    const q = new URLSearchParams({ autoplay: 1, mute: 1, loop: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, enablejsapi: 1, origin: location.origin });
     let src;
     if (c.playlist) { q.set("list", c.playlist); src = `https://www.youtube-nocookie.com/embed/videoseries?${q}`; }
     else { q.set("playlist", c.video); src = `https://www.youtube-nocookie.com/embed/${c.video}?${q}`; }
     body.innerHTML = `<iframe allow="autoplay; encrypted-media; fullscreen" referrerpolicy="strict-origin-when-cross-origin" title="Videos" src="${src}"></iframe>`;
     const fr = body.querySelector("iframe");
     this.cmd = (func, args = []) => fr.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "*");
-    fr.addEventListener("load", () => fr.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*"));
-    this.playing = true; this.muted = false;
+    // the handshake, as YouTube's own API does it: "listening" again until the player answers (at the
+    // iframe's load it is not ready yet); its first answer: the slider's volume, and play
+    this.playing = false; this.muted = false;
+    const hello = setInterval(() => fr.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*"), 400);
+    let ready = false;
     this.onMsg = (e) => {
       if (e.source !== fr.contentWindow) return;
       let d; try { d = JSON.parse(e.data); } catch { return; }
-      if (d.event === "onReady" || (d.event === "initialDelivery")) this.volume();
+      if (!ready) { ready = true; clearInterval(hello); this.volume(); this.cmd("playVideo"); }
       const i = d.info || {};
       if (i.playerState !== undefined) { this.playing = i.playerState === 1 || i.playerState === 3; this.mark(); }
     };
+    this.stopHello = () => clearInterval(hello);
     window.addEventListener("message", this.onMsg);
-    setTimeout(() => this.volume(), 1500);
     if (this.conf.pause) { // the radio stops for the video
       const h = this.hass(), st = h?.states[this.conf.pause]?.state;
       if (st === "playing") h.callService("media_player", "media_pause", { entity_id: this.conf.pause });
@@ -524,9 +528,10 @@ const Stage = window.__ninaStage ||= {
     }
   },
   close() {
+    this.stopHello?.();
     if (this.onMsg) window.removeEventListener("message", this.onMsg);
     this.el?.remove();
-    this.el = this.root = this.cmd = this.onMsg = this.pics = null;
+    this.el = this.root = this.cmd = this.onMsg = this.pics = this.stopHello = null;
     this.what = null;
   },
 };
