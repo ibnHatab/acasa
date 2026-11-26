@@ -33,8 +33,9 @@ One Google account and one Cloud project **per role/machine** (each Home Assista
 ## 3. OAuth client (Credentials → Create credentials → OAuth client ID)
 
 - Type **Web application**; Authorized redirect URI **exactly** `https://my.home-assistant.io/redirect/oauth`.
-- The person downloads the JSON: keep it as `~/.config/nina/<account>-google-oauth-client.json`
-  (600). It holds the secret — never print it.
+- The person downloads the JSON: keep it as `~/.config/nina/<name>-google-oauth-client.json` (600),
+  `<name>` a short name of the account or machine (the address's local part, never the full address).
+  It holds the secret — never print it.
 
 ## 4. Home Assistant side (before adding integrations)
 
@@ -42,6 +43,7 @@ One Google account and one Cloud project **per role/machine** (each Home Assista
   is trimmed). Without it HA sends a localhost callback → Google **Error 400: redirect_uri_mismatch**.
 - In the browser where the person signs in, **My Home Assistant** (my.home-assistant.io) points at
   *this* machine's HA (`http://localhost:8123`, `http://HOST.local:8123`); another HA → **"Invalid state"**.
+  Sign in once on the LAN; the tokens then work from the tailnet too (no tailnet URL needed).
 - Chrome on Linux skips mDNS: put `HOST.local` in the desktop's `/etc/hosts` (Firefox resolves it).
 
 ## 5. Add the integrations

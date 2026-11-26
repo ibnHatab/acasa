@@ -23,8 +23,8 @@ primary number she answers only its own "Message yourself" chat.
 
 It writes a page that follows the codes: `http://HOST:8770/nina/wa-link.html`. Open it; on the phone:
 Settings → Linked devices → Link a device → scan. A session lasts ~160 s (run again for a new one).
-Then restart Nina (`systemctl --user restart nina` or `acasa-nina`) and delete the page (it removes
-its PNG itself).
+Then restart Nina (`systemctl --user restart nina` or `acasa-nina`). `link-qr` removes its PNG when it
+exits; the HTML page stays: delete it by hand.
 
 Pairing by phone code (`nina-whatsapp link PHONE`) failed twice ("Couldn't link device"): use the QR.
 `-debug` prints whatsmeow's exchange.
@@ -36,7 +36,7 @@ whatsapp:
   enabled: true
   answer: named     # named: direct messages + groups that name her or reply to her | self: only "Message yourself" (a primary number) | none
   names: [nina]
-  keep: [self]      # chats stored: self, chat names, all (none listed: all)
+  keep: [self]      # chats stored: self, chat names, all (none listed: all; with answer: self, only the self-chat)
   show: [Group Name]   # groups on her screen's chat card (also settable from her settings card)
   min_gap: 10s
   per_hour: 30
@@ -54,5 +54,6 @@ one device kick each other off).
 
 ## Unlink
 
-On the phone: Linked devices → the device (it shows as "Chrome") → Log out. Then delete `~/.local/share/nina/whatsapp.db`
+On the phone: Linked devices → her device (its name is what whatsmeow sends, often "Chrome": check the
+list) → Log out. Then delete `~/.local/share/nina/whatsapp.db`
 (whatsmeow's keys and her messages: treat it as a secret).

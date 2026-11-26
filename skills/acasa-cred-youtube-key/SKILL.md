@@ -10,7 +10,8 @@ Rules: `acasa-credentials` (the person creates the key; it lives in a file).
 ## Create
 
 In the role's Cloud project (the APIs from `acasa-cred-google-oauth` §1 include YouTube Data API v3):
-Credentials → Create credentials → **API key** → restrict it to **YouTube Data API v3**.
+Credentials → Create credentials → **API key** → restrict it to **YouTube Data API v3** (an API
+restriction only: a home's IP changes, an IP restriction would break it).
 
 ## Install
 
