@@ -24,9 +24,13 @@ dialog:
   note_gap: 2s # a NOTE waits for the floor to be free this long
   wake: # who hears her name
     mode: local # cloud: the transcriber; shadow: and the local spotter, logged; local: asleep, only what the spotter woke goes to the cloud
-    model: ~/models/sherpa-kws/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01
-    keywords: ~/repo/fsttm-live/testdata/kws-keywords.txt
-    threshold: 0.25 # lower hears more
+    engine: oww # openWakeWord, listening continuously (2026-11-26: sherpa's spotter, started per utterance, missed a bare "Nina")
+    model: ~/repo/fsttm-live/models/oww # its shared models
+    word: ~/repo/fsttm-live/models/oww/nina.onnx # Nina's own (trained on Paradee's voices)
+    label: NINA
+    threshold: 0.5 # lower hears more (the log's oww_peak: each utterance's best score)
+    # the sherpa spotter instead: engine: kws, model: ~/models/sherpa-kws/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01,
+    # keywords: ~/repo/fsttm-live/testdata/kws-keywords.txt, threshold: 0.25
 # SOURCES: the systems Nina draws on. Metis (metis-home): its tools, and its REASONING through the
 # stream door (opened here). A line's kind gives its level: context (she knows it, says nothing),
 # info / important / urgent (a NOTE: spoken when the floor and the narration knob allow), drop.
