@@ -265,6 +265,7 @@ class NinaBubbleCard extends NinaBase {
 // resolved address lasts about an hour, so each photo is resolved as it is shown. Videos: YouTube's
 // player, embedded from youtube-nocookie.com, muted and looping by default (a referrer sent: YouTube's
 // player refuses without one).
+const NEXT_AGAIN = 2500; // ms: a second "next" this soon after one (held) starts the slideshow again
 class NinaPhotosCard extends HTMLElement {
   setConfig(c) {
     this.c = Object.assign({ album: "Nina's gallery", interval: 10, title: "Gallery", icon: "mdi:image-multiple", height: "320px" }, c || {});
@@ -315,9 +316,27 @@ class NinaPhotosCard extends HTMLElement {
     for (let i = this.items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.items[i], this.items[j]] = [this.items[j], this.items[i]]; }
     this.i = -1; this.next();
   }
-  // step: d photos on (-1 the previous); pause: the slideshow held or going on
+  // The slideshow's machine (the user, 2026-11-27): "show" (a photo every interval) or "browse" (held).
+  //   back            → browse, the previous photo
+  //   next  in show   → the next photo, the interval again from now
+  //   next  in browse → the next photo, still held; a second next within NEXT_AGAIN → show again
+  //   play            → show ↔ browse (the stage's ⏸ ▶)
+  // onMode(mode) tells whoever shows its buttons (the stage's ⏸ ▶ follow it).
+  get mode() { return this.paused ? "browse" : "show"; }
+  fsm(ev) {
+    const was = this.mode, now = Date.now();
+    if (ev === "back") { this.paused = true; this.lastNext = 0; this.step(-1); }
+    else if (ev === "next") {
+      if (this.paused && this.lastNext && now - this.lastNext < NEXT_AGAIN) { this.paused = false; this.lastNext = 0; }
+      else this.lastNext = this.paused ? now : 0;
+      this.step(1);
+    } else if (ev === "play") { this.paused = !this.paused; this.lastNext = 0; if (this.paused) clearTimeout(this.tm); else this.next(); }
+    if (this.mode !== was) this.onMode?.(this.mode);
+    return this.mode;
+  }
+  // step: d photos on (-1 the previous): shown now, the interval (in show) again from now
   step(d) { if (!this.items?.length) return; this.i = (this.i + d - 1 + 2 * this.items.length) % this.items.length; this.next(); }
-  pause(on) { this.paused = on; if (on) clearTimeout(this.tm); else this.next(); }
+  pause(on) { if (this.paused !== on) this.fsm("play"); }
   async next() {
     clearTimeout(this.tm);
     if (!this.isConnected || !this.items?.length) return;
@@ -561,6 +580,7 @@ const Stage = window.__ninaStage ||= {
     const h = this.hass();
     if (h) p.hass = h;
     this.pics = p; this.playing = true;
+    p.onMode = (m) => { this.playing = m === "show"; this.mark(); }; // its machine moves the ⏸ ▶
   },
   volume() { // the slider's level, a quarter of it while she or the person speaks
     if (!this.cmd || this.what !== "videos") return;
@@ -582,9 +602,9 @@ const Stage = window.__ninaStage ||= {
       else if (f === "play") this.cmd(this.playing ? "pauseVideo" : "playVideo");
       else if (f === "mute") { this.muted = !this.muted; this.volume(); this.mark(); }
     } else {
-      if (f === "prev") this.pics.step(-1);
-      else if (f === "next") this.pics.step(1);
-      else if (f === "play") { this.playing = !this.playing; this.pics.pause(!this.playing); this.mark(); }
+      if (f === "prev") this.pics.fsm("back");
+      else if (f === "next") this.pics.fsm("next");
+      else if (f === "play") this.pics.fsm("play");
     }
   },
   // close: back into its card (where one is docked), or faded; now: at once (another opens)
