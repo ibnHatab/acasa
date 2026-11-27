@@ -99,6 +99,7 @@ echo "searxng: $($D inspect -f '{{.State.Status}}' searxng)"
 
 step "the persona's build: metisc, nina, the radar (nina-live scripts/persona-build.sh; the look and feel waits for Home Assistant's token: install/update.sh applies it)"
 REPO_ROOT=$R bash "$R/nina-live/scripts/persona-build.sh" 2>&1 | grep -v "^go: downloading"
+REPO_ROOT=$R bash "$R/acasa/live/build.sh" 2>&1 | grep -v "^go: downloading"   # bin/nina: the persona with Home Assistant
 
 step "MPD (her radio: a user service on the default output; Home Assistant's MPD integration at 127.0.0.1)"
 sudo systemctl disable --now mpd.service mpd.socket >/dev/null 2>&1 || true # the system-wide one: not hers

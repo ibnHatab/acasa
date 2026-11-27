@@ -37,6 +37,8 @@ fi
 
 echo "== the persona"
 REPO_ROOT=$R bash "$R/nina-live/scripts/persona-build.sh" $PULL
+echo "== nina (acasa's cmd/nina: the persona with Home Assistant)"
+REPO_ROOT=$R bash "$R/acasa/live/build.sh"
 
 echo "== the look and feel (this machine's Home Assistant)"
 if [ -s "$HOME/.config/fsttm/hass.token" ]; then
@@ -61,6 +63,7 @@ if [ "$KIOSK" = 1 ]; then
 fi
 
 echo "== the services"
+systemctl --user daemon-reload   # a unit linked from this repo that changed (2026-11-27: bin/nina moved to acasa)
 any=0
 for s in nina acasa-nina nina-radar; do
   if systemctl --user is-enabled -q "$s" 2>/dev/null; then

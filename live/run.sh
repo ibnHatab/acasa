@@ -11,6 +11,7 @@ sc() { systemctl --user "$@"; }
 case "${1:-start}" in
 install)
 	REPO_ROOT="$HOME/repo" bash "$HOME/repo/nina-live/scripts/persona-build.sh"   # the persona's own build
+	REPO_ROOT="$HOME/repo" bash "$HERE/build.sh"                                   # bin/nina: the persona with Home Assistant
 	for u in $UNITS; do sc link "$HERE/systemd/$u"; done
 	sc daemon-reload
 	sc enable --now $UNITS

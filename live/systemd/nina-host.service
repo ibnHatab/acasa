@@ -5,7 +5,7 @@ Description=Nina (nina-live: her voice, the home's rules, her tasks): this machi
 After=network-online.target pipewire.service
 
 [Service]
-ExecStart=%h/repo/nina-live/bin/nina -config %h/.config/nina/nina.yaml
+ExecStart=%h/repo/acasa/bin/nina -config %h/.config/nina/nina.yaml
 Restart=on-failure
 RestartSec=5
 
