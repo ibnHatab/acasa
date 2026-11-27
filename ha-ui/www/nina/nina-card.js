@@ -53,7 +53,15 @@ const hub = window.__ninaHub || (window.__ninaHub = {
   cue(what) { this.cards.forEach((c) => c.scene?.(what)); }, // a tool, a new persona, a surprise: its scene (scenes.json), where the card shows scenes
   talkUntil: 0, // with her voice off: her face "speaks" her text reply until then (as long as saying it would take)
   quietTalk(text) { if (this.prefs && this.prefs.voice === false && text) this.talkUntil = Math.max(this.talkUntil, Date.now() + Math.min(20000, 600 + text.length * 65)); },
-  emit() { this.cards.forEach((c) => c.render()); },
+  // one render per frame at most, and at most ~8 a second while her words stream (each render rebuilds
+  // the chat: per word, the Fire 7's Chromium 100 dropped a quarter of its frames, 2026-11-27)
+  emit() {
+    if (this.pending) return;
+    const due = Math.max(0, (this.last || 0) + 120 - Date.now());
+    this.pending = setTimeout(() => requestAnimationFrame(() => {
+      this.pending = 0; this.last = Date.now(); this.cards.forEach((c) => c.render());
+    }), due);
+  },
   viewer: null, // {angle, distance, elevation, at}: where the person is (the radar's reading)
   presence: null, // {present, near, inReach}: the radar's (sensor.nina_viewer): someone in reach, she attends
   look(v) { this.viewer = Object.assign({}, v, { at: Date.now() }); },
@@ -228,6 +236,7 @@ const remote = {
 
 class NinaCard extends HTMLElement {
   setConfig(c) {
+    this.toggleAttribute("lite", !!c.lite); // a small device: no blur over her face
     this.c = Object.assign({ max_messages: 20, message_max_age: 300 }, c || {});
     this.panel = this.c.panel || (location.protocol === "https:" ? `https://${location.hostname}` : `http://${location.hostname}:8770`);
     if (!this.root) {
@@ -270,23 +279,23 @@ class NinaCard extends HTMLElement {
   .face:not([hidden]) ~ .chat { justify-content: flex-end;
          -webkit-mask-image: linear-gradient(transparent 0, #000 35%); mask-image: linear-gradient(transparent 0, #000 35%); }
   .face:not([hidden]) ~ .chat .b { backdrop-filter: blur(6px); }
-  .face:not([hidden]) ~ .chat .user { background: color-mix(in srgb, var(--assist-chat-display-user-bubble-background, #3b6ea5) 62%, transparent); }
-  .face:not([hidden]) ~ .chat .nina { background: color-mix(in srgb, var(--assist-chat-display-assistant-bubble-background, var(--primary-color)) 66%, transparent); }
+  .face:not([hidden]) ~ .chat .user { background: rgba(59, 110, 165, .62); background: color-mix(in srgb, var(--assist-chat-display-user-bubble-background, #3b6ea5) 62%, transparent); }
+  .face:not([hidden]) ~ .chat .nina { background: rgba(60, 60, 60, .66); background: color-mix(in srgb, var(--assist-chat-display-assistant-bubble-background, var(--primary-color)) 66%, transparent); }
   .face:not([hidden]) ~ .chat .note { color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
   /* Firefox (the tablet's kiosk, pero 2026-11-26): its renderer painted the blurred bubbles over a card
      expanded above the page (nina-expand) and the stage; no blur there, the bubbles nearly opaque */
-  :host([gecko]) .chat .b, :host([gecko]) .say input { backdrop-filter: none !important; }
-  :host([gecko]) .face:not([hidden]) ~ .chat .user { background: color-mix(in srgb, var(--assist-chat-display-user-bubble-background, #3b6ea5) 90%, #000); }
-  :host([gecko]) .face:not([hidden]) ~ .chat .nina { background: color-mix(in srgb, var(--assist-chat-display-assistant-bubble-background, var(--primary-color)) 90%, #000); }
+  :host([gecko]) .chat .b, :host([gecko]) .say input, :host([lite]) .chat .b, :host([lite]) .say input { backdrop-filter: none !important; } /* lite: no blur over her face (each of her frames re-blurs it: a small GPU) */
+  :host([gecko]) .face:not([hidden]) ~ .chat .user { background: rgb(53, 99, 149); background: color-mix(in srgb, var(--assist-chat-display-user-bubble-background, #3b6ea5) 90%, #000); }
+  :host([gecko]) .face:not([hidden]) ~ .chat .nina { background: rgb(40, 40, 40); background: color-mix(in srgb, var(--assist-chat-display-assistant-bubble-background, var(--primary-color)) 90%, #000); }
   .face:not([hidden]) ~ .hint { margin: auto 0 18px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
   .top { display: flex; align-items: center; gap: 12px; }
   .orb { width: 42px; height: 42px; border-radius: 50%; flex: none;
          background: radial-gradient(circle at 35% 35%, var(--nina-orb-light, #ffd9a8), var(--nina-orb, #c96f2e));
          box-shadow: 0 0 0 0 var(--nina-orb, #c96f2e); transition: filter .4s, box-shadow .4s; }
   .orb.asleep { filter: grayscale(.8) brightness(.55); }
-  .orb.hearing { box-shadow: 0 0 0 6px color-mix(in srgb, var(--nina-orb, #c96f2e) 35%, transparent); }
+  .orb.hearing { box-shadow: 0 0 0 6px rgba(201, 111, 46, .35); box-shadow: 0 0 0 6px color-mix(in srgb, var(--nina-orb, #c96f2e) 35%, transparent); }
   .orb.speaking { animation: breathe 1.2s ease-in-out infinite; }
-  @keyframes breathe { 50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--nina-orb, #c96f2e) 25%, transparent); } }
+  @keyframes breathe { 50% { box-shadow: 0 0 0 10px rgba(201, 111, 46, .25); box-shadow: 0 0 0 10px color-mix(in srgb, var(--nina-orb, #c96f2e) 25%, transparent); } }
   .who { flex: 1; }
   .name { font-size: 1.25em; font-weight: 500; color: var(--primary-text-color); }
   .state { color: var(--secondary-text-color); font-size: .9em; }
@@ -477,7 +486,9 @@ class NinaCard extends HTMLElement {
     const next = (every) => { this.tm = setTimeout(() => { this.raf = requestAnimationFrame(draw); }, Math.max(0, every - 8)); };
     const draw = (now) => {
       const cl0 = rig.classList, asleep = cl0.contains("slow"), busy = cl0.contains("fast") || cl0.contains("lean");
-      const every = busy ? 33 : 66; // 30 or 15 frames a second
+      // 30 or 15 frames a second; config fps: [busy, rest] lower for a small device (the Fire 7's Mali-450
+      // at 15/30: a third of a core at rest, 2026-11-27)
+      const fps = this.c.fps || [30, 15], every = 1000 / (busy ? fps[0] : fps[1]);
       next(every);
       const dt = now - last;
       last = now; frames++;
@@ -485,7 +496,7 @@ class NinaCard extends HTMLElement {
       if (asleep && Object.keys(w).every((n) => Math.abs((this.target[n] || 0) - w[n]) < .01)) { // settled: rest until she wakes
         if (++this.still > 8) { stop(); return; }
       } else this.still = 0;
-      const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 1.5) * (this.c.gl_scale || 1); // gl_scale < 1: fewer pixels, scaled up (a small GPU)
       const cw = Math.round(r.width * dpr), ch = Math.round(r.height * dpr);
       if (!cw || !ch) return;
       if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; gl.viewport(0, 0, cw, ch); }
