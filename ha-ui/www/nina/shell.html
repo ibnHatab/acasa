@@ -68,7 +68,7 @@
 
     // Nina's card: her panel is this page's own origin
     const card = document.createElement("nina-card");
-    card.setConfig({ parallax: q.get("parallax") !== "0", fps: q.get("fps") ? q.get("fps").split(",").map(Number) : undefined, gl_scale: +q.get("scale") || undefined, lite: q.has("lite"), panel: location.origin, height: REMOTE ? (CSS.supports("height", "100dvh") ? "100dvh" : "100vh") : "calc(100vh - 16px)", input: REMOTE, remote: REMOTE }); // remote: the mic and voice buttons are this device's
+    card.setConfig({ parallax: q.get("parallax") !== "0", fps: q.get("fps") ? q.get("fps").split(",").map(Number) : undefined, gl_scale: +q.get("scale") || undefined, lite: q.has("lite"), guests: q.has("guests"), panel: location.origin, height: REMOTE ? (CSS.supports("height", "100dvh") ? "100dvh" : "100vh") : "calc(100vh - 16px)", input: REMOTE, remote: REMOTE }); // remote: the mic and voice buttons are this device's
     document.getElementById("nina").appendChild(card);
 
     // the clock while the house wakes up

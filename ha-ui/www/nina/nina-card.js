@@ -169,7 +169,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
           case "prefs": this.prefs = e.prefs; this.emit(); break;
           case "persona": if (e.artwork && e.artwork !== this.persona) { const had = this.persona; this.persona = e.artwork; if (had) this.cue("persona"); this.emit(); } break;
           case "surprises": { const was = this.surprises?.unseen || 0; this.surprises = { unseen: e.unseen || 0, open: e.open || 0 }; if (this.surprises.unseen > was) this.cue("surprise"); this.emit(); break; }
-          case "tool": this.cue(e.name); break;
+          case "tool": this.cue(e.name); this.cards.forEach((c) => c.guest?.(e)); break;
         }
       });
       es.addEventListener("down", () => { this.status = null; this.emit(); });
@@ -284,6 +284,32 @@ class NinaCard extends HTMLElement {
   .rig.gl { animation: none; rotate: none; }
   .rig.gl img { display: none; }
   .rig canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  ha-card > .guest { position: absolute; left: 12px; right: 12px; bottom: 76px; height: min(440px, 50%); z-index: 4; border-radius: 22px;
+                     overflow: hidden; border: 1px solid rgba(233,221,211,.18); box-shadow: 0 12px 40px rgba(0,0,0,.5); background: #14100e; }
+  ha-card > .guest[hidden] { display: none; }
+  .gimgs img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s ease; }
+  .gimgs img.on { opacity: 1; }
+  .gshade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(20,16,14,.6) 0%, rgba(20,16,14,.15) 45%, rgba(20,16,14,.8) 100%); }
+  .gin { position: absolute; inset: 0; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; color: #e9ddd3; }
+  .ghead { display: flex; align-items: center; gap: 10px; }
+  .gicon { width: 26px; height: 26px; color: #e9ddd3; } .gicon svg { width: 26px; height: 26px; }
+  .gwho { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+  .gtitle { font-size: 1.1em; font-weight: 600; } .gsub { font-size: .85em; opacity: .9; }
+  .gbtn { width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0; background: rgba(20,16,14,.55); color: #e9ddd3;
+          display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .gbody { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+  .gpanel { background: #d97757; color: #fff; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .gpanel .k { font-size: .8em; opacity: .9; } .gpanel .v { font-size: 1.15em; font-weight: 600; }
+  .gbar { background: rgba(20,16,14,.78); border-radius: 999px; height: 56px; padding: 0 6px 0 14px; display: flex; align-items: center; gap: 6px; }
+  .gbar .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gbar button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: transparent; color: #e9ddd3; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .gbar button.main { background: #d97757; color: #fff; }
+  .gcap { font-size: 1.05em; line-height: 1.4; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+  .gnote { font-size: .8em; opacity: .85; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  ha-card > .dock { position: absolute; right: 0; top: 22%; z-index: 4; display: flex; flex-direction: column; gap: 8px; }
+  .tab { width: 60px; height: 68px; padding: 0; background: rgba(20,16,14,.86); border: 1px solid rgba(233,221,211,.18); border-right: 0;
+         border-radius: 16px 0 0 16px; color: #e9ddd3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: inherit; font-size: 11px; cursor: pointer; }
+  .tab svg { width: 24px; height: 24px; color: #d97757; }
   .scenebox { position: absolute; inset: 0; opacity: 0; transition: opacity 1s ease; pointer-events: none; }
   .scenebox.on { opacity: 1; }
   .scenebox img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; opacity: 0; transition: opacity 1.2s ease; }
@@ -366,6 +392,12 @@ class NinaCard extends HTMLElement {
 </style>
 <ha-card>
   <div class="face" hidden><div class="rig"></div><div class="scenebox"></div></div>
+  <div class="guest" hidden><div class="gimgs"></div><div class="gshade"></div>
+    <div class="gin"><div class="ghead"><span class="gicon"></span><div class="gwho"><span class="gtitle"></span><span class="gsub"></span></div>
+      <button class="gbtn gdock" title="To the edge" aria-label="Minimize to the edge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="gbtn gclose" title="Close" aria-label="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="gbody"></div><div class="gnote"></div></div></div>
+  <div class="dock"></div>
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina <span class="flag" hidden></span></div><div class="state">…</div></div>
     <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button><button class="addph" title="Add photos: Google Photos' picker, into her album" style="display:none">photos</button><button class="radiost on" title="Stop the radio" style="display:none">■ radio</button></div></div>
@@ -415,6 +447,18 @@ class NinaCard extends HTMLElement {
         });
       }
       if (window.NinaApp || this.c.home === false) this.root.querySelector("button.ha").style.display = "none"; // no Home Assistant here
+      { // the guest card's own controls (the layer works in her app, or with config guests: true)
+        const gq = (s) => this.root.querySelector(s);
+        gq(".guest").addEventListener("click", () => this.guestTouch());
+        gq(".gdock").addEventListener("click", (ev) => { ev.stopPropagation(); this.guestMin(); });
+        gq(".gclose").addEventListener("click", (ev) => { // ×: closed; the radio stops with it (a Clock timer cannot be cancelled from here: its tab stays)
+          ev.stopPropagation();
+          const k = this.openGuest;
+          if (k === "music") { window.NinaApp?.set("radio", false); this.guestEnd("music"); }
+          else if (k === "info") this.guestEnd("info");
+          else this.guestMin();
+        });
+      }
       if (window.NinaApp) // her app's radio: a stop button while it plays (even when she cannot answer)
         this.root.querySelector("button.radiost").addEventListener("click", () => { window.NinaApp.set("radio", false); setTimeout(() => this.showPrefs(), 300); });
       if (window.NinaApp || this.c.add_photos) { // her app (or config add_photos): Google Photos' picker into her album (its QR: photos_pick)
@@ -479,6 +523,133 @@ class NinaCard extends HTMLElement {
     box.classList.add("on");
     this.sceneSteps = imgs.map((im, i) => setTimeout(() => imgs.forEach((x) => x.classList.toggle("on", x === im)), 50 + i * sc.frame_seconds * 1000));
     this.sceneEnd = setTimeout(() => box.classList.remove("on"), Math.max(sc.show_seconds, n * sc.frame_seconds + 2) * 1000);
+  }
+  // ---- guests: the cards over her face in her app (the user's design, 2026-11-28) ----------------
+  // A tool's card opens over her lower half with its scene (scenes.json: its frames once, held on the
+  // last); a card with something running (the radio, a timer) docks to a still tab on the right edge
+  // after 8 s untouched; one with nothing running closes after show_seconds. No animation but the
+  // scene's crossfades when it opens; a tab is a still icon and a word (a timer's: its time left).
+  async guest(e) {
+    if (!window.NinaApp && !this.c.guests) return;
+    this.scenes ||= await fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => null);
+    const sc = this.scenes || { tools: {}, frames: {}, frame_seconds: 2.5, show_seconds: 12 };
+    const tablet = { radio: "music", alarm: "timers", timer: "timers" }; // her app's own tools
+    const scene = tablet[e.name] || sc.tools[e.name];
+    if (!scene) return;
+    const kind = scene === "music" ? "music" : scene === "timers" ? "timers" : "info";
+    const st = e.result?.status || "";
+    if (st === "error" || st === "refused") return; // her words say why; nothing to show
+    this.guests ||= {};
+    if (kind === "music") {
+      if (e.args?.action === "stop") { this.guestEnd("music"); return; }
+      if (e.args?.action === "volume" && this.guests.music) { this.guestTouch(); return; }
+      const name = String(e.result?.text || "").replace(/^playing\s+/i, "") || "the radio";
+      this.guests.music = { kind, scene, title: "Music", sub: "ask for a kind of music, a station, or “something”", station: name, at: Date.now() };
+    } else if (kind === "timers") {
+      let end = 0, label = e.args?.label || "";
+      if (e.name === "alarm" && /^\d{1,2}:\d{2}$/.test(e.args?.time || "")) {
+        const [h, m] = e.args.time.split(":").map(Number), d = new Date(); d.setHours(h, m, 0, 0);
+        if (d <= new Date()) d.setDate(d.getDate() + 1); end = +d;
+      } else if (+e.args?.minutes > 0) end = Date.now() + e.args.minutes * 60000;
+      this.guests.timers = { kind, scene, title: e.name === "alarm" ? "Alarm" : "Timer", sub: label || (e.result?.text || ""), end, alarm: e.name === "alarm", at: Date.now() };
+    } else {
+      this.guests.info = { kind, scene, title: scene.charAt(0).toUpperCase() + scene.slice(1), sub: "", text: e.result?.text || "", at: Date.now() };
+    }
+    this.guestOpen(kind === "info" ? "info" : kind, sc);
+  }
+  guestOpen(key, sc) {
+    sc ||= this.scenes || { frames: {}, frame_seconds: 2.5, show_seconds: 12 };
+    const g = this.guests[key], box = this.root.querySelector(".guest");
+    this.openGuest = key;
+    const n = sc.frames[g.scene] || 1, imgs = this.root.querySelector(".gimgs");
+    imgs.replaceChildren(...Array.from({ length: n }, (_, i) => { const im = document.createElement("img"); im.src = `${ASSETS}scenes/${g.scene}/${i + 1}.webp`; im.alt = ""; return im; }));
+    const all = [...imgs.children];
+    (this.gSteps || []).forEach(clearTimeout);
+    this.gSteps = all.map((im, i) => setTimeout(() => all.forEach((x) => x.classList.toggle("on", x === im)), 50 + i * sc.frame_seconds * 1000)); // once, held on the last
+    const icons = { music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l10-4"/><circle cx="8" cy="14" r="2.5"/><path d="M14 12h4M14 16h4"/></svg>',
+      timers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>',
+      info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>' };
+    this.root.querySelector(".gicon").innerHTML = icons[g.kind];
+    this.root.querySelector(".gtitle").textContent = g.title;
+    this.root.querySelector(".gsub").textContent = g.sub;
+    this.root.querySelector(".gdock").style.display = g.kind === "info" ? "none" : "";
+    box.hidden = false;
+    this.guestBody();
+    this.guestTouch(sc);
+    this.guestDock();
+  }
+  guestBody() {
+    const g = this.guests?.[this.openGuest], body = this.root.querySelector(".gbody");
+    if (!g) return;
+    if (g.kind === "music") {
+      body.innerHTML = `<div class="gpanel"><span class="k">Radio</span><span class="v"></span></div>
+        <div class="gbar"><span class="t"></span>
+          <button class="another" title="Another station" aria-label="Another station"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+          <button class="main stop" title="Stop the radio" aria-label="Stop the radio"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button></div>`;
+      body.querySelector(".v").textContent = g.station;
+      body.querySelector(".t").textContent = g.station;
+      body.querySelector(".stop").addEventListener("click", (ev) => { ev.stopPropagation(); window.NinaApp?.set("radio", false); this.guestEnd("music"); });
+      body.querySelector(".another").addEventListener("click", (ev) => { ev.stopPropagation(); this.guestTouch(); this.api("/api/do", { action: "type", arg: "Another station, please." }).catch(() => {}); });
+    } else if (g.kind === "timers") {
+      body.innerHTML = `<div class="gpanel"><span class="k"></span><span class="v"></span></div>`;
+      body.querySelector(".k").textContent = g.alarm ? "rings at " + new Date(g.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "time left";
+      this.guestTick();
+    } else {
+      body.innerHTML = `<div class="gcap"></div>`;
+      body.querySelector(".gcap").textContent = g.text;
+    }
+  }
+  left(g) { const s = Math.max(0, Math.round((g.end - Date.now()) / 1000)); return s >= 3600 ? `${Math.floor(s / 3600)}h${String(Math.floor(s / 60) % 60).padStart(2, "0")}` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+  guestTick() { // a timer's time left, once a second, only while one runs (the open card's panel, its tab)
+    clearInterval(this.gTick);
+    const t = this.guests?.timers;
+    if (!t || !t.end) return;
+    const draw = () => {
+      if (Date.now() >= t.end) { clearInterval(this.gTick); this.guestEnd("timers"); return; }
+      const v = this.root.querySelector(".gbody .v"); if (this.openGuest === "timers" && v) v.textContent = this.left(t);
+      const tab = this.root.querySelector('.tab[data-k="timers"] span'); if (tab) tab.textContent = this.left(t);
+    };
+    draw(); this.gTick = setInterval(draw, 1000);
+  }
+  running(key) { return key === "music" ? (window.NinaApp ? window.NinaApp.get("radio") : true) : key === "timers" ? !!(this.guests?.timers?.end > Date.now()) : false; }
+  guestTouch(sc) { // the open card stays 8 s more (running: then docks) or show_seconds (nothing running: then closes)
+    sc ||= this.scenes || { show_seconds: 12 };
+    const key = this.openGuest; if (!key) return;
+    clearTimeout(this.gIdle); clearInterval(this.gCount);
+    const run = key !== "info";
+    const until = Date.now() + (run ? 8000 : sc.show_seconds * 1000);
+    const note = this.root.querySelector(".gnote");
+    const tick = () => { const s = Math.ceil((until - Date.now()) / 1000); note.textContent = run ? `to the edge in ${s} s · tap to keep it` : ""; };
+    tick(); if (run) this.gCount = setInterval(tick, 1000);
+    this.gIdle = setTimeout(() => { clearInterval(this.gCount); run ? this.guestMin() : this.guestEnd(key); }, until - Date.now());
+  }
+  guestMin() { // docked: the card closed, its process going on, its tab on the edge
+    clearTimeout(this.gIdle); clearInterval(this.gCount); (this.gSteps || []).forEach(clearTimeout);
+    this.root.querySelector(".guest").hidden = true;
+    this.root.querySelector(".gimgs").replaceChildren(); // its images freed
+    this.openGuest = null;
+    this.guestDock();
+  }
+  guestEnd(key) { // closed: its process over (the radio stopped, the timer rung)
+    if (this.guests) delete this.guests[key];
+    if (this.openGuest === key) this.guestMin();
+    if (key === "timers") clearInterval(this.gTick);
+    this.guestDock();
+  }
+  guestDock() { // the tabs: the running guests not open, newest on top; still icons, one word
+    const dock = this.root.querySelector(".dock");
+    const keys = Object.keys(this.guests || {}).filter((k) => k !== this.openGuest && k !== "info" && this.running(k))
+      .sort((a, b) => this.guests[b].at - this.guests[a].at);
+    const icon = { music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l10-4"/><circle cx="8" cy="14" r="2.5"/><path d="M14 12h4M14 16h4"/></svg>',
+      timers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>' };
+    dock.replaceChildren(...keys.map((k) => {
+      const b = document.createElement("button"); b.className = "tab"; b.dataset.k = k;
+      b.setAttribute("aria-label", (k === "music" ? "The radio" : "The timer") + ": open its card");
+      b.innerHTML = icon[k] + `<span>${k === "music" ? "radio" : this.left(this.guests[k])}</span>`;
+      b.addEventListener("click", () => this.guestOpen(k));
+      return b;
+    }));
+    if (this.guests?.music && !this.running("music")) delete this.guests.music; // stopped elsewhere (her card's ■ radio, a crash)
   }
   show(name, on) { const f = this.frames?.[name]; if (f) f.classList.toggle("on", on); if (this.target) this.target[name] = on ? 1 : 0; }
   // gl3d: the frames and the depth in one shader; it steps aside if the machine is too slow.
