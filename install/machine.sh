@@ -59,6 +59,7 @@ step "the repos (GitHub, public: no credentials)"
 clone() { [ -d "$R/$2/.git" ] || git clone -q -b "$3" "$1" "$R/$2"; echo "$2 $(git -C "$R/$2" log --oneline -1 | cut -c1-60)"; }
 mkdir -p "$R/perotheia-packages"
 clone https://github.com/ibnHatab/nina-live.git nina-live main
+clone https://github.com/ibnHatab/nina-narratives.git nina-narratives main   # her rules (nina-live catalog/domains links into it)
 clone https://github.com/ibnHatab/acasa.git acasa main
 clone https://github.com/ibnHatab/fsttm-live.git fsttm-live main
 clone https://github.com/metis-lang-dev/metis-lang.git perotheia-packages/metis-lang master
