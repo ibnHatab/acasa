@@ -361,7 +361,7 @@ class NinaCard extends HTMLElement {
       if (this.c.height) this.root.querySelector("ha-card").style.height = this.c.height;
       this.root.querySelectorAll("button[data-p]").forEach((b) =>
         b.addEventListener("click", async () => {
-          const was = !!hub.prefs?.[b.dataset.p];
+          const was = window.NinaApp ? window.NinaApp.get(b.dataset.p) : !!hub.prefs?.[b.dataset.p];
           this.toggle(b.dataset.p);
           if (was) return; // turned off: nothing to open
           // on a Home Assistant dashboard (not her own screen, not opened large already): the mic brings
@@ -376,7 +376,7 @@ class NinaCard extends HTMLElement {
       // ⚑: what surprised her (asked as if typed: she answers with the explain tool's SURPRISES)
       this.root.querySelector(".flag").addEventListener("click", () =>
         this.api("/api/do", { action: "type", arg: "What surprised you?" }).catch(() => {}));
-      if (!this.c.expanded) { // a single click on her orb: her card large
+      if (!this.c.expanded && !window.NinaApp) { // a single click on her orb: her card large (not in her app: it is large)
         const orb = this.root.querySelector(".orb");
         orb.style.cursor = "pointer"; orb.title = "Nina, large";
         orb.addEventListener("click", async () => {
@@ -384,6 +384,7 @@ class NinaCard extends HTMLElement {
           expand(card("nina-card", { ...this.c, expanded: true, height: "min(86vh, 640px)" }));
         });
       }
+      if (window.NinaApp || this.c.home === false) this.root.querySelector("button.ha").style.display = "none"; // no Home Assistant here
       this.root.querySelector("button.ha").addEventListener("click", () =>
         window.__ninaShell ? window.__ninaShell.mode("ha") : (history.pushState(null, "", "/home-panel/home"), // no reload: no splash
           window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }))));
@@ -592,7 +593,8 @@ class NinaCard extends HTMLElement {
       return b;
     };
     const nodes = msgs.filter((m) => !m.parts || m.parts.some((p) => p.text)).map(bubble);
-    if (hub.listening != null && hub.status?.awake !== false) { const d = document.createElement("div"); d.className = "b listening"; d.title = "listening"; nodes.push(d); }
+    // the dots: not in her app (its state line says it, and their animation kept her screen repainting)
+    if (hub.listening != null && hub.status?.awake !== false && !window.NinaApp) { const d = document.createElement("div"); d.className = "b listening"; d.title = "listening"; nodes.push(d); }
     chat.replaceChildren(...nodes);
     chat.scrollTop = chat.scrollHeight;
   }
@@ -635,6 +637,11 @@ class NinaCard extends HTMLElement {
     try { return JSON.parse(t); } catch { return { error: t || r.statusText }; }
   }
   async toggle(p) {
+    if (window.NinaApp) { // her app (fsttm-live's Android app): its mic and its speaker, switched by the app
+      window.NinaApp.set(p, !window.NinaApp.get(p));
+      setTimeout(() => hub.emit(), 50); // the app applies it on its own thread
+      return;
+    }
     if (this.c.remote) { // this device's microphone and speaker, not the room's
       try { await remote.toggle(this.panel, p); } catch (e) { this.state(p === "mic" ? "no microphone here: " + (e.message || e) : String(e)); }
       hub.emit();
@@ -644,7 +651,8 @@ class NinaCard extends HTMLElement {
     try { await this.api("/api/prefs", { [p]: on }); hub.prefs = Object.assign(hub.prefs || {}, { [p]: on }); hub.emit(); } catch (e) { this.state("her panel is not reachable"); }
   }
   showPrefs() {
-    this.root.querySelectorAll("button[data-p]").forEach((b) => b.classList.toggle("on", this.c.remote ? !!remote[b.dataset.p] : !!hub.prefs?.[b.dataset.p]));
+    this.root.querySelectorAll("button[data-p]").forEach((b) => b.classList.toggle("on",
+      window.NinaApp ? window.NinaApp.get(b.dataset.p) : this.c.remote ? !!remote[b.dataset.p] : !!hub.prefs?.[b.dataset.p]));
   }
   state(t) { this.root.querySelector(".state").textContent = t; }
   status(s) {
