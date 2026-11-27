@@ -1,6 +1,6 @@
 ---
 name: acasa-role
-description: Adapt Nina to a new role or place (a home, an office secretary, another person) in acasa — her per-machine configs in live/, her role's dashboards in ha-ui/roles/<role>/, her role's Metis catalog workspace (roles/<role>/catalog), and which Google account, calendars, lists and channels the role uses. Use when deploying Nina for someone new, giving a machine a different job, or when a request works on one machine and not another because the role lacks a target.
+description: Adapt Nina to a new role or place (a home, an office secretary, another person) in acasa — her per-machine configs in live/, her role's dashboards in ha-ui/roles/<role>/, her role's workspace in nina-narratives (workspaces/<role>), and which Google account, calendars, lists and channels the role uses. Use when deploying Nina for someone new, giving a machine a different job, or when a request works on one machine and not another because the role lacks a target.
 ---
 
 # Giving Nina a role
@@ -20,13 +20,11 @@ nina-live is the persona; a **role** is acasa's adaptation of it to one place. T
    of the same name; others stay the home's. `echo ROLE > ~/.config/nina/role` on the machine;
    `cmd/ha-ui` (and every update) reads it (`-role` overrides). The office drops the home's lights
    and air cards and shows its account's calendar, tasks and WhatsApp group.
-3. **Catalog** (her rules for the role): `roles/ROLE/catalog/domains/` — its own
-   `composition.yaml` (which specialists: the office has no lights/air/comfort/glow), its capacity
-   `shared/home_map.llp` and director instance; other units linked from `nina-live/catalog/domains`.
-   A changed unit is a file here that `include`s the main one `hiding (rule …)` the rules it replaces
-   (a replacement takes a new name). Build: `cd roles/ROLE/catalog/domains && metisc build .`;
-   point the core config's `home.root` at it. (Today pero still runs the main catalog: nina-live
-   takes its package list from the composition first. An external domain catalog is planned.)
+3. **Rules** (her catalog for the role): not in acasa. A role is a workspace of nina-narratives
+   (`workspaces/home`, `workspaces/office`: its composition, capacity and director instance over the
+   shared units), formalized and gated there. acasa only points the core config's `home.root` at it.
+   (Until nina-live takes its members from a composition, every machine runs nina-live's
+   `catalog/`; see nina-narratives `RUNTIME.md`.)
 4. **Accounts and credentials**: the role's own Google account and Cloud project, its own WhatsApp
    number if any — skills under `acasa-credentials`.
 

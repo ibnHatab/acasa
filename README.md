@@ -10,7 +10,6 @@ elsewhere; acasa is one adaptation (the home, and the office's `secretary` role)
 | `hass/` | Home Assistant as her tool (Go): the websocket feed into her world, REST service calls |
 | `ha-ui/` | her look and feel: themes, dashboards (`dashboards/`, per role `roles/ROLE/dashboards/`), her cards (`www/nina/`), the kiosk's files (`kiosk/`), applied by `go run ./cmd/ha-ui` |
 | `cmd/` | `ha-ui` (apply the look and feel), `ha-startup`, `ha-entries` (Home Assistant's start) |
-| `roles/` | a role's own catalog workspace (`secretary`: the office) |
 | `install/` | `sd-firstboot.sh` (a Pi's card), `machine.sh` (a new machine), `update.sh` (every update) |
 | `live/` | each machine's configs (`nina-HOST.yaml` her core, `HOST.yaml` her dialogue), systemd units, sound (PipeWire/Pulse echo cancelling), Tailscale, ha-mcp |
 | `homeassistant/` | Home Assistant's compose file; `copy-from.sh` moves a whole Home Assistant between machines |
@@ -36,4 +35,4 @@ YouTube key, Home Assistant token, OpenRouter key, WhatsApp link). The persona's
 The first prototype on the NUC (metis-agent's Python service with Gemma, a Chrome page, an xmonad kiosk:
 `run.sh`, `serve.py`, `domains/home/`, `web/`, `kiosk/`) was removed on 2026-11-27; it is in the git
 history before that date. Nina's single service (`acasa-nina`, since 2026-11-24) replaced it; `live/run.sh
-install` installs that service on a desktop. Research notes: `docs/`, `paper/`.
+install` installs that service on a desktop. The office's first catalog workspace (`roles/secretary/catalog`, links into nina-live's), the two services before `acasa-nina` (`acasa-metis-home`, `acasa-nina-live`, fsttm-live's `sources.metis`) and `docs/DIALOG-METIS.md` (the NUC sidecar's design) were removed on 2026-11-27: her rules live in nina-live's catalog and, once merged, in nina-narratives. Research notes: `docs/`, `paper/` (it cites DIALOG-METIS.md at 24e301a).

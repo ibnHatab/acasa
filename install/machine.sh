@@ -16,7 +16,7 @@
 #   the screen, from boot; its boot splash with Nina's logo; Raspberry Pi Connect); user services
 #   kept running without a login (linger).
 # Not here (README, step 3 on): Tailscale, Home Assistant's onboarding and integrations, Nina's
-# token and keys, her role's catalog workspace and her service.
+# token and keys, and her service.
 set -euo pipefail
 R=$HOME/repo
 export PATH=$PATH:/usr/sbin:/sbin # a user's PATH on Debian lacks them (ha-pi-kiosk looks for plymouth-set-default-theme)
