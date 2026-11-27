@@ -116,23 +116,41 @@ const hub = window.__ninaHub || (window.__ninaHub = {
           case "vad_end": if (this.listening === e.seq) setTimeout(() => { if (this.listening === e.seq) { this.listening = null; this.emit(); } }, 2500); break;
           case "barge_duck": this.tent.delete(e.seq); this.listening = e.seq; this.emit(); break; // a voice over hers: shown from now on
           case "interim":
-            if (this.tent.has(e.seq) || !e.text) break;
+            if (this.tent.has(e.seq) || !e.text || this.closed?.has(e.seq)) break; // a closed utterance: no new bubble
             { const p = this.part(e.seq); if (!p.final) { p.text = e.text.trim(); this.listening = null; this.joined(); this.emit(); } }
             break;
           case "heard":
             if (e.tentative) break; // over her voice: echo or barge_in decide
-            if (!e.text || !e.text.trim()) { this.drop(e.seq); break; }
+            if (this.closed?.has(e.seq)) { // late: its turn closed the bubble already: the corrected words there (the tablet showed both, 2026-11-27)
+              const m = this.closed.get(e.seq);
+              if (e.text?.trim() && m.parts?.length === 1) { m.parts[0].text = e.text.trim(); m.text = e.text.trim(); this.emit(); }
+              break;
+            }
+            if (e.late && !this.cur?.parts.some((p) => p.seq === e.seq)) break; // late, and no bubble of its own: nothing new to show
+            if (!e.text || !e.text.trim()) { // an empty final (Gemini's transcriber takes back what it wrote at times):
+              const p = this.cur?.parts.find((x) => x.seq === e.seq); // the words shown while the person spoke stand, as the ears keep them
+              if (p && p.text) { p.final = true; if (this.listening === e.seq) this.listening = null; this.joined(); this.emit(); }
+              else this.drop(e.seq); // nothing was shown: no words, no bubble
+              break;
+            }
+            if (/^\W*nina\W*$/i.test(e.text.trim()) && /['"‘’“”()]/.test(e.text)) { this.drop(e.seq); break; } // a noise transcribed as her name in quotes ('Nina'): no turn follows, no bubble
             { const p = this.part(e.seq); p.text = e.text.trim(); p.final = true; if (this.listening === e.seq) this.listening = null; this.joined(); this.emit(); }
             break;
           case "barge_in": { this.tent.delete(e.seq); const p = this.part(e.seq); p.text = (e.heard || "").trim(); p.final = true; this.joined(); this.emit(); break; }
           case "echo": case "phantom_name": case "asleep_local": this.tent.delete(e.seq); this.drop(e.seq); break;
           case "aside": if (this.cur) { this.cur.cls = "user aside"; this.cur.live = false; this.cur = null; this.emit(); } break;
           case "turn":
-            if (e.note) this.add("note", e.text.replace(/^NOTE \((\w+)\): /, ""));
+            if (e.note) { // a NOTE (a task's result): she says it herself next, so the raw note only when her voice is off
+              const speaks = window.NinaApp ? window.NinaApp.get("voice") : !!this.prefs?.voice;
+              if (!speaks) this.add("note", e.text.replace(/^NOTE \((\w+)\): /, ""));
+            }
             else if (/^SAY: /.test(e.text)) { /* Nina's own words handed to her voice (a narration): shown as her reply, not as the person's */ }
             else if (!e.typed_shown) {
               const t = e.text.replace(/^\((You were|You are)[^)]*\)\n/, "").trim(), last = this.msgs[this.msgs.length - 1];
               if (this.cur && t) { // heard as it was spoken: the turn's text settles it (her echo stripped, utterances joined)
+                this.closed ||= new Map(); // a late transcript of these utterances corrects this bubble, not a new one
+                this.cur.parts.forEach((p) => this.closed.set(p.seq, this.cur));
+                if (this.closed.size > 200) this.closed = new Map([...this.closed].slice(-100));
                 const norm = (x) => x.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").replace(/\s+/g, " ").trim();
                 if (norm(this.cur.parts.map((p) => p.text).join(" ")) !== norm(t)) this.cur.parts = [{ seq: 0, text: t, final: true }];
                 this.cur.parts.forEach((p) => (p.final = true));
