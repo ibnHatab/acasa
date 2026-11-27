@@ -350,7 +350,7 @@ class NinaCard extends HTMLElement {
   <div class="face" hidden><div class="rig"></div><div class="scenebox"></div></div>
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina <span class="flag" hidden></span></div><div class="state">…</div></div>
-    <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button></div></div>
+    <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button><button class="addph" title="Add photos: Google Photos' picker, into her album" style="display:none">photos</button></div></div>
   <div class="pick" hidden><img alt="QR code: open Google Photos' picker"><div class="pickn"></div></div>
   <div class="chat"></div>
   <div class="hint">Say “Nina”, or tap the mic.</div>
@@ -397,6 +397,13 @@ class NinaCard extends HTMLElement {
         });
       }
       if (window.NinaApp || this.c.home === false) this.root.querySelector("button.ha").style.display = "none"; // no Home Assistant here
+      if (window.NinaApp || this.c.add_photos) { // her app (or config add_photos): Google Photos' picker into her album (its QR: photos_pick)
+        const ph = this.root.querySelector("button.addph");
+        ph.style.display = "";
+        ph.addEventListener("click", () => this.api("/api/do", { action: "pick_photos", arg: "" })
+          .then((r) => { if (r?.error) this.state("no picker: " + r.error); else this.state("opening the photo picker…"); })
+          .catch(() => this.state("her panel is not reachable")));
+      }
       this.root.querySelector("button.ha").addEventListener("click", () =>
         window.__ninaShell ? window.__ninaShell.mode("ha") : (history.pushState(null, "", "/home-panel/home"), // no reload: no splash
           window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }))));

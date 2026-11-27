@@ -107,6 +107,8 @@ class NinaSettingsCard extends NinaBase {
       <div class="row"><label>A mood holds</label><input type="range" class="ms" min="15" max="240" step="15"><span class="val vms"></span></div>
       <div class="row"><label>Mood swing</label><input type="range" class="adv" min="0" max="0.2" step="0.01"><span class="val vadv"></span></div>
       <div class="row"><button class="save">Save</button><button class="ghost reset">Her file's</button><span class="note msg"></span></div>
+      <div class="row"><label>Photos</label><button class="ghost addph" title="Google Photos' picker: scan, pick, and she copies them into her album">Add photos</button><span class="note phmsg"></span></div>
+      <div class="phqr" style="display:none;text-align:center;margin:8px 0"><img alt="QR code: open Google Photos' picker" style="width:220px;height:220px;background:#fff;padding:10px;border-radius:12px"><div class="note phn"></div></div>
       <div class="note">The temperament, the hour and what the home is doing choose her mood; a mood holds a while, and a new one needs the swing's margin to win. The wake word stays "Nina".</div>`;
     const q = (s) => this.root.querySelector(s);
     const show = () => { q(".v0").textContent = (+q(".w0").value).toFixed(2); q(".v1").textContent = (+q(".w1").value).toFixed(2);
@@ -139,6 +141,26 @@ class NinaSettingsCard extends NinaBase {
       } catch (e) { q(".msg").textContent = "not saved: " + e; }
     });
     q(".reset").addEventListener("click", async () => { await api("/api/do", { action: "temperament", arg: "{}" }).catch(() => {}); setTimeout(load, 500); });
+    // photos: the panel's pick_photos (nina-live add_photos), its QR here as on her own card (photos_pick)
+    q(".addph").addEventListener("click", async () => {
+      q(".phmsg").textContent = "opening the picker…";
+      try { const r = await api("/api/do", { action: "pick_photos", arg: "" }); if (r?.error) throw r.error; }
+      catch (e) { q(".phmsg").textContent = "no picker: " + e; }
+    });
+    stageStream(PANEL).addEventListener("ev", (m) => {
+      const e = JSON.parse(m.data);
+      if (e.ev !== "photos_pick") return;
+      const box = q(".phqr");
+      if (e.state === "open" && e.png) {
+        box.style.display = "block"; q(".phqr img").src = e.png; q(".phmsg").textContent = "";
+        q(".phn").textContent = `Scan with your phone: pick photos in Google Photos for ${e.album ? "“" + e.album + "”" : "her album"}.`;
+      } else if (e.state === "copying") q(".phn").textContent = "Copying the photos into her album…";
+      else {
+        box.style.display = "none";
+        q(".phmsg").textContent = e.state === "done" ? `${e.copied || 0} added to ${e.album || "her album"}` :
+          e.state === "expired" ? "the picker expired: try again" : "not added: " + (e.error || e.state);
+      }
+    });
   }
 }
 
