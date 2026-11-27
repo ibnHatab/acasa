@@ -105,6 +105,12 @@ const hub = window.__ninaHub || (window.__ninaHub = {
       es.addEventListener("ev", (m) => {
         const e = JSON.parse(m.data);
         switch (e.ev) {
+          case "photos_pick": // add_photos (nina-live services/google): the Picker's QR until it ends
+            this.pick = e.state === "open" ? e : e.state === "copying" ? Object.assign({}, this.pick, { copying: true }) : null;
+            if (e.state !== "open" && e.state !== "copying") this.pickNote = { at: Date.now(),
+              text: e.state === "done" ? `${e.copied || 0} photo${e.copied === 1 ? "" : "s"} added to ${e.album || "her album"}` :
+                e.state === "expired" ? "the photo picker expired: ask again" : "the photos were not added: " + (e.error || e.state) };
+            this.emit(); break;
           case "typed": this.add("user", e.text); break;
           case "vad_start": if (e.tentative) this.tent.add(e.seq); else { this.listening = e.seq; this.emit(); } break;
           case "vad_end": if (this.listening === e.seq) setTimeout(() => { if (this.listening === e.seq) { this.listening = null; this.emit(); } }, 2500); break;
@@ -330,6 +336,11 @@ class NinaCard extends HTMLElement {
   .off { color: var(--secondary-text-color); font-size: .85em; text-align: center; }
   .hint { margin: auto; color: var(--secondary-text-color); text-align: center; line-height: 1.6; opacity: .8; }
   .chat:not(:empty) + .hint { display: none; }
+  .pick { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 3; text-align: center;
+          background: rgba(0,0,0,.72); color: #fff; padding: 14px; border-radius: 14px; width: min(86%, 280px); box-sizing: border-box; }
+  .pick[hidden] { display: none; }
+  .pick img { width: 220px; height: 220px; background: #fff; padding: 10px; border-radius: 12px; display: block; margin: 0 auto 8px; }
+  .pickn { font-size: .92em; line-height: 1.35; }
   .say { display: flex; gap: 8px; } .say[hidden] { display: none; }  /* typed to her (remote: away from her mic) */
   .say input { flex: 1; min-width: 0; font: inherit; color: #fff; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.25);
                border-radius: 999px; padding: 9px 14px; backdrop-filter: blur(6px); }
@@ -340,6 +351,7 @@ class NinaCard extends HTMLElement {
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina <span class="flag" hidden></span></div><div class="state">…</div></div>
     <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button></div></div>
+  <div class="pick" hidden><img alt="QR code: open Google Photos' picker"><div class="pickn"></div></div>
   <div class="chat"></div>
   <div class="hint">Say “Nina”, or tap the mic.</div>
   <form class="say" hidden><input placeholder="Write to Nina…" enterkeyhint="send" autocomplete="off"><button>Send</button></form>
@@ -579,6 +591,14 @@ class NinaCard extends HTMLElement {
         if (attend && this.isConnected && !document.hidden) this.gl?.start();
       }
     }
+    { const pk = this.root.querySelector(".pick"), p = hub.pick;
+      pk.hidden = !(p && p.png);
+      if (p && p.png) {
+        if (pk.querySelector("img").src !== p.png) pk.querySelector("img").src = p.png;
+        pk.querySelector(".pickn").textContent = p.copying ? "Copying the photos into her album…" :
+          `Scan with your phone: pick photos in Google Photos for ${p.album ? "“" + p.album + "”" : "her album"}.`;
+      }
+      if (hub.pickNote && Date.now() - hub.pickNote.at < 8000) this.state(hub.pickNote.text); }
     const max = this.c.message_max_age * 1000;
     const msgs = hub.msgs.filter((m) => !max || Date.now() - m.t <= max).slice(-this.c.max_messages);
     const chat = this.root.querySelector(".chat");
