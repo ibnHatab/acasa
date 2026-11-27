@@ -108,6 +108,7 @@ class NinaSettingsCard extends NinaBase {
       <div class="row"><label>Mood swing</label><input type="range" class="adv" min="0" max="0.2" step="0.01"><span class="val vadv"></span></div>
       <div class="row"><button class="save">Save</button><button class="ghost reset">Her file's</button><span class="note msg"></span></div>
       <div class="row"><label>Photos</label><button class="ghost addph" title="Google Photos' picker: scan, pick, and she copies them into her album">Add photos</button><span class="note phmsg"></span></div>
+      <div class="note">A friend can share an album with Nina's Google account, then pick it here: the photos are copied into her album and stay hers.</div>
       <div class="phqr" style="display:none;text-align:center;margin:8px 0"><img alt="QR code: open Google Photos' picker" style="width:220px;height:220px;background:#fff;padding:10px;border-radius:12px"><div class="note phn"></div></div>
       <div class="note">The temperament, the hour and what the home is doing choose her mood; a mood holds a while, and a new one needs the swing's margin to win. The wake word stays "Nina".</div>`;
     const q = (s) => this.root.querySelector(s);
