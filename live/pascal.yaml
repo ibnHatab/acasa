@@ -39,3 +39,32 @@ dialog:
     threshold: 0.3 # lower hears more (the log's oww_peak: each utterance's best score); 0.3: 0.28 false wakes an hour, the person's names at 0.34-0.94 (2026-11-26)
     # the sherpa spotter instead: engine: kws, model: ~/models/sherpa-kws/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01,
     # keywords: ~/repo/fsttm-live/testdata/kws-keywords.txt, threshold: 0.25
+# Changed at run time by the plugins (the web panel, the buttons) and written back here.
+prefs:
+  mic: false
+  voice: false
+  voice_name: Zephyr # a Live voice (Puck, Kore, Aoede, …); "" the model's
+  local: "" # "" the Live audio; rhvoice (small machines), paradee (a desktop's socket): a local voice speaks her transcript
+  rhvoice: slt
+  paradee: af_heart
+  narration: important # the lowest NOTE level spoken: info, important, urgent, off
+  bubble: 1 # the one sound knob: metres her voice (and the music) carries; 1 the calibrated minimum, x2 +6 dB, up to 4
+plugins:
+  web: # the panel: preferences, status, the conversation; a kiosk's screen
+    enabled: true
+    addr: ":8770"
+    allow_origin: ["http://localhost:8123", "http://127.0.0.1:8123", "http://homeassistant.local:8123", "https://nina-home.tail2ffd4d.ts.net:8443"] # this laptop's Home Assistant (its own screen and browser: 2026-11-26, the bubble's replay could not fetch), the Pi's, local and from the tailnet (live/tailscale-serve.sh) # Home Assistant's Nina card reads her state and events, sets the mic and voice
+    static: {"/nina/": ~/repo/acasa/ha-ui/www/nina, "/metis/": ~/repo/nina-live/catalog/domains/.metis} # her own screen, card and personas; the loop workspace (read only: the surprises card)
+    remote: /nina/shell.html # from outside (Tailscale serve, live/tailscale-serve.sh): "/" is her own screen
+  gpio: # buttons and lights on a Raspberry Pi (BCM line numbers)
+    enabled: false
+    chip: gpiochip0
+    debounce: 30ms
+    long_press: 1200ms
+    buttons:
+      - {line: 17, press: talk, long: sleep} # talk: wake her (or stop her if she speaks); long: sleep
+      - {line: 27, press: mic} # the mic on and off
+      - {line: 22, press: voice} # her sound on and off
+    lights:
+      - {line: 5, show: awake}
+      - {line: 6, show: speaking}
