@@ -23,7 +23,7 @@ import (
 //   - normal: Home Assistant can set a preset but not clear one; a stop clears it, so off, on;
 //   - a boost goes back to normal after BoostMax: boost air is cold air.
 type Device struct {
-	C        *Client
+	S        Services // the service calls: Home Assistant's REST client, or its MCP server (MCP)
 	M        *semhome.Map
 	BoostMax time.Duration // 0: no limit
 
@@ -33,8 +33,8 @@ type Device struct {
 
 // NewDevice is the device over c with the home map m; BoostMax from METIS_HOME_BOOST_MAX (a
 // duration; default 10 minutes).
-func NewDevice(c *Client, m *semhome.Map) *Device {
-	d := &Device{C: c, M: m, BoostMax: 10 * time.Minute}
+func NewDevice(s Services, m *semhome.Map) *Device {
+	d := &Device{S: s, M: m, BoostMax: 10 * time.Minute}
 	if v := os.Getenv("METIS_HOME_BOOST_MAX"); v != "" {
 		if x, err := time.ParseDuration(v); err == nil {
 			d.BoostMax = x
@@ -44,6 +44,17 @@ func NewDevice(c *Client, m *semhome.Map) *Device {
 }
 
 var errNoEntity = fmt.Errorf("no entity")
+
+// Services carries one service call of Home Assistant's (domain, service, its data with entity_id).
+type Services interface {
+	CallService(domain, service string, data map[string]any) error
+}
+
+// CallService is the REST client's: POST /api/services/<domain>/<service>.
+func (c *Client) CallService(domain, service string, data map[string]any) error {
+	_, err := c.Call("POST", "/api/services/"+domain+"/"+service, data)
+	return err
+}
 
 // Do is one command: kind light | tv | unit, the role (l1, t1, u2), the op (on, off, louder,
 // quieter, preset, heater, winter) and its value. → whether Home Assistant took it.
@@ -74,7 +85,7 @@ func (d *Device) do(kind, role, op string, value any) error {
 		if svc == "" {
 			return fmt.Errorf("no %s op %q", kind, op)
 		}
-		_, err := d.C.Call("POST", "/api/services/"+strings.SplitN(*e, ".", 2)[0]+"/"+svc, map[string]any{"entity_id": *e})
+		err := d.S.CallService(strings.SplitN(*e, ".", 2)[0], svc, map[string]any{"entity_id": *e})
 		return err
 	case "unit":
 		u, ok := d.M.Units[role]
@@ -87,11 +98,11 @@ func (d *Device) do(kind, role, op string, value any) error {
 			for k, v := range extra {
 				body[k] = v
 			}
-			_, err := d.C.Call("POST", "/api/services/fan/"+svc, body)
+			err := d.S.CallService("fan", svc, body)
 			if err != nil {
 				log.Printf("[hass] %s %s: %v; once more", svc, e, err)
 				time.Sleep(time.Second)
-				_, err = d.C.Call("POST", "/api/services/fan/"+svc, body)
+				err = d.S.CallService("fan", svc, body)
 			}
 			return err
 		}
@@ -128,7 +139,7 @@ func (d *Device) do(kind, role, op string, value any) error {
 			if on {
 				svc = "turn_on"
 			}
-			_, err := d.C.Call("POST", "/api/services/switch/"+svc, map[string]any{"entity_id": "switch." + u.Prefix + "_" + op})
+			err := d.S.CallService("switch", svc, map[string]any{"entity_id": "switch." + u.Prefix + "_" + op})
 			return err
 		}
 		return fmt.Errorf("no unit op %q", op)

@@ -33,6 +33,10 @@ type Config struct {
 	Hass       struct {
 		URL   string `yaml:"url"`
 		Token string `yaml:"token"`
+		// Via: "mcp", Home Assistant only through its MCP server (ha-mcp, the MCP entry named by Server: default
+		// hacfg) and only for the home's devices and sensors (the user, 2026-11-28); "" its REST and websocket API
+		Via    string `yaml:"via"`
+		Server string `yaml:"server"`
 	} `yaml:"hass"`
 }
 
@@ -55,11 +59,19 @@ func main() {
 	if err != nil {
 		stdlog.Fatal(err)
 	}
-	ha, err := hass.New(c.Hass.URL, c.Hass.Token)
+	var backs app.Backends
+	if c.Hass.Via == "mcp" {
+		backs, err = MCPBackends(ctx, c, m, filepath.Join(app.Expand(c.Home.Root), "world", "home.map.json"))
+	} else {
+		var ha *hass.Client
+		if ha, err = hass.New(c.Hass.URL, c.Hass.Token); err == nil {
+			backs = Backends(ha, m)
+		}
+	}
 	if err != nil {
 		stdlog.Fatal(err)
 	}
-	if err := app.Run(ctx, c.Config, Backends(ha, m)); err != nil {
+	if err := app.Run(ctx, c.Config, backs); err != nil {
 		stdlog.Fatal(err)
 	}
 }
@@ -94,7 +106,7 @@ func Backends(ha *hass.Client, m *semhome.Map) app.Backends {
 				stdlog.Printf("[hass] %v: the world gets no readings", err)
 			}
 		},
-		Presence: func(ctx context.Context, set func(core.Presence)) { radar(ctx, ha, set) },
+		Presence: func(ctx context.Context, set func(core.Presence)) { radar(ctx, restViewer(ha), set) },
 		Albums:   func(ctx context.Context) ([]string, error) { return googleAlbums(ctx, ha) },
 	}
 }
@@ -124,8 +136,29 @@ func (r reader) Forecast(ctx context.Context, id, kind string, n int) (string, e
 	return r.o.Forecast(ctx, id, kind, n)
 }
 
+// viewer is the radar's sensor now (sensor.nina_viewer): its state, its last update, its attributes.
+type viewer func(ctx context.Context) (state, updated string, attrs map[string]any, err error)
+
+func restViewer(ha *hass.Client) viewer {
+	return func(context.Context) (string, string, map[string]any, error) {
+		raw, err := ha.Call("GET", "/api/states/sensor.nina_viewer", nil)
+		if err != nil {
+			return "", "", nil, err
+		}
+		var st struct {
+			State      string         `json:"state"`
+			Updated    string         `json:"last_updated"`
+			Attributes map[string]any `json:"attributes"`
+		}
+		if err := json.Unmarshal(raw, &st); err != nil {
+			return "", "", nil, err
+		}
+		return st.State, st.Updated, st.Attributes, nil
+	}
+}
+
 // radar: sensor.nina_viewer (the Pi's LD2410C): presence and distance, until ctx ends.
-func radar(ctx context.Context, ha *hass.Client, set func(core.Presence)) {
+func radar(ctx context.Context, get viewer, set func(core.Presence)) {
 	last, stale := "", false
 	tk := time.NewTicker(2 * time.Second)
 	defer tk.Stop()
@@ -135,17 +168,14 @@ func radar(ctx context.Context, ha *hass.Client, set func(core.Presence)) {
 			return
 		case <-tk.C:
 		}
-		raw, err := ha.Call("GET", "/api/states/sensor.nina_viewer", nil)
-		if err != nil {
-			continue // no radar yet
-		}
 		var st struct {
-			State      string         `json:"state"`
-			Updated    string         `json:"last_updated"`
-			Attributes map[string]any `json:"attributes"`
+			State      string
+			Updated    string
+			Attributes map[string]any
 		}
-		if json.Unmarshal(raw, &st) != nil {
-			continue
+		var err error
+		if st.State, st.Updated, st.Attributes, err = get(ctx); err != nil {
+			continue // no radar yet
 		}
 		// a reading that has not changed in 10 min is a radar gone (its Pi off): nobody, not a person
 		// held at its last distance (2026-11-26: 0.54 m from the day before capped her bubble)
