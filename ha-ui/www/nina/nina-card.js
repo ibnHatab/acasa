@@ -117,6 +117,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
           case "barge_duck": this.tent.delete(e.seq); this.listening = e.seq; this.emit(); break; // a voice over hers: shown from now on
           case "interim":
             if (this.tent.has(e.seq) || !e.text || this.closed?.has(e.seq)) break; // a closed utterance: no new bubble
+            if (/^\W*nina\W*$/i.test(e.text.trim()) && /['"‘’“”()]/.test(e.text)) break; // noise transcribed as her name in quotes ('Nina'): not words (it often gets no final to drop it)
             { const p = this.part(e.seq); if (!p.final) { p.text = e.text.trim(); this.listening = null; this.joined(); this.emit(); } }
             break;
           case "heard":
@@ -461,7 +462,7 @@ class NinaCard extends HTMLElement {
       }
       if (window.NinaApp) // her app's radio: a stop button while it plays (even when she cannot answer)
         this.root.querySelector("button.radiost").addEventListener("click", () => { window.NinaApp.set("radio", false); setTimeout(() => this.showPrefs(), 300); });
-      if (window.NinaApp || this.c.add_photos) { // her app (or config add_photos): Google Photos' picker into her album (its QR: photos_pick)
+      if (this.c.add_photos) { // config add_photos: Google Photos' picker into her album (its QR: photos_pick); not in her app's bar (the user, 2026-11-28: its own design later)
         const ph = this.root.querySelector("button.addph");
         ph.style.display = "";
         ph.addEventListener("click", () => this.api("/api/do", { action: "pick_photos", arg: "" })
@@ -869,7 +870,7 @@ class NinaCard extends HTMLElement {
     try { await this.api("/api/prefs", { [p]: on }); hub.prefs = Object.assign(hub.prefs || {}, { [p]: on }); hub.emit(); } catch (e) { this.state("her panel is not reachable"); }
   }
   showPrefs() {
-    if (window.NinaApp) { const r = this.root.querySelector("button.radiost"); if (r) r.style.display = window.NinaApp.get("radio") ? "" : "none"; }
+    // (her app's radio: its guest card's tab on the edge, not a button in the bar: the user, 2026-11-28)
     this.root.querySelectorAll("button[data-p]").forEach((b) => b.classList.toggle("on",
       window.NinaApp ? window.NinaApp.get(b.dataset.p) : this.c.remote ? !!remote[b.dataset.p] : !!hub.prefs?.[b.dataset.p]));
   }
