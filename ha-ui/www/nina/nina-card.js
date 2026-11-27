@@ -350,7 +350,7 @@ class NinaCard extends HTMLElement {
   <div class="face" hidden><div class="rig"></div><div class="scenebox"></div></div>
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina <span class="flag" hidden></span></div><div class="state">…</div></div>
-    <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button><button class="addph" title="Add photos: Google Photos' picker, into her album" style="display:none">photos</button></div></div>
+    <div class="toggles"><button data-p="mic">mic</button><button data-p="voice">voice</button><button class="ha" title="Home Assistant: add and configure devices">⌂</button><button class="addph" title="Add photos: Google Photos' picker, into her album" style="display:none">photos</button><button class="radiost on" title="Stop the radio" style="display:none">■ radio</button></div></div>
   <div class="pick" hidden><img alt="QR code: open Google Photos' picker"><div class="pickn"></div></div>
   <div class="chat"></div>
   <div class="hint">Say “Nina”, or tap the mic.</div>
@@ -397,6 +397,8 @@ class NinaCard extends HTMLElement {
         });
       }
       if (window.NinaApp || this.c.home === false) this.root.querySelector("button.ha").style.display = "none"; // no Home Assistant here
+      if (window.NinaApp) // her app's radio: a stop button while it plays (even when she cannot answer)
+        this.root.querySelector("button.radiost").addEventListener("click", () => { window.NinaApp.set("radio", false); setTimeout(() => this.showPrefs(), 300); });
       if (window.NinaApp || this.c.add_photos) { // her app (or config add_photos): Google Photos' picker into her album (its QR: photos_pick)
         const ph = this.root.querySelector("button.addph");
         ph.style.display = "";
@@ -678,6 +680,7 @@ class NinaCard extends HTMLElement {
     try { await this.api("/api/prefs", { [p]: on }); hub.prefs = Object.assign(hub.prefs || {}, { [p]: on }); hub.emit(); } catch (e) { this.state("her panel is not reachable"); }
   }
   showPrefs() {
+    if (window.NinaApp) { const r = this.root.querySelector("button.radiost"); if (r) r.style.display = window.NinaApp.get("radio") ? "" : "none"; }
     this.root.querySelectorAll("button[data-p]").forEach((b) => b.classList.toggle("on",
       window.NinaApp ? window.NinaApp.get(b.dataset.p) : this.c.remote ? !!remote[b.dataset.p] : !!hub.prefs?.[b.dataset.p]));
   }
