@@ -8,6 +8,10 @@
   main { max-width: 760px; margin: 0 auto; padding: 18px 14px 40px; }
   h1 { font-weight: 600; font-size: 1.3em; margin: 4px 4px 14px; }
 </style>
+<script>
+  // no Home Assistant here: its icon element stands in as a key (the card's head)
+  if (!customElements.get("ha-icon")) customElements.define("ha-icon", class extends HTMLElement { connectedCallback() { this.textContent = "🔑"; } });
+</script>
 <script type="module" src="nina-cards.js"></script>
 </head><body><main>
 <h1>Nina: her setup</h1>
