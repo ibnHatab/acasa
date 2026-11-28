@@ -29,6 +29,7 @@ const P = {
   "mdi:home-heart": '<path d="M3 11l9-7 9 7M5 10v10h14V10"/><path d="M12 17.5l-2.3-2.2a1.4 1.4 0 0 1 2.3-1.7 1.4 1.4 0 0 1 2.3 1.7z"/>',
   "mdi:brain": '<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-1zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/>',
   "mdi:account-voice": '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 5a5 5 0 0 1 0 6M20 3a9 9 0 0 1 0 10"/>',
+  "mdi:key-chain": '<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M18 5l2 2"/>',
   "mdi:account-cog": '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 11-5.7"/><circle cx="18" cy="17" r="2.5"/><path d="M18 13v1.5M18 19.5V21M14 17h1.5M20.5 17H22"/>',
 };
 
