@@ -1094,6 +1094,90 @@ class NinaModelsCard extends NinaBase {
   }
 }
 
+// ---- her keys and her Google account (design/keys-and-signin.md, s-b478fe59; the user, 2026-11-28) -----
+// The keys her config names (her panel's GET /api/keys: set or not, working or not, never the value) and the
+// Google account (sign in in your own browser: a QR on her home screen, the system browser in her app).
+// A key typed here is sent once (POST /api/keys) and the field cleared; the part that uses it reads it again.
+//
+//   type: custom:nina-keys-card
+class NinaKeysCard extends NinaBase {
+  setConfig(c) {
+    this.c = c || {};
+    if (this.root) return;
+    this.style = `.k { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+      .k .lab { flex: 1; min-width: 0; } .k .lab div { font-size: .8em; color: rgba(255,255,255,.7); }
+      .k .st { font-size: .78em; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.16); white-space: nowrap; }
+      .k .st.ok { background: #5d8a5b; } .k .st.bad { background: #b9442a; }
+      .k input { max-width: 46%; } .k button { padding: 6px 12px; }
+      .acct { margin-top: 12px; } .gqr { display: none; text-align: center; margin: 8px 0; }
+      .gqr img { width: 220px; height: 220px; background: #fff; padding: 10px; border-radius: 12px; }`;
+    const el = this.frame("explain", 2, "mdi:account-cog", "Keys and accounts", "what she reaches the world with");
+    el.innerHTML = `<div class="keys"><div class="empty">…</div></div>
+      <div class="acct"><div class="row"><label>Google</label><span class="gwho">not signed in</span></div>
+        <div class="row gparts"></div>
+        <div class="row"><button class="gin">Sign in</button><button class="ghost gmail">Add Gmail</button><button class="ghost gout">Sign out</button><span class="note gmsg"></span></div>
+        <div class="gqr"><img alt="QR code: sign in to Google"><div class="note">Scan with your phone (on the home's tailnet) and sign in there.</div></div></div>
+      <div class="note">Keys are kept in her files; they are never shown again here, only whether they are set and work.</div>`;
+    const q = (x) => this.root.querySelector(x);
+    this.load = () => api("/api/keys").then((r) => this.draw(r)).catch(() => { q(".keys").innerHTML = '<div class="empty">her panel is not reachable</div>'; });
+    this.load();
+    const signin = (parts) => async () => {
+      q(".gmsg").textContent = "opening Google…";
+      const r = await api("/api/do", { action: "google_signin", arg: parts }).catch((e) => ({ error: String(e) }));
+      if (r?.error) q(".gmsg").textContent = "no sign-in: " + r.error;
+    };
+    q(".gin").addEventListener("click", signin(""));
+    q(".gmail").addEventListener("click", signin("gmail"));
+    q(".gout").addEventListener("click", async () => {
+      const r = await api("/api/do", { action: "google_signout", arg: "" }).catch((e) => ({ error: String(e) }));
+      q(".gmsg").textContent = r?.error ? "not signed out: " + r.error : "signed out"; setTimeout(this.load, 800);
+    });
+    stageStream(PANEL).addEventListener("ev", (m) => {
+      const e = JSON.parse(m.data);
+      if (e.ev === "keys") this.draw(e);
+      if (e.ev !== "google_signin") return;
+      const box = q(".gqr");
+      if (e.state === "open") {
+        q(".gmsg").textContent = "";
+        if (window.NinaApp?.open && e.uri) { window.NinaApp.open(e.uri); q(".gmsg").textContent = "sign in in the browser, then come back"; }
+        else if (e.png) { box.style.display = "block"; q(".gqr img").src = e.png; }
+        else if (e.uri) { q(".gmsg").innerHTML = ""; const a = document.createElement("a"); a.href = e.uri; a.target = "_blank"; a.textContent = "open Google's sign-in"; a.style.color = "#f0a37f"; q(".gmsg").append(a); }
+      } else {
+        box.style.display = "none";
+        q(".gmsg").textContent = e.state === "done" ? `signed in as ${e.account || "her account"}` : "not signed in: " + (e.error || e.state);
+        setTimeout(this.load, 500);
+      }
+    });
+  }
+  draw(r) {
+    const q = (x) => this.root.querySelector(x), list = r?.keys || (Array.isArray(r) ? r : []);
+    const box = q(".keys");
+    if (!list.length) { box.innerHTML = '<div class="empty">no keys registered by her panel</div>'; }
+    else box.replaceChildren(...list.filter((k) => !k.oauth).map((k) => {
+      const d = document.createElement("div"); d.className = "k";
+      const st = !k.set ? (k.optional ? "optional" : "not set") : k.ok === false ? "not working" : "set";
+      d.innerHTML = `<div class="lab"></div><span class="st ${!k.set ? "" : k.ok === false ? "bad" : "ok"}"></span>
+        <input type="password" autocomplete="off" placeholder="paste to replace"><button class="ghost">Save</button>`;
+      d.querySelector(".lab").textContent = k.label || k.name;
+      if (k.error) { const e = document.createElement("div"); e.textContent = k.error; d.querySelector(".lab").append(e); }
+      d.querySelector(".st").textContent = st;
+      const inp = d.querySelector("input");
+      d.querySelector("button").addEventListener("click", async () => {
+        const v = inp.value.trim(); if (!v) return;
+        const res = await api("/api/keys", { name: k.name, value: v }).catch((e) => ({ error: String(e) }));
+        inp.value = "";
+        if (res?.error) { d.querySelector(".st").textContent = "not saved"; d.querySelector(".st").className = "st bad"; d.querySelector(".st").title = res.error; }
+        else setTimeout(this.load, 500);
+      });
+      return d;
+    }));
+    const g = r?.google || list.find((k) => k.oauth) || {};
+    q(".gwho").textContent = g.account ? `signed in as ${g.account}` : g.set ? "signed in" : "not signed in";
+    q(".gparts").textContent = (g.scopes || g.parts || []).length ? "granted: " + (g.parts || g.scopes).join(", ") : "";
+    q(".gout").style.display = g.account || g.set ? "" : "none";
+  }
+}
+customElements.define("nina-keys-card", NinaKeysCard);
 customElements.define("nina-settings-card", NinaSettingsCard);
 customElements.define("nina-activity-card", NinaActivityCard);
 customElements.define("nina-surprises-card", NinaSurprisesCard);
