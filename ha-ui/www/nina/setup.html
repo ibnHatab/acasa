@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- Her guided setup on her own panel (http://HOST:8770/nina/setup.html), without Home Assistant: the same
+     card as her settings page's (nina-cards.js nina-setup-card). -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nina: her setup</title>
+<style>
+  body { margin: 0; min-height: 100vh; background: #0d0b0a; font: 16px/1.4 system-ui, sans-serif; color: #fff; }
+  main { max-width: 760px; margin: 0 auto; padding: 18px 14px 40px; }
+  h1 { font-weight: 600; font-size: 1.3em; margin: 4px 4px 14px; }
+</style>
+<script type="module" src="nina-cards.js"></script>
+</head><body><main>
+<h1>Nina: her setup</h1>
+<script type="module">
+  // as Home Assistant does: the card configured, then put on the page
+  await customElements.whenDefined("nina-setup-card");
+  const c = document.createElement("nina-setup-card");
+  c.setConfig({ expanded: true, list_height: "none" });
+  document.querySelector("main").appendChild(c);
+</script>
+</main></body></html>

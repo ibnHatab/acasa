@@ -81,6 +81,8 @@ views:
         cards:
           - {type: heading, heading: Her settings, icon: mdi:account-cog}
           - {type: custom:nina-settings-card, grid_options: {columns: full}}
+          - {type: heading, heading: Her setup, icon: mdi:key-chain}
+          - {type: custom:nina-setup-card, grid_options: {columns: full}}   # her keys, her Google account, her channels: added one at a time, she guides each step
           - {type: heading, heading: Her sound bubble, icon: mdi:surround-sound}
           - {type: custom:nina-bubble-card, room: 5, grid_options: {columns: full}}   # the one sound knob, her voice and the music
       - type: grid

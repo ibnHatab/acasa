@@ -9,6 +9,7 @@
 //   type: custom:nina-photos-card       a Google Photos album as a slideshow (album: its name; Home Assistant's
 //                                       Google Photos integration: the albums she made and filled)
 //   type: custom:nina-video-card        a YouTube playlist (playlist: its id) or video (video: its id), embedded
+//   type: custom:nina-setup-card        her guided setup: her keys, her Google account, her channels, one at a time
 //   type: custom:nina-bubble-card       her sound bubble: the one sound knob (her voice and the music), as a space
 //                                       in the room; the distance calibration's points (room: 5, metres wide)
 const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
@@ -21,7 +22,7 @@ const api = (path, body) => fetch(PANEL + path, body ? { method: "POST", headers
 
 const SCHEME = `
   :host { display: block; }
-  ha-card { position: relative; overflow: hidden; padding: 14px 16px; color: #fff; background: #14100e; border: 0;
+  ha-card { display: block; position: relative; overflow: hidden; padding: 14px 16px; color: #fff; background: #14100e; border: 0;
             --primary-text-color: #fff; --secondary-text-color: rgba(255,255,255,.78); }
   ha-card * { text-shadow: 0 1px 3px rgba(0,0,0,.65); }
   .bg { position: absolute; inset: 0; pointer-events: none; }
@@ -970,6 +971,169 @@ class NinaWhatsAppCard extends NinaBase {
   }
 }
 
+// ---- her guided setup: her keys, her Google account, her channels, one integration at a time (2026-11-28) ----
+// The user: no coding agent drives the person's browser, so she guides them. "Add" starts an integration's
+// steps: each step's page opens in one tab of its own ("nina-setup", the same tab for every step), she says
+// what to do there word for word (the narration goes on while the person is in that tab), the step's check
+// proves it before Next; a step the person cannot do is skipped. A key is pasted here, checked, then kept
+// (chmod 600, the old one beside it); nothing secret comes back to this page (nina-live setup/).
+class NinaSetupCard extends NinaBase {
+  get style() {
+    return `
+      .ints .item { align-items: center; } .ints .what { cursor: default; }
+      .pill.ok { background: #5d8a5b; } .pill.bad { background: #a3402a; } .pill.opt { background: rgba(255,255,255,.12); }
+      .guide { display: none; background: rgba(0,0,0,.42); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+      .guide .gt { font-weight: 600; font-size: 1.05em; } .guide .stt { font-weight: 600; margin: 8px 0 2px; }
+      .guide .txt { font-size: .95em; } .guide details { margin: 6px 0; font-size: .88em; color: rgba(255,255,255,.85); }
+      .guide textarea { width: 100%; box-sizing: border-box; min-height: 90px; font: .85em monospace; color: #fff;
+                        background: rgba(0,0,0,.4); border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 7px 10px; }
+      .res { margin: 6px 0; font-size: .92em; } .res.ok { color: #9fd49a; } .res.bad { color: #f2a08c; }
+      .res .hint { color: rgba(255,255,255,.85); margin-top: 3px; }
+      .qr { display: none; text-align: center; margin: 8px 0; } .qr img { width: 220px; height: 220px; background: #fff; padding: 10px; border-radius: 12px; }
+      .acts { flex-wrap: wrap; } .foot { flex-wrap: wrap; } .foot label { width: auto; display: flex; gap: 6px; align-items: center; }
+      .foot input[type=checkbox] { flex: none; width: 16px; height: 16px; accent-color: #d97757; }`;
+  }
+  setConfig(c) {
+    this.c = c || {};
+    if (this.root) return;
+    const el = this.frame("agenda", 2, "mdi:key-chain", "Her setup", "her keys, her Google account, her channels: one at a time");
+    el.innerHTML = `
+      <div class="guide">
+        <div><span class="gt"></span><span class="pill gs"></span></div>
+        <div class="stt"></div><div class="txt"></div>
+        <details><summary>What Nina says</summary><div class="say"></div></details>
+        <div class="row acts"><button class="ghost open">Open the page ↗</button><button class="ghost again">Say it again</button></div>
+        <div class="in secret"><div class="row"><input class="key" type="password" autocomplete="off" spellcheck="false" placeholder="paste the key here"><button class="give">Check and keep</button></div></div>
+        <div class="in client"><div class="row"><label>One made before</label><select class="found"></select><button class="ghost pick">Use it</button></div>
+          <textarea class="json" spellcheck="false" placeholder="or paste the downloaded JSON here"></textarea><div class="row"><button class="giveJson">Check and keep</button></div></div>
+        <div class="in signin"><div class="row"><button class="signin">Sign in with Google ↗</button></div></div>
+        <div class="in whatsapp"><div class="row"><button class="link">Show the code</button></div><div class="qr"><img alt="QR code to scan"></div></div>
+        <div class="res"></div>
+        <div class="row acts"><button class="ghost back">Back</button><button class="ghost check">Check</button><button class="ghost skip">Skip this step</button>
+          <button class="short"></button><button class="next">Next</button><button class="ghost close">Close</button></div>
+      </div>
+      <div class="list ints"></div>
+      <div class="row foot"><label><input type="checkbox" class="narrate"> Nina says each step</label>
+        <button class="restart" style="display:none">Restart Nina</button><button class="ghost refresh">Check all again</button><span class="note msg"></span></div>`;
+    const q = (x) => this.root.querySelector(x);
+    const go = (a, arg, page) => { if (page) this.open(page); return this.act(a, arg); };
+    q(".open").addEventListener("click", () => this.open(this.cur?.url));
+    q(".again").addEventListener("click", () => this.act("setup_say"));
+    q(".give").addEventListener("click", () => { const v = q(".key").value; q(".key").value = ""; if (v.trim()) this.act("setup_value", v); });
+    q(".key").addEventListener("keydown", (e) => { if (e.key === "Enter") q(".give").click(); });
+    q(".pick").addEventListener("click", () => q(".found").value && this.act("setup_value", "file:" + q(".found").value));
+    q(".giveJson").addEventListener("click", () => { const v = q(".json").value; if (v.trim()) { q(".json").value = ""; this.act("setup_value", v); } });
+    q(".signin").addEventListener("click", async () => {
+      const w = this.tab("about:blank"); // opened by the click itself (a page opened later is blocked)
+      const r = await this.act("setup_signin");
+      const u = this.v?.active?.signin?.url;
+      if (r?.error || !u) { w?.close?.(); return; }
+      if (w) w.location.href = u; else this.open(u);
+    });
+    q(".link").addEventListener("click", () => this.act("setup_link"));
+    q(".check").addEventListener("click", () => this.act("setup_check"));
+    q(".back").addEventListener("click", () => go("setup_back", "", this.page(-1)));
+    q(".skip").addEventListener("click", () => go("setup_skip", "", this.page(1)));
+    q(".next").addEventListener("click", () => {
+      const a = this.v?.active, manual = a?.current?.manual, ok = a?.result?.ok;
+      go(manual ? "setup_done" : "setup_next", "", manual || ok ? this.page(1) : "");
+    });
+    q(".short").addEventListener("click", () => this.act("setup_done"));
+    q(".close").addEventListener("click", () => this.act("setup_close"));
+    q(".narrate").addEventListener("change", (e) => this.act("setup_narrate", e.target.checked ? "on" : "off"));
+    q(".restart").addEventListener("click", () => this.act("setup_restart", "", "restarting: back in a few seconds"));
+    q(".refresh").addEventListener("click", () => this.act("setup_status", "", "checking…"));
+  }
+  connectedCallback() {
+    if (this.listening) return;
+    this.listening = true;
+    api("/api/state").then((s) => this.take(s.facts?.settings?.setup)).catch(() => (this.root.querySelector(".msg").textContent = "her panel is not reachable"));
+    stageStream(PANEL).addEventListener("ev", (m) => {
+      const e = JSON.parse(m.data);
+      if (e.ev === "settings") this.take(e.setup);
+      else if (e.ev === "wa_status") this.qr(e);
+    });
+  }
+  // the one tab of the guide: each step's page in it (NinaApp.open on her tablet: its system browser)
+  tab(url) {
+    if (window.NinaApp?.open && url !== "about:blank") { window.NinaApp.open(url); return null; }
+    return window.open(url, "nina-setup");
+  }
+  open(url) { if (url) this.tab(url); }
+  // the page of the step d steps from this one ("" none, or past the last)
+  page(d) {
+    const a = this.v?.active; if (!a || a.done) return "";
+    const it = (this.v.integrations || []).find((x) => x.id === a.integration);
+    return it?.pages?.[a.step + d] || "";
+  }
+  async act(action, arg, wait) {
+    const m = this.root.querySelector(".msg");
+    if (wait) m.textContent = wait;
+    const r = await api("/api/do", { action, arg: arg || "" }).catch((e) => ({ error: String(e) }));
+    m.textContent = r?.error ? r.error : "";
+    return r;
+  }
+  qr(e) {
+    const q = (x) => this.root.querySelector(x);
+    if (e.state === "qr" && e.png) { q(".qr").style.display = "block"; q(".qr img").src = e.png; }
+    else { q(".qr").style.display = "none"; if (e.state === "linked") this.act("setup_check"); }
+  }
+  take(v) {
+    if (!v) return;
+    this.v = v;
+    const q = (x) => this.root.querySelector(x);
+    q(".narrate").checked = !!v.narrate;
+    q(".restart").style.display = v.restart ? "" : "none";
+    // the integrations: what each gives her, whether it works, Add
+    const box = q(".ints"); box.replaceChildren();
+    const ok = Object.fromEntries((v.integrations || []).map((i) => [i.id, i.status?.ok]));
+    for (const it of v.integrations || []) {
+      const row = document.createElement("div"); row.className = "item";
+      const what = document.createElement("div"); what.className = "what";
+      const b = document.createElement("b"); b.textContent = it.title;
+      const pill = document.createElement("span");
+      pill.className = "pill " + (it.status?.ok ? "ok" : it.status ? (it.optional ? "opt" : "bad") : "opt");
+      pill.textContent = it.status?.ok ? "works" : it.status ? (it.optional ? "optional" : "not set") : "…";
+      const d = document.createElement("div"); d.textContent = it.why + (it.status?.detail ? " · " + it.status.detail : "");
+      what.append(b, pill, d);
+      const add = document.createElement("button"); add.className = it.status?.ok ? "ghost" : "";
+      add.textContent = it.status?.ok ? "Again" : "Add";
+      const blocked = (it.needs || []).filter((n) => !ok[n]);
+      if (blocked.length) add.title = "first: " + blocked.join(", ");
+      add.addEventListener("click", () => { if (!it.status?.ok) this.open(it.pages?.[0]); this.act("setup_add", it.id); }); // what works needs no page
+      row.append(what, add); box.appendChild(row);
+    }
+    // the integration being added: its step
+    const a = v.active, g = q(".guide");
+    g.style.display = a ? "block" : "none";
+    if (!a) return;
+    q(".gt").textContent = a.title;
+    q(".gs").textContent = a.done ? "done" : `step ${a.step + 1} of ${a.of}`;
+    const c = a.done ? null : a.current; this.cur = c;
+    for (const x of this.root.querySelectorAll(".in")) x.style.display = c && x.classList.contains(c.input) ? "" : "none";
+    q(".stt").textContent = c ? c.title : (a.status?.ok ? "Set and working." : "Not complete.");
+    q(".txt").textContent = c ? c.text : (a.status?.detail || "") + (a.skipped?.length ? ` (skipped: ${a.skipped.join(", ")})` : "");
+    q(".say").textContent = c?.say || "";
+    q(".open").style.display = c?.url ? "" : "none";
+    q(".again").style.display = c?.say ? "" : "none";
+    for (const k of [".back", ".check", ".skip", ".next"]) q(k).style.display = c ? "" : "none";
+    q(".back").style.display = c && a.step > 0 ? "" : "none";
+    q(".check").style.display = c && !c.manual && c.input !== "signin" ? "" : "none";
+    q(".short").style.display = c?.shortcut ? "" : "none"; q(".short").textContent = c?.shortcut || "";
+    q(".next").textContent = c?.manual ? "Done" : (a.step + 1 === a.of ? "Finish" : "Next");
+    if (c?.input === "client") {
+      const f = q(".found"); f.replaceChildren();
+      for (const n of a.clients || []) { const o = document.createElement("option"); o.value = o.textContent = n; f.appendChild(o); }
+      f.parentElement.style.display = (a.clients || []).length ? "" : "none";
+    }
+    const r = a.result, res = q(".res"); res.replaceChildren(); res.className = "res" + (r ? (r.ok ? " ok" : " bad") : "");
+    if (r) {
+      const d = document.createElement("div"); d.textContent = (r.ok ? "✓ " : "✗ ") + (r.detail || ""); res.appendChild(d);
+      if (r.hint && !r.ok) { const h = document.createElement("div"); h.className = "hint"; h.textContent = r.hint; res.appendChild(h); }
+    }
+  }
+}
+
 // ---- her task models: the chain her tasks (and her WhatsApp answers) use, in order (2026-11-26) ----
 // The models of her config (the model and its fallbacks: their keys are there), each on or off and
 // moved up or down; the first on is tried first, a busy or silent one hands over to the next. Saved
@@ -1046,6 +1210,7 @@ customElements.define("nina-media-card", NinaMediaCard);
 customElements.define("nina-chat-card", NinaChatCard);
 customElements.define("nina-whatsapp-card", NinaWhatsAppCard);
 customElements.define("nina-models-card", NinaModelsCard);
+customElements.define("nina-setup-card", NinaSetupCard);
 window.customCards = window.customCards || [];
 window.customCards.push(
   { type: "nina-settings-card", name: "Nina: settings", description: "Her name, persona, voice and temperament." },

@@ -71,6 +71,7 @@ func main() {
 	if err != nil {
 		stdlog.Fatal(err)
 	}
+	backs.HassURL, backs.HassToken = c.Hass.URL, c.Hass.Token // her setup checks the token
 	if err := app.Run(ctx, c.Config, backs); err != nil {
 		stdlog.Fatal(err)
 	}
