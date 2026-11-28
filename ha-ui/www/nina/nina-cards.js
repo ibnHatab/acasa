@@ -1033,7 +1033,7 @@ class NinaSetupCard extends NinaBase {
     });
     q(".link").addEventListener("click", () => this.act("setup_link"));
     q(".check").addEventListener("click", () => this.act("setup_check"));
-    q(".back").addEventListener("click", () => go("setup_back", "", this.page(-1)));
+    q(".back").addEventListener("click", () => this.act("setup_back")); // its page: Open the page (Google's pages cut the tab's name: a new tab each time)
     q(".skip").addEventListener("click", () => go("setup_skip", "", this.page(1)));
     q(".next").addEventListener("click", () => {
       const a = this.v?.active, manual = a?.current?.manual, ok = a?.result?.ok;
@@ -1121,7 +1121,7 @@ class NinaSetupCard extends NinaBase {
     q(".back").style.display = c && a.step > 0 ? "" : "none";
     q(".check").style.display = c && !c.manual && c.input !== "signin" ? "" : "none";
     q(".short").style.display = c?.shortcut ? "" : "none"; q(".short").textContent = c?.shortcut || "";
-    q(".next").textContent = c?.manual ? "Done" : (a.step + 1 === a.of ? "Finish" : "Next");
+    q(".next").textContent = c?.manual ? "Done" : "Next"; // the words she says ("press Next", "press Done")
     if (c?.input === "client") {
       const f = q(".found"); f.replaceChildren();
       for (const n of a.clients || []) { const o = document.createElement("option"); o.value = o.textContent = n; f.appendChild(o); }
