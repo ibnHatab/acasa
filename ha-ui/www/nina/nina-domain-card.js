@@ -16,6 +16,8 @@
 //   compact: true            # no header row: the icon small in the corner (a crowded page)
 //   focus: "15% 20%"         # the crop's centre (object-position): a small card shows the scene's object
 //   entities: [light.bedroom_led]  # their changes bloom it too (the domain used from Home Assistant, not by Nina)
+//   view: "^(calendar|list|todo)"  # her own screens (no Home Assistant): her context lines whose keys match, as
+//                            # the card's content (her panel's view event: the weather, the agenda, the timers, the players)
 const EXPAND = import(new URL(`nina-expand.js?v=m${Math.floor(Date.now() / 60000)}`, import.meta.url)); // a card opened large (its own version: fresh each minute, like nina-boot's)
 // one event stream to her panel per page, shared by all of Nina's modules (a browser keeps six
 // connections to a host: a stream each, on two pages, left none for her panel's other requests)
@@ -42,7 +44,11 @@ const bus = window.__ninaDomainBus || (window.__ninaDomainBus = {
     ninaStream(this.panel).addEventListener("ev", (m) => {
       const e = JSON.parse(m.data);
       if (e.ev === "tool") this.cards.forEach((c) => c.cue(e));
+      if (e.ev === "view") { this.view = e.lines || []; this.cards.forEach((c) => c.showView()); }
     });
+    fetch(`${this.panel}/api/state`).then((r) => r.json()).then((s) => { // the last one, sticky on her panel
+      if (!this.view && s.facts?.view) { this.view = s.facts.view.lines || []; this.cards.forEach((c) => c.showView()); }
+    }).catch(() => {});
   },
 });
 
@@ -92,6 +98,8 @@ class NinaDomainCard extends HTMLElement {
   ha-card.bloom .caption { max-height: 120px; opacity: 1; }
   .inner { position: relative; margin-top: 8px; }
   .inner:empty { display: none; margin: 0; }
+  .vl { font-size: .92em; line-height: 1.35; margin: 4px 0; } .vl b { font-weight: 600; }
+  ha-card.tall .vl { font-size: 1.02em; margin: 8px 0; }
   .swatches { position: relative; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
   .swatches:empty { display: none; }
   .sw { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(255,255,255,.6); cursor: pointer; padding: 0;
@@ -142,8 +150,9 @@ class NinaDomainCard extends HTMLElement {
       this.play(); // as in the review: the first frame, a pause, the next
       this.tools = this.c.tools || Object.entries(sc.tools).filter(([, s]) => s === this.c.scene).map(([t]) => t);
     });
-    if (this.c.card) this.inner(this.c.card);
+    if (this.c.card && window.loadCardHelpers) this.inner(this.c.card);
     bus.start();
+    this.showView();
   }
   async open() {
     const { expand, card } = await EXPAND;
@@ -173,7 +182,21 @@ class NinaDomainCard extends HTMLElement {
       this.seen[id] = key;
     }
   }
-  connectedCallback() { bus.cards.add(this); }
+  // showView: her context lines whose keys match config view (her own screens: no Home Assistant card inside)
+  showView() {
+    if ((!this.c.view && !this.c.empty) || this.child || window.loadCardHelpers) return; // inside Home Assistant: its own card
+    const re = this.c.view ? new RegExp(this.c.view) : null, box = this.root.querySelector(".inner");
+    const ls = re ? (bus.view || []).filter((l) => re.test(l.key)) : [];
+    box.replaceChildren(...ls.slice(0, this.c.compact ? 2 : 12).map((l) => {
+      const d = document.createElement("div"), i = l.text.indexOf(":");
+      d.className = "vl";
+      if (i > 0 && i < 40) { const b = document.createElement("b"); b.textContent = l.text.slice(0, i); d.append(b, l.text.slice(i)); }
+      else d.textContent = l.text;
+      return d;
+    }));
+    if (!ls.length && this.c.empty) { const d = document.createElement("div"); d.className = "vl"; d.textContent = this.c.empty; box.replaceChildren(d); }
+  }
+  connectedCallback() { bus.cards.add(this); this.showView?.(); }
   disconnectedCallback() { bus.cards.delete(this); }
   getCardSize() { return 2; }
   say(text) {

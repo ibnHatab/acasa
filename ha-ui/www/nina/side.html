@@ -1,0 +1,106 @@
+<!doctype html>
+<!-- Nina's side, on her own panel (the user, 2026-11-28: her cards off the Home Assistant dashboards). The
+     right half of her screen (shell.html frames it where it framed Home Assistant's nina-side): the same
+     cards in the same pages (Home, Music, Light, Air, Agenda, Weather, Surprises, Settings), with
+     nothing of Home Assistant's. The domain cards show her own context lines (her panel's view event:
+     the weather, the calendars and lists, the timers, the players), her tools bloom them, and each tool
+     brings its page up for a while (views.json), as nina-view.js did on the dashboards. Videos and photos:
+     the stage (nina-media-card), the photos from her own Google album. -->
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nina's side</title>
+<style>
+  html, body { margin: 0; min-height: 100%; background: #14100e; color: #e9ddd3; font: 16px system-ui, sans-serif; }
+  body { padding: 8px 8px 12px 4px; box-sizing: border-box; }
+  nav { display: flex; gap: 4px; margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; }
+  nav button { flex: none; height: 34px; padding: 0 12px; border: 0; border-radius: 999px; background: rgba(233,221,211,.08); color: #c9b8aa;
+               font: inherit; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; --mdc-icon-size: 18px; }
+  nav button.on { background: #d97757; color: #fff; }
+  .page { display: none; flex-direction: column; gap: 8px; } .page.on { display: flex; }
+  .row { display: flex; gap: 8px; } .row > * { flex: 1; min-width: 0; }
+  .clock h1 { font-size: 3.2em; font-weight: 300; margin: 0; line-height: 1; } .clock div { color: #c9b8aa; }
+  .clock span { opacity: .6; }
+</style></head>
+<body>
+  <nav></nav>
+  <main></main>
+  <script type="module">
+    import "./nina-shim.js";
+    import "./nina-domain-card.js";
+    import "./nina-cards.js";
+    const q = new URLSearchParams(location.search);
+    const playlist = q.get("playlist") || "PLSh0S6uPqqgA"; // the Claudia videos, as on her Home Assistant screen
+    const swatches = [ // the bedroom light's colours (Alexa's names): a swatch asks Nina, as if said
+      { name: "warm", color: "#f6c27a", say: "make the bedroom light warm white" }, { name: "amber", color: "#f0a03c", say: "make the bedroom light amber" },
+      { name: "sunset", color: "#e8743b", say: "make the bedroom light sunset" }, { name: "ember", color: "#b9442a", say: "make the bedroom light ember" },
+      { name: "white", color: "#f4f1ea", say: "make the bedroom light white" }, { name: "daylight", color: "#dfeaf5", say: "make the bedroom light daylight" },
+      { name: "cool", color: "#b9d4f0", say: "make the bedroom light cool white" }];
+    const AGENDA = "^(calendar|list|todo)", WEATHER = "^weather", MUSIC = "^media_player", TIMERS = "^timer";
+    const D = (c) => ["nina-domain-card", c];
+    // the pages: the dashboard's views (dashboards/nina.yaml), each card's Home Assistant card replaced by her lines
+    const PAGES = [
+      { path: "home", title: "Home", icon: "mdi:home-heart", cards: [
+        ["clock"],
+        D({ compact: true, scene: "weather", focus: "12% 18%", title: "Weather", icon: "mdi:weather-partly-cloudy", view: WEATHER, empty: "Ask Nina about the weather." }),
+        D({ compact: true, scene: "music", focus: "92% 55%", title: "Radio", icon: "mdi:radio", view: MUSIC, empty: "Ask for a kind of music, a station, or “something”." }),
+        ["row", [D({ compact: true, scene: "agenda", focus: "90% 45%", title: "Agenda", icon: "mdi:calendar-heart", view: AGENDA, empty: "Nothing in the calendar soon." }),
+                 D({ scene: "timers", focus: "45% 78%", title: "Timers", subtitle: "none running", icon: "mdi:timer-sand", countdown: true, view: TIMERS })]],
+        ["row", [["nina-media-card", { show: "videos", videos: { playlist } }], ["nina-media-card", { show: "photos", photos: { album: q.get("album") || "Nina's gallery", interval: 10 } }]]],
+        D({ compact: true, scene: "air", focus: "8% 35%", title: "Air", icon: "mdi:fan", empty: "Ask Nina to air a room." })] },
+      { path: "music", title: "Music", icon: "mdi:music", cards: [
+        D({ scene: "music", title: "Music", subtitle: "ask for a kind of music, a station, or “something”", icon: "mdi:radio", height: "584px", view: MUSIC })] },
+      { path: "light", title: "Light", icon: "mdi:lightbulb-on", cards: [
+        D({ scene: "glow", title: "Bedroom light", subtitle: "a colour asks Nina, through the kitchen Echo; “time for bed” fades it like a sunset", icon: "mdi:ceiling-light", height: "584px", swatches })] },
+      { path: "air", title: "Air", icon: "mdi:fan", cards: [D({ scene: "air", title: "Air", icon: "mdi:fan", height: "584px" })] },
+      { path: "agenda", title: "Agenda", icon: "mdi:calendar-heart", cards: [
+        D({ scene: "agenda", title: "Agenda", icon: "mdi:calendar-heart", height: "584px", view: AGENDA, empty: "Nothing in the calendar or the lists." })] },
+      { path: "weather", title: "Weather", icon: "mdi:weather-partly-cloudy", cards: [
+        D({ scene: "weather", title: "Weather", icon: "mdi:weather-partly-cloudy", height: "584px", view: WEATHER, empty: "No forecast yet." })] },
+      { path: "surprises", title: "Surprises", icon: "mdi:flag", cards: [
+        ["nina-surprises-card", { list_height: "210px" }], ["nina-activity-card", { list_height: "170px" }]] },
+      { path: "settings", title: "Settings", icon: "mdi:account-cog", cards: [
+        ["nina-settings-card", {}], ["nina-bubble-card", { room: 5 }], ["nina-models-card", {}], ["nina-whatsapp-card", {}]] },
+    ];
+    const make = ([tag, conf]) => {
+      if (tag === "clock") {
+        const d = document.createElement("div"); d.className = "clock";
+        const tick = () => { const n = new Date();
+          d.innerHTML = `<h1>${n.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}</h1><div>${n.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}</div>`; };
+        tick(); setInterval(tick, 10000); return d;
+      }
+      if (tag === "row") { const r = document.createElement("div"); r.className = "row"; r.append(...conf.map(make)); return r; }
+      const el = document.createElement(tag);
+      try { el.setConfig(conf); } catch (e) { const d = document.createElement("div"); d.textContent = `${tag}: ${e.message}`; return d; }
+      return el;
+    };
+    const nav = document.querySelector("nav"), main = document.querySelector("main"), pages = {};
+    for (const p of PAGES) {
+      const sec = document.createElement("section"); sec.className = "page"; sec.dataset.path = p.path;
+      sec.append(...p.cards.map(make)); main.append(sec); pages[p.path] = sec;
+      const b = document.createElement("button"); b.dataset.path = p.path; b.title = p.title;
+      b.innerHTML = `<ha-icon icon="${p.icon}"></ha-icon><span>${p.title}</span>`;
+      b.addEventListener("click", () => go(p.path, true)); nav.append(b);
+    }
+    // the page her tools bring up (views.json), home again after return_after seconds without another
+    const conf = await fetch("views.json").then((r) => r.json()).catch(() => ({}));
+    const home = "home", back = (conf.return_after || 90) * 1000;
+    let timer;
+    function go(path, tapped) {
+      for (const [k, s] of Object.entries(pages)) s.classList.toggle("on", k === path);
+      nav.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.path === path));
+      clearTimeout(timer);
+      if (path !== home) timer = setTimeout(() => go(home), tapped ? back * 2 : back);
+    }
+    go(q.get("page") && pages[q.get("page")] ? q.get("page") : home);
+    const viewOf = (e) => { const t = (conf.tools || {})[e.name]; if (!t) return null; return typeof t === "string" ? t : t[(e.args || {}).intent] || t["*"] || null; };
+    ((window.__ninaStreams ||= {})[location.origin] ||= (() => { // her panel's one stream on this page (shared with the cards)
+      const t = new EventTarget();
+      const open = () => {
+        const es = new EventSource("/api/events");
+        for (const k of ["ev", "status"]) es.addEventListener(k, (m) => t.dispatchEvent(new MessageEvent(k, { data: m.data })));
+        es.onopen = () => t.dispatchEvent(new Event("up"));
+        es.onerror = () => { es.close(); t.dispatchEvent(new Event("down")); setTimeout(open, 5000); };
+      };
+      open(); return t;
+    })()).addEventListener("ev", (m) => { const e = JSON.parse(m.data); if (e.ev === "tool") { const v = viewOf(e); if (v && pages[v]) go(v); } });
+  </script>
+</body></html>

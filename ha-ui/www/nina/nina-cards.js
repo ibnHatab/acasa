@@ -308,7 +308,8 @@ class NinaPhotosCard extends HTMLElement {
     this.root.querySelector("ha-card").style.setProperty("--h", this.c.height);
   }
   set hass(h) { this._hass = h; if (!this.items && !this.loading) this.load(); }
-  connectedCallback() { if (this.items && !this.tm) this.next(); else if (this.c.scenes && !this.items && !this.loading) this.load(); }
+  // off Home Assistant (her own screens): her panel's album_photos, her own Google album
+  connectedCallback() { if (this.items && !this.tm) this.next(); else if ((this.c.scenes || !document.querySelector("home-assistant")) && !this.items && !this.loading) this.load(); }
   disconnectedCallback() { clearTimeout(this.tm); this.tm = null; }
   async load() {
     this.loading = true;
@@ -317,6 +318,15 @@ class NinaPhotosCard extends HTMLElement {
       const sc = await fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => ({ frames: {} }));
       this.items = Object.entries(sc.frames || {}).flatMap(([k, n]) => Array.from({ length: n }, (_, i) => `${ASSETS}scenes/${k}/${i + 1}.webp`));
       this.root.querySelector(".sub").textContent = this.c.sub || "Nina's scenes";
+    } else if (!this._hass) { // her own screens: the album from her panel (nina-live stage/photos.go), her scenes if none
+      const got = await new Promise((res) => {
+        const s = stageStream(PANEL), t = setTimeout(() => { s.removeEventListener("ev", on); res(null); }, 30000);
+        function on(m) { const e = JSON.parse(m.data); if (e.ev === "album_photos") { clearTimeout(t); s.removeEventListener("ev", on); res(e); } }
+        s.addEventListener("ev", on);
+        api("/api/do", { action: "album_photos", arg: this.c.album }).then((r) => { if (r?.error) { clearTimeout(t); s.removeEventListener("ev", on); res({ error: r.error }); } });
+      });
+      if (got?.photos?.length) { this.items = got.photos; this.root.querySelector(".sub").textContent = got.album || this.c.album; this.refresh(); }
+      else { this.c.scenes = true; this.loading = false; this.tries = 0; return this.load(); }
     } else try {
       const root = await ws("media-source://google_photos");
       for (const acct of root.children || []) {
@@ -338,6 +348,16 @@ class NinaPhotosCard extends HTMLElement {
     }
     for (let i = this.items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [this.items[i], this.items[j]] = [this.items[j], this.items[i]]; }
     this.i = -1; this.next();
+  }
+  refresh() { // Google's URLs last an hour: the album again before then, the place kept
+    clearTimeout(this.tRefresh);
+    this.tRefresh = setTimeout(async () => {
+      if (!this.isConnected) return;
+      const s = stageStream(PANEL);
+      const on = (m) => { const e = JSON.parse(m.data); if (e.ev === "album_photos" && e.photos?.length) { s.removeEventListener("ev", on); this.items = e.photos; this.refresh(); } };
+      s.addEventListener("ev", on);
+      api("/api/do", { action: "album_photos", arg: this.c.album }).catch(() => {});
+    }, 50 * 60000);
   }
   // The slideshow's machine (the user, 2026-11-27): "show" (a photo every interval) or "browse" (held).
   //   back            → browse, the previous photo
