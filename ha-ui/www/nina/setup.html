@@ -6,7 +6,11 @@
 <style>
   body { margin: 0; min-height: 100vh; background: #0d0b0a; font: 16px/1.4 system-ui, sans-serif; color: #fff; }
   main { max-width: 760px; margin: 0 auto; padding: 18px 14px 40px; }
-  h1 { font-weight: 600; font-size: 1.3em; margin: 4px 4px 14px; }
+  header { display: flex; align-items: center; gap: 12px; margin: 4px 4px 14px; }
+  h1 { font-weight: 600; font-size: 1.3em; margin: 0; flex: 1; }
+  a.back { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px 9px 12px; border-radius: 999px; background: #d97757;
+           color: #fff; text-decoration: none; font-weight: 500; }
+  a.back::before { content: ""; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffd9a8, #c96f2e); }
 </style>
 <script>
   // no Home Assistant here: its icon element stands in as a key (the card's head)
@@ -14,7 +18,7 @@
 </script>
 <script type="module" src="nina-cards.js"></script>
 </head><body><main>
-<h1>Nina: her setup</h1>
+<header><h1>Nina: her setup</h1><a class="back" href="shell.html" title="Her own screen">Back to Nina</a></header>
 <script type="module">
   // as Home Assistant does: the card configured, then put on the page
   await customElements.whenDefined("nina-setup-card");
