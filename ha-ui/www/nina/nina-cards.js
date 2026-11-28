@@ -1123,7 +1123,24 @@ class NinaSetupCard extends NinaBase {
       const blocked = (it.needs || []).filter((n) => !ok[n]);
       if (blocked.length) add.title = "first: " + blocked.join(", ");
       add.addEventListener("click", () => { if (!it.status?.ok) this.open(it.pages?.[0]); this.act("setup_add", it.id); }); // what works needs no page
-      row.append(what, add); box.appendChild(row);
+      row.append(what, add);
+      const gv = v.google || {};
+      if (it.id === "google" && (gv.signed_in || gv.prev)) { // her sign-in (creds): the account, what it allows; Sign out (revoked, kept as .prev)
+        const acct = document.createElement("div");
+        const names = { "calendar.events": "Calendar", tasks: "Tasks", "photoslibrary.appendonly": "Photos", "photoslibrary.readonly.appcreateddata": "Photos", "photospicker.mediaitems.readonly": "Photos" };
+        const allowed = [...new Set((gv.scopes || []).map((x) => names[x]).filter(Boolean))];
+        acct.textContent = gv.signed_in
+          ? `signed in${gv.account ? " as " + gv.account : ""}${allowed.length ? " · allows " + allowed.join(", ") : ""}${gv.granted ? " · since " + new Date(gv.granted).toLocaleDateString() : ""}`
+          : "signed out (the old sign-in kept as .prev)";
+        what.append(acct);
+        if (gv.signed_in) {
+          const out = document.createElement("button"); out.className = "ghost"; out.textContent = "Sign out";
+          out.title = "Revoke her sign-in at Google (the file is kept as .prev)";
+          out.addEventListener("click", () => this.act("setup_signout", "", "signing out…"));
+          row.append(out);
+        }
+      }
+      box.appendChild(row);
     }
     // the integration being added: its step
     const a = v.active, g = q(".guide");
