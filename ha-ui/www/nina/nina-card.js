@@ -101,7 +101,7 @@ const hub = window.__ninaHub || (window.__ninaHub = {
     };
     {
       const es = stream;
-      es.addEventListener("status", (m) => { this.status = JSON.parse(m.data); this.emit(); });
+      es.addEventListener("status", (m) => { this.status = JSON.parse(m.data); this.cards.forEach((c) => c.stageDuck?.(this.status)); this.emit(); });
       es.addEventListener("ev", (m) => {
         const e = JSON.parse(m.data);
         switch (e.ev) {
@@ -171,6 +171,8 @@ const hub = window.__ninaHub || (window.__ninaHub = {
           case "persona": if (e.artwork && e.artwork !== this.persona) { const had = this.persona; this.persona = e.artwork; if (had) this.cue("persona"); this.emit(); } break;
           case "surprises": { const was = this.surprises?.unseen || 0; this.surprises = { unseen: e.unseen || 0, open: e.open || 0 }; if (this.surprises.unseen > was) this.cue("surprise"); this.emit(); break; }
           case "tool": this.cue(e.name); this.cards.forEach((c) => c.guest?.(e)); break;
+          case "stage": this.cards.forEach((c) => c.stageEv?.(e)); break; // her screen tool: videos, photos, close, ⏮ ⏭ ⏸ ▶
+          case "album_photos": this.cards.forEach((c) => c.albumEv?.(e)); break; // an album's photos, asked for by the stage
         }
       });
       es.addEventListener("down", () => { this.status = null; this.emit(); });
@@ -307,6 +309,21 @@ class NinaCard extends HTMLElement {
   .gbar button.main { background: #d97757; color: #fff; }
   .gcap { font-size: 1.05em; line-height: 1.4; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
   .gnote { font-size: .8em; opacity: .85; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+  ha-card > .stage { position: absolute; left: 12px; right: 12px; bottom: 76px; height: min(440px, 50%); z-index: 4; border-radius: 22px;
+                     overflow: hidden; border: 1px solid rgba(233,221,211,.18); box-shadow: 0 12px 40px rgba(0,0,0,.5); background: #000; }
+  ha-card > .stage[hidden] { display: block; visibility: hidden; left: -9999px; right: auto; width: 320px; } /* docked: out of sight, its video playing on */
+  .sbody { position: absolute; left: 0; right: 0; top: 0; bottom: 60px; }
+  .sbody iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .sbody img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.2s ease; }
+  .sbody img.on { opacity: 1; }
+  .shead { position: absolute; left: 0; right: 0; top: 0; padding: 12px 12px 18px 16px; display: flex; align-items: center; gap: 10px; color: #e9ddd3;
+           background: linear-gradient(to bottom, rgba(20,16,14,.75), transparent); }
+  .sctl { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: #14100e; color: #e9ddd3; }
+  .sctl button { width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0; background: rgba(233,221,211,.12); color: #e9ddd3; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .sctl button.main { background: #d97757; color: #fff; }
+  .scount { margin-left: auto; font-size: .8em; opacity: .75; font-variant-numeric: tabular-nums; }
+  @media (orientation: landscape) and (min-width: 700px) { /* the tablet on its side: the card in the right half, Nina on the left */
+    ha-card > .guest, ha-card > .stage:not([hidden]) { left: 50%; right: 12px; top: 76px; bottom: 76px; height: auto; } }
   ha-card > .dock { position: absolute; right: 0; top: 22%; z-index: 4; display: flex; flex-direction: column; gap: 8px; }
   .tab { width: 60px; height: 68px; padding: 0; background: rgba(20,16,14,.86); border: 1px solid rgba(233,221,211,.18); border-right: 0;
          border-radius: 16px 0 0 16px; color: #e9ddd3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: inherit; font-size: 11px; cursor: pointer; }
@@ -398,6 +415,14 @@ class NinaCard extends HTMLElement {
       <button class="gbtn gdock" title="To the edge" aria-label="Minimize to the edge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <button class="gbtn gclose" title="Close" aria-label="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="gbody"></div><div class="gnote"></div></div></div>
+  <div class="stage" hidden><div class="sbody"></div>
+    <div class="shead"><span class="gicon"></span><div class="gwho"><span class="gtitle"></span><span class="gsub"></span></div>
+      <button class="gbtn sdock" title="To the edge" aria-label="Minimize to the edge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="gbtn sclose" title="Close" aria-label="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="sctl"><button data-f="prev" title="Previous" aria-label="Previous"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="main" data-f="play" title="Play or pause" aria-label="Play or pause"></button>
+      <button data-f="next" title="Next" aria-label="Next"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      <span class="scount"></span></div></div>
   <div class="dock"></div>
   <div class="top"><div class="orb asleep"></div>
     <div class="who"><div class="name">Nina <span class="flag" hidden></span></div><div class="state">…</div></div>
@@ -459,6 +484,15 @@ class NinaCard extends HTMLElement {
           else if (k === "info") this.guestEnd("info");
           else this.guestMin();
         });
+      }
+      { // the stage's own controls (videos, photos): ⏮ ⏸ ▶ ⏭, to the edge, ×
+        const sq = (x) => this.root.querySelector(x);
+        sq(".sdock").addEventListener("click", () => this.stageMin());
+        sq(".sclose").addEventListener("click", () => this.stageEnd());
+        this.root.querySelectorAll(".sctl button").forEach((b) => b.addEventListener("click", () => this.stageAct(b.dataset.f)));
+        let x0 = null; // a swipe right: to the edge
+        sq(".stage").addEventListener("touchstart", (ev) => { x0 = ev.touches[0].clientX; }, { passive: true });
+        sq(".stage").addEventListener("touchend", (ev) => { if (x0 !== null && ev.changedTouches[0].clientX - x0 > 80) this.stageMin(); x0 = null; });
       }
       if (window.NinaApp) // her app's radio: a stop button while it plays (even when she cannot answer)
         this.root.querySelector("button.radiost").addEventListener("click", () => { window.NinaApp.set("radio", false); setTimeout(() => this.showPrefs(), 300); });
@@ -560,7 +594,9 @@ class NinaCard extends HTMLElement {
   }
   guestOpen(key, sc) {
     sc ||= this.scenes || { frames: {}, frame_seconds: 2.5, show_seconds: 12 };
+    if (key === "stage") { this.stageShow(); return; }
     const g = this.guests[key], box = this.root.querySelector(".guest");
+    if (this.stg && !this.stg.min) this.stageMin(); // one card over her face: the stage goes to its tab
     this.openGuest = key;
     const n = sc.frames[g.scene] || 1, imgs = this.root.querySelector(".gimgs");
     imgs.replaceChildren(...Array.from({ length: n }, (_, i) => { const im = document.createElement("img"); im.src = `${ASSETS}scenes/${g.scene}/${i + 1}.webp`; im.alt = ""; return im; }));
@@ -612,7 +648,7 @@ class NinaCard extends HTMLElement {
     };
     draw(); this.gTick = setInterval(draw, 1000);
   }
-  running(key) { return key === "music" ? (window.NinaApp ? window.NinaApp.get("radio") : true) : key === "timers" ? !!(this.guests?.timers?.end > Date.now()) : false; }
+  running(key) { if (key === "stage") return !!this.stg; return key === "music" ? (window.NinaApp ? window.NinaApp.get("radio") : true) : key === "timers" ? !!(this.guests?.timers?.end > Date.now()) : false; }
   guestTouch(sc) { // the open card stays 8 s more (running: then docks) or show_seconds (nothing running: then closes)
     sc ||= this.scenes || { show_seconds: 12 };
     const key = this.openGuest; if (!key) return;
@@ -639,18 +675,169 @@ class NinaCard extends HTMLElement {
   }
   guestDock() { // the tabs: the running guests not open, newest on top; still icons, one word
     const dock = this.root.querySelector(".dock");
-    const keys = Object.keys(this.guests || {}).filter((k) => k !== this.openGuest && k !== "info" && this.running(k))
+    const keys = Object.keys(this.guests || {}).filter((k) => k !== this.openGuest && k !== "info" && k !== "stage" && this.running(k))
       .sort((a, b) => this.guests[b].at - this.guests[a].at);
     const icon = { music: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l10-4"/><circle cx="8" cy="14" r="2.5"/><path d="M14 12h4M14 16h4"/></svg>',
-      timers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>' };
+      timers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>',
+      stage: this.stageIcon() };
+    if (this.stg?.min) keys.unshift("stage"); // the stage docked: its tab, newest on top
     dock.replaceChildren(...keys.map((k) => {
       const b = document.createElement("button"); b.className = "tab"; b.dataset.k = k;
-      b.setAttribute("aria-label", (k === "music" ? "The radio" : "The timer") + ": open its card");
-      b.innerHTML = icon[k] + `<span>${k === "music" ? "radio" : this.left(this.guests[k])}</span>`;
+      b.setAttribute("aria-label", ({ music: "The radio", timers: "The timer", stage: this.stg?.what === "videos" ? "The video" : "The photos" })[k] + ": open its card");
+      b.innerHTML = icon[k] + `<span>${k === "music" ? "radio" : k === "stage" ? (this.stg?.what === "videos" ? "video" : "photos") : this.left(this.guests[k])}</span>`;
       b.addEventListener("click", () => this.guestOpen(k));
       return b;
     }));
     if (this.guests?.music && !this.running("music")) delete this.guests.music; // stopped elsewhere (her card's ■ radio, a crash)
+  }
+
+  // ---- the stage: videos and photos as a guest over her face (the user, 2026-11-28: the Home Assistant
+  // cards ported to her own screens). Her screen tool's "stage" events open it (videos: her playlist, a
+  // search's videos, a playlist; photos: an album, from her own Google albums through album_photos, or
+  // her scenes where there are none). It docks only when asked (the chevron, a swipe right, another card
+  // opening): it is watched, not glanced at. Docked, a video plays on and a slideshow holds; × closes it.
+  // Her voice and the person speaking duck the video to a quarter, as the radio is ducked.
+  stageIcon() {
+    return this.stg?.what === "videos"
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/></svg>';
+  }
+  stageEv(e) {
+    if (!window.NinaApp && !this.c.guests) return;
+    const s = e.show;
+    if (s === "close") return this.stageEnd();
+    if (({ next: 1, previous: 1, pause: 1, play: 1 })[s]) {
+      if (!this.stg) return;
+      if (s === "next" || s === "previous") this.stageAct(s === "next" ? "next" : "prev");
+      else if ((s === "pause") === !!this.stg.playing) this.stageAct("play");
+      return;
+    }
+    if (s === "videos" || s === "photos") this.stageOpen(s, e);
+  }
+  stageOpen(what, o) {
+    this.stageEnd(true);
+    if (this.openGuest) this.guestMin();
+    const st = this.stg = { what, playing: true, muted: false, vol: 70, duck: false, min: false, at: Date.now() };
+    const q = (x) => this.root.querySelector(x), body = q(".sbody");
+    q(".stage .gicon").innerHTML = this.stageIcon();
+    q(".stage .gtitle").textContent = o.title || (what === "videos" ? "Videos" : "Photos");
+    q(".stage .gsub").textContent = what === "videos" ? (o.videos?.length ? `${o.videos.length} found` : "") : (o.album || "Nina's gallery");
+    q(".scount").textContent = "";
+    if (what === "videos") {
+      const v = this.c.videos || { playlist: "PLSh0S6uPqqgA" }; // her own playlist (the Claudia videos), as on her Home Assistant screen
+      const p = new URLSearchParams({ autoplay: 1, mute: 1, loop: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 0, enablejsapi: 1, origin: location.origin });
+      let src;
+      if (o.videos?.length) { p.set("playlist", o.videos.join(",")); src = `https://www.youtube-nocookie.com/embed/${o.videos[0]}?${p}`; }
+      else if (o.playlist || v.playlist) { p.set("list", o.playlist || v.playlist); src = `https://www.youtube-nocookie.com/embed/videoseries?${p}`; }
+      else { p.set("playlist", v.video); src = `https://www.youtube-nocookie.com/embed/${v.video}?${p}`; }
+      body.innerHTML = `<iframe allow="autoplay; encrypted-media; fullscreen" referrerpolicy="strict-origin-when-cross-origin" title="Videos"></iframe>`;
+      const fr = body.querySelector("iframe");
+      st.cmd = (func, args = []) => fr.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "*");
+      // YouTube's handshake: "listening" until the player answers; then its volume, and play
+      let ready = false;
+      st.hello = setInterval(() => fr.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1 }), "*"), 400);
+      st.onMsg = (m) => {
+        if (m.source !== fr.contentWindow) return;
+        let d; try { d = JSON.parse(m.data); } catch { return; }
+        if (!ready) { ready = true; clearInterval(st.hello); this.stageVolume(); st.cmd("playVideo"); }
+        const i = d.info || {};
+        if (i.playerState !== undefined) { st.playing = i.playerState === 1 || i.playerState === 3; this.stageMark(); }
+      };
+      addEventListener("message", st.onMsg);
+      fr.src = src;
+      if (window.NinaApp?.get("radio")) { window.NinaApp.set("radio", false); this.guestEnd("music"); } // the radio stops for the video
+    } else {
+      body.innerHTML = `<img alt=""><img alt="">`;
+      st.album = o.album || "";
+      this.api("/api/do", { action: "album_photos", arg: st.album }).then((r) => { if (r?.error) this.stagePics(null, r.error); }).catch(() => this.stagePics(null, "her panel is not reachable"));
+    }
+    this.stageMark();
+    this.stageShow();
+  }
+  albumEv(e) { // the album's photos (or why not), for the slideshow open now
+    const st = this.stg;
+    if (!st || st.what !== "photos") return;
+    this.stagePics(e.photos?.length ? e.photos : null, e.error || (e.photos ? "the album is empty" : ""), e.album);
+  }
+  async stagePics(urls, why, album) {
+    const st = this.stg; if (!st || st.what !== "photos") return;
+    if (!urls) { // no Google album here: her scenes, as her Home Assistant screen had on Pascal
+      const sc = this.scenes ||= await fetch(`${ASSETS}scenes/scenes.json`).then((r) => r.json()).catch(() => null);
+      urls = Object.entries(sc?.frames || {}).flatMap(([k, n]) => Array.from({ length: n }, (_, i) => `${ASSETS}scenes/${k}/${i + 1}.webp`));
+      this.root.querySelector(".stage .gsub").textContent = "her scenes"; if (why) console.log("stage photos: her scenes:", why); // no Google album here (no token, no album)
+    } else {
+      if (album) this.root.querySelector(".stage .gsub").textContent = album;
+      clearTimeout(st.refresh); // Google's URLs last an hour: the list again before then, the place kept
+      st.refresh = setTimeout(() => this.stg === st && this.api("/api/do", { action: "album_photos", arg: st.album }).catch(() => {}), 50 * 60000);
+    }
+    if (st.urls) { st.urls = urls; return; } // a refresh: the same show
+    for (let i = urls.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [urls[i], urls[j]] = [urls[j], urls[i]]; }
+    st.urls = urls; st.i = -1;
+    this.stageStep(1);
+  }
+  stageStep(d) { // d photos on, shown now; the next in 10 s while it plays and is not docked
+    const st = this.stg; if (!st?.urls?.length) return;
+    clearTimeout(st.tm);
+    st.i = (st.i + d + st.urls.length) % st.urls.length;
+    const [a, b] = this.root.querySelectorAll(".sbody img");
+    if (!a) return;
+    const show = a.classList.contains("on") ? b : a, hide = show === a ? b : a;
+    show.onload = () => { show.classList.add("on"); hide.classList.remove("on"); };
+    show.onerror = () => { if (this.stg === st && st.playing && !st.min) st.tm = setTimeout(() => this.stageStep(1), 1000); };
+    show.src = st.urls[st.i];
+    this.root.querySelector(".scount").textContent = `${st.i + 1} / ${st.urls.length}`;
+    if (st.playing && !st.min) st.tm = setTimeout(() => this.stageStep(1), 10000);
+  }
+  stageAct(f) {
+    const st = this.stg; if (!st) return;
+    if (st.what === "videos") {
+      if (f === "prev") st.cmd?.("previousVideo");
+      else if (f === "next") st.cmd?.("nextVideo");
+      else if (f === "play") st.cmd?.(st.playing ? "pauseVideo" : "playVideo");
+      return;
+    }
+    if (f === "prev") { st.playing = false; this.stageStep(-1); }
+    else if (f === "next") this.stageStep(1);
+    else if (f === "play") { st.playing = !st.playing; if (st.playing) this.stageStep(1); else clearTimeout(st.tm); }
+    this.stageMark();
+  }
+  stageMark() {
+    const b = this.root.querySelector('.sctl [data-f="play"]'); if (!b) return;
+    b.innerHTML = this.stg?.playing
+      ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>'
+      : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg>';
+  }
+  stageDuck(s) { // a quarter of the video's volume while she speaks, or the person speaks to her
+    const st = this.stg; if (!st || st.what !== "videos" || !s) return;
+    const d = !!(s.speaking || s.replying || (s.awake && String(s.floor || "").startsWith("USER")));
+    if (d !== st.duck) { st.duck = d; this.stageVolume(); }
+  }
+  stageVolume() {
+    const st = this.stg; if (!st?.cmd) return;
+    st.cmd("unMute"); st.cmd("setVolume", [Math.round(st.duck ? st.vol / 4 : st.vol)]);
+  }
+  stageShow() { // open: over her lower half (the right half on its side)
+    const st = this.stg; if (!st) return;
+    if (this.openGuest) this.guestMin();
+    st.min = false;
+    this.root.querySelector(".stage").hidden = false;
+    if (st.what === "photos" && st.playing && st.urls) this.stageStep(0);
+    this.guestDock();
+  }
+  stageMin() { // docked: its tab on the edge; a video plays on, a slideshow holds
+    const st = this.stg; if (!st) return;
+    st.min = true; clearTimeout(st.tm);
+    this.root.querySelector(".stage").hidden = true;
+    this.guestDock();
+  }
+  stageEnd(quiet) { // closed: the player gone, nothing left running
+    const st = this.stg; if (!st) return;
+    clearInterval(st.hello); clearTimeout(st.tm); clearTimeout(st.refresh);
+    if (st.onMsg) removeEventListener("message", st.onMsg);
+    this.stg = null;
+    const box = this.root.querySelector(".stage");
+    box.hidden = true; box.querySelector(".sbody").replaceChildren();
+    if (!quiet) this.guestDock();
   }
   show(name, on) { const f = this.frames?.[name]; if (f) f.classList.toggle("on", on); if (this.target) this.target[name] = on ? 1 : 0; }
   // gl3d: the frames and the depth in one shader; it steps aside if the machine is too slow.
