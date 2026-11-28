@@ -997,6 +997,7 @@ class NinaSetupCard extends NinaBase {
     this.c = c || {};
     if (this.root) return;
     const el = this.frame("agenda", 2, "mdi:key-chain", "Her setup", "her keys, her Google account, her channels: one at a time");
+    if (this.c.list_height) this.root.querySelector("ha-card").style.setProperty("--list-height", this.c.list_height);
     el.innerHTML = `
       <div class="guide">
         <div><span class="gt"></span><span class="pill gs"></span></div>
