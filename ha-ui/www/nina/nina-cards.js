@@ -1069,7 +1069,25 @@ class NinaSetupCard extends NinaBase {
     q(".short").addEventListener("click", () => this.act("setup_done"));
     q(".close").addEventListener("click", () => this.act("setup_close"));
     q(".narrate").addEventListener("change", (e) => this.act("setup_narrate", e.target.checked ? "on" : "off"));
-    q(".restart").addEventListener("click", () => this.act("setup_restart", "", "restarting: back in a few seconds"));
+    // Restart: she ends and her service starts her again (~5 s). The message stays and the button hides until her
+    // stream is back (the first press had looked like nothing: its message cleared at once, Pascal 2026-11-28)
+    q(".restart").addEventListener("click", async () => {
+      if (this.restarting) return;
+      this.restarting = true; q(".restart").style.display = "none";
+      const r = await this.act("setup_restart", "", "restarting: back in a few seconds");
+      if (r?.error && !/fetch|network|reachable/i.test(r.error)) { this.restarting = false; q(".restart").style.display = ""; return; }
+      q(".msg").textContent = "restarting: back in a few seconds";
+      this.wentDown = false;
+    });
+    { const st = stageStream(PANEL); // her stream down and up again: she is back
+      st.addEventListener("down", () => { if (this.restarting) this.wentDown = true; });
+      st.addEventListener("up", () => {
+        if (!this.restarting || !this.wentDown) return;
+        this.restarting = false;
+        q(".msg").textContent = "she is back: her new keys are in use";
+        api("/api/state").then((s) => this.take(s.facts?.settings?.setup)).catch(() => {});
+        setTimeout(() => { if (q(".msg").textContent.startsWith("she is back")) q(".msg").textContent = ""; }, 8000);
+      }); }
     q(".refresh").addEventListener("click", () => this.act("setup_status", "", "checking…"));
   }
   connectedCallback() {
@@ -1111,7 +1129,7 @@ class NinaSetupCard extends NinaBase {
     this.v = v;
     const q = (x) => this.root.querySelector(x);
     q(".narrate").checked = !!v.narrate;
-    q(".restart").style.display = v.restart ? "" : "none";
+    q(".restart").style.display = v.restart && !this.restarting ? "" : "none";
     // the integrations: what each gives her, whether it works, Add
     const box = q(".ints"); box.replaceChildren();
     const ok = Object.fromEntries((v.integrations || []).map((i) => [i.id, i.status?.ok]));
