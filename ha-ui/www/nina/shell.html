@@ -64,7 +64,7 @@
     document.body.classList.toggle("remote", REMOTE);
     const HA = q.get("ha") || (location.protocol === "https:" ? `https://${location.hostname}:8443` : `${location.protocol}//${location.hostname}:8123`);
     // her side: her own cards on her panel (side.html, the user, 2026-11-28); ?side=ha: Home Assistant's nina-side as before
-    const OWN = q.get("side") !== "ha", SIDE = OWN ? `side.html${q.get("playlist") ? "?playlist=" + encodeURIComponent(q.get("playlist")) : ""}` : `${HA}/nina-side/home?kiosk`, FULL = `${HA}/home-panel/home`; // the full interface, in her scheme (dashboards/home.yaml)
+    const OWN = q.get("side") !== "ha", SIDE = OWN ? `side.html${q.get("playlist") ? "?playlist=" + encodeURIComponent(q.get("playlist")) : ""}` : `${HA}/nina-side/home?kiosk`, FULL = window.NinaApp || q.get("full") === "own" ? "side.html?page=settings" : `${HA}/home-panel/home`; // her app: no Home Assistant, her own settings (side.html) instead // the full interface, in her scheme (dashboards/home.yaml)
     const STAY = (+q.get("stay") || 600) * 1000, WARN = 10; // ?stay=SECONDS (tests): how long Home Assistant stays up
 
     // Nina's card: her panel is this page's own origin

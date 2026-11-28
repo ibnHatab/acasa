@@ -58,7 +58,7 @@
       { path: "surprises", title: "Surprises", icon: "mdi:flag", cards: [
         ["nina-surprises-card", { list_height: "210px" }], ["nina-activity-card", { list_height: "170px" }]] },
       { path: "settings", title: "Settings", icon: "mdi:account-cog", cards: [
-        ["nina-settings-card", {}], ["nina-bubble-card", { room: 5 }], ["nina-models-card", {}], ["nina-whatsapp-card", {}]] },
+        ["nina-settings-card", {}], ["nina-bubble-card", { room: 5 }], ["nina-whatsapp-card", {}], ["nina-models-card", {}], ["nina-activity-card", { list_height: "420px" }]] }, // the Nina view of her Home Assistant screen (dashboards/home.yaml)
     ];
     const make = ([tag, conf]) => {
       if (tag === "clock") {
@@ -82,7 +82,8 @@
     }
     // the page her tools bring up (views.json), home again after return_after seconds without another
     const conf = await fetch("views.json").then((r) => r.json()).catch(() => ({}));
-    const home = "home", back = (conf.return_after || 90) * 1000;
+    // opened on a page (her settings, from her app): that page is its home
+    const home = q.get("page") && pages[q.get("page")] ? q.get("page") : "home", back = (conf.return_after || 90) * 1000;
     let timer;
     function go(path, tapped) {
       for (const [k, s] of Object.entries(pages)) s.classList.toggle("on", k === path);

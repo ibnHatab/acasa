@@ -474,7 +474,11 @@ class NinaCard extends HTMLElement {
           expand(card("nina-card", { ...this.c, expanded: true, height: "min(86vh, 640px)" }));
         });
       }
-      if (window.NinaApp || this.c.home === false) this.root.querySelector("button.ha").style.display = "none"; // no Home Assistant here
+      if (window.NinaApp) { // her app: no Home Assistant; the same button opens her own settings (the shell's other mode: side.html)
+        const b = this.root.querySelector("button.ha");
+        b.title = "Her settings"; b.setAttribute("aria-label", "Her settings");
+        b.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+      } else if (this.c.home === false) this.root.querySelector("button.ha").style.display = "none"; // no Home Assistant here
       { // the guest card's own controls (the layer works in her app, or with config guests: true)
         const gq = (s) => this.root.querySelector(s);
         gq(".guest").addEventListener("click", () => this.guestTouch());
