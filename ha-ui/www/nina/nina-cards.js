@@ -499,6 +499,7 @@ const Stage = window.__ninaStage ||= {
   // small in the corner
   rect(big) {
     const W = innerWidth, H = innerHeight, m = 8;
+    if (this.full) return { left: 0, top: 0, width: W, height: H }; // full screen (the user, 2026-11-28)
     if (big) { const w = W < 760 ? W - 2 * m : Math.round(W * 0.64); return { left: W - m - w, top: m, width: w, height: H - 2 * m }; }
     const w = Math.round(W < 760 ? W * 0.62 : W * 0.34); const h = Math.round(w * 9 / 16 + 52);
     return { left: W - m - w, top: H - m - h, width: w, height: h };
@@ -514,6 +515,7 @@ const Stage = window.__ninaStage ||= {
       const e = JSON.parse(m.data);
       if (e.ev === "stage") { // what her screen tool found: videos (ids), a playlist, an album
         if (e.show === "close") this.close();
+        else if (this.el && (e.show === "full" || e.show === "window")) { if (!!this.full !== (e.show === "full")) this.act("full"); }
         else if (this.el && ({ next: 1, previous: 1, pause: 1, play: 1 })[e.show]) { // on what is shown: its ⏭ ⏮ ⏸ ▶
           if (e.show === "next" || e.show === "previous") this.act(e.show === "next" ? "next" : "prev");
           else if ((e.show === "pause") === !!this.playing) this.act("play");
@@ -559,11 +561,12 @@ const Stage = window.__ninaStage ||= {
       .sp { flex: 1; }
       input[type=range] { width: 22%; min-width: 90px; accent-color: #d97757; }
       .pip.small input[type=range] { display: none; }
+      .pip.full, .pip:fullscreen { border-radius: 0; left: 0 !important; top: 0 !important; width: 100% !important; height: 100% !important; }
     </style><div class="pip"><div class="body"></div><div class="ctl">
       <button data-f="prev" title="Previous">⏮</button><button class="main" data-f="play" title="Play or pause">⏸</button>
       <button data-f="next" title="Next">⏭</button>
       ${what === "videos" ? `<button data-f="mute" title="Sound on or off">🔊</button><input type="range" min="0" max="100" value="${this.vol}" title="Volume">` : ""}
-      <span class="sp"></span><button data-f="size" title="Smaller or larger">⤡</button><button data-f="close" title="Close">✕</button></div></div>`;
+      <span class="sp"></span><button data-f="full" title="Full screen">⛶</button><button data-f="size" title="Smaller or larger">⤡</button><button data-f="close" title="Close">✕</button></div></div>`;
     this.root = root;
     const body = root.querySelector(".body");
     const pip = root.querySelector(".pip");
@@ -579,6 +582,8 @@ const Stage = window.__ninaStage ||= {
     this.el = host;
     requestAnimationFrame(() => requestAnimationFrame(() => { pip.classList.remove("docked"); pip.style.opacity = 1; this.place(this.rect(this.big)); }));
     this.onResize ||= () => this.place(this.rect(this.big));
+    this.onFs ||= () => { if (!document.fullscreenElement && this.full && this.root) this.act("full"); }; // Esc: back to the card
+    document.addEventListener("fullscreenchange", this.onFs);
     addEventListener("resize", this.onResize);
   },
   video(body) {
@@ -638,7 +643,16 @@ const Stage = window.__ninaStage ||= {
   },
   act(f) {
     if (f === "close") return this.close();
-    if (f === "size") { this.big = !this.big; this.root.querySelector(".pip").classList.toggle("small", !this.big); this.place(this.rect(this.big)); return; }
+    if (f === "full") { // the whole screen: the browser's full screen where it may (her shell's frame allows it), else the page's
+      this.full = !this.full;
+      const pip = this.root.querySelector(".pip"), b = this.root.querySelector('[data-f="full"]');
+      pip.classList.toggle("full", this.full); b.title = this.full ? "Back to the card" : "Full screen";
+      if (this.full && pip.requestFullscreen && !document.fullscreenElement) pip.requestFullscreen().catch(() => {});
+      if (!this.full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      this.place(this.rect(this.big));
+      return;
+    }
+    if (f === "size") { if (this.full) this.act("full"); this.big = !this.big; this.root.querySelector(".pip").classList.toggle("small", !this.big); this.place(this.rect(this.big)); return; }
     if (this.what === "videos") {
       if (f === "prev") this.cmd("previousVideo");
       else if (f === "next") this.cmd("nextVideo");
@@ -656,6 +670,8 @@ const Stage = window.__ninaStage ||= {
     this.stopHello?.();
     if (this.onMsg) window.removeEventListener("message", this.onMsg);
     removeEventListener("resize", this.onResize);
+    document.removeEventListener("fullscreenchange", this.onFs);
+    if (this.full) { this.full = false; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
     const el = this.el, what = this.what, pip = this.root?.querySelector(".pip"), card = this.docked(what);
     this.el = this.root = this.cmd = this.onMsg = this.pics = this.stopHello = null;
     this.what = null;

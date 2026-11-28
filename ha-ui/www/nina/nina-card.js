@@ -312,6 +312,7 @@ class NinaCard extends HTMLElement {
   ha-card > .stage { position: absolute; left: 12px; right: 12px; bottom: 76px; height: min(440px, 50%); z-index: 4; border-radius: 22px;
                      overflow: hidden; border: 1px solid rgba(233,221,211,.18); box-shadow: 0 12px 40px rgba(0,0,0,.5); background: #000; }
   ha-card > .stage[hidden] { display: block; visibility: hidden; left: -9999px; right: auto; width: 320px; } /* docked: out of sight, its video playing on */
+  ha-card > .stage.full:not([hidden]), .stage:fullscreen { left: 0; right: 0; top: 0; bottom: 0; width: auto; height: auto; border-radius: 0; border: 0; z-index: 9; }
   .sbody { position: absolute; left: 0; right: 0; top: 0; bottom: 60px; }
   .sbody iframe { width: 100%; height: 100%; border: 0; display: block; }
   .sbody img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity 1.2s ease; }
@@ -417,6 +418,7 @@ class NinaCard extends HTMLElement {
       <div class="gbody"></div><div class="gnote"></div></div></div>
   <div class="stage" hidden><div class="sbody"></div>
     <div class="shead"><span class="gicon"></span><div class="gwho"><span class="gtitle"></span><span class="gsub"></span></div>
+      <button class="gbtn sfull" title="Full screen" aria-label="Full screen"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <button class="gbtn sdock" title="To the edge" aria-label="Minimize to the edge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
       <button class="gbtn sclose" title="Close" aria-label="Close"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="sctl"><button data-f="prev" title="Previous" aria-label="Previous"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
@@ -488,6 +490,8 @@ class NinaCard extends HTMLElement {
       { // the stage's own controls (videos, photos): ⏮ ⏸ ▶ ⏭, to the edge, ×
         const sq = (x) => this.root.querySelector(x);
         sq(".sdock").addEventListener("click", () => this.stageMin());
+        sq(".sfull").addEventListener("click", () => this.stageFull(!this.stg?.full));
+        document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && this.stg?.full) this.stageFull(false); }); // Esc
         sq(".sclose").addEventListener("click", () => this.stageEnd());
         this.root.querySelectorAll(".sctl button").forEach((b) => b.addEventListener("click", () => this.stageAct(b.dataset.f)));
         let x0 = null; // a swipe right: to the edge
@@ -706,6 +710,7 @@ class NinaCard extends HTMLElement {
     if (!window.NinaApp && !this.c.guests) return;
     const s = e.show;
     if (s === "close") return this.stageEnd();
+    if (s === "full" || s === "window") { if (this.stg) { if (this.stg.min) this.stageShow(); this.stageFull(s === "full"); } return; }
     if (({ next: 1, previous: 1, pause: 1, play: 1 })[s]) {
       if (!this.stg) return;
       if (s === "next" || s === "previous") this.stageAct(s === "next" ? "next" : "prev");
@@ -824,14 +829,30 @@ class NinaCard extends HTMLElement {
     if (st.what === "photos" && st.playing && st.urls) this.stageStep(0);
     this.guestDock();
   }
+  // stageFull: the photos or the video over the whole screen (the user, 2026-11-28), and back: the card over
+  // all of hers; the page's own full screen too where it may (not in her app: the card is the screen there)
+  stageFull(on) {
+    const st = this.stg; if (!st) return;
+    st.full = on;
+    const box = this.root.querySelector(".stage"), b = box.querySelector(".sfull");
+    box.classList.toggle("full", on);
+    b.title = on ? "Back to the card" : "Full screen"; b.setAttribute("aria-label", b.title);
+    b.innerHTML = on
+      ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>'
+      : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+    if (on && !window.NinaApp && box.requestFullscreen && !document.fullscreenElement) box.requestFullscreen().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }
   stageMin() { // docked: its tab on the edge; a video plays on, a slideshow holds
     const st = this.stg; if (!st) return;
+    if (st.full) this.stageFull(false);
     st.min = true; clearTimeout(st.tm);
     this.root.querySelector(".stage").hidden = true;
     this.guestDock();
   }
   stageEnd(quiet) { // closed: the player gone, nothing left running
     const st = this.stg; if (!st) return;
+    if (st.full) this.stageFull(false);
     clearInterval(st.hello); clearTimeout(st.tm); clearTimeout(st.refresh);
     if (st.onMsg) removeEventListener("message", st.onMsg);
     this.stg = null;
