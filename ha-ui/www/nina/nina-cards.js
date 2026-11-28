@@ -991,12 +991,15 @@ class NinaSetupCard extends NinaBase {
       .res .hint { color: rgba(255,255,255,.85); margin-top: 3px; }
       .qr { display: none; text-align: center; margin: 8px 0; } .qr img { width: 220px; height: 220px; background: #fff; padding: 10px; border-radius: 12px; }
       .acts { flex-wrap: wrap; } .foot { flex-wrap: wrap; } .foot label { width: auto; display: flex; gap: 6px; align-items: center; }
-      .foot input[type=checkbox] { flex: none; width: 16px; height: 16px; accent-color: #d97757; }`;
+      .foot input[type=checkbox] { flex: none; width: 16px; height: 16px; accent-color: #d97757; }
+      .svcs .g { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: .92em; cursor: pointer; }
+      .svcs input { flex: none; width: 16px; height: 16px; min-width: 0; margin: 0; padding: 0; accent-color: #d97757; }
+      .svcs input:disabled + span { color: rgba(255,255,255,.5); }`;
   }
   setConfig(c) {
     this.c = c || {};
     if (this.root) return;
-    const el = this.frame("agenda", 2, "mdi:key-chain", "Her setup", "her keys, her Google account, her channels: one at a time");
+    const el = this.frame("agenda", 2, "mdi:key-chain", "Her setup", "her Google services and her WhatsApp");
     if (this.c.list_height) this.root.querySelector("ha-card").style.setProperty("--list-height", this.c.list_height);
     el.innerHTML = `
       <div class="guide">
@@ -1005,8 +1008,15 @@ class NinaSetupCard extends NinaBase {
         <details><summary>What Nina says</summary><div class="say"></div></details>
         <div class="row acts"><button class="ghost open">Open the page ↗</button><button class="ghost again">Say it again</button></div>
         <div class="in secret"><div class="row"><input class="key" type="password" autocomplete="off" spellcheck="false" placeholder="paste the key here"><button class="give">Check and keep</button></div></div>
-        <div class="in client"><div class="row"><label>One made before</label><select class="found"></select><button class="ghost pick">Use it</button></div>
-          <textarea class="json" spellcheck="false" placeholder="or paste the downloaded JSON here"></textarea><div class="row"><button class="giveJson">Check and keep</button></div></div>
+        <div class="in services"><div class="svcs"></div><div class="row"><button class="saveSvcs">Keep this choice</button></div></div>
+        <div class="in client">
+          <div class="row"><label>Client ID</label><input class="cid" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com"></div>
+          <div class="row"><label>Client secret</label><input class="csec" type="password" autocomplete="off" spellcheck="false"></div>
+          <div class="row"><button class="giveIds">Check and keep</button></div>
+          <details><summary>Or one made before, or its JSON</summary>
+            <div class="row"><label>One made before</label><select class="found"></select><button class="ghost pick">Use it</button></div>
+            <textarea class="json" spellcheck="false" placeholder="paste the downloaded JSON here"></textarea><div class="row"><button class="giveJson">Check and keep</button></div>
+          </details></div>
         <div class="in signin"><div class="row"><button class="signin">Sign in with Google ↗</button></div></div>
         <div class="in whatsapp"><div class="row"><button class="link">Show the code</button></div><div class="qr"><img alt="QR code to scan"></div></div>
         <div class="res"></div>
@@ -1024,6 +1034,17 @@ class NinaSetupCard extends NinaBase {
     q(".key").addEventListener("keydown", (e) => { if (e.key === "Enter") q(".give").click(); });
     q(".pick").addEventListener("click", () => q(".found").value && this.act("setup_value", "file:" + q(".found").value));
     q(".giveJson").addEventListener("click", () => { const v = q(".json").value; if (v.trim()) { q(".json").value = ""; this.act("setup_value", v); } });
+    q(".giveIds").addEventListener("click", () => { // Google's personal setup shows the two: a Desktop app's client, made of them
+      const id = q(".cid").value.trim(), sec = q(".csec").value.trim();
+      if (!id || !sec) return;
+      q(".csec").value = "";
+      this.act("setup_value", JSON.stringify({ installed: { client_id: id, client_secret: sec } }));
+    });
+    q(".saveSvcs").addEventListener("click", () => {
+      const on = [...this.root.querySelectorAll(".svcs input:checked")].map((x) => x.value);
+      this.svcDirty = false;
+      this.act("setup_services", on.join(","));
+    });
     q(".signin").addEventListener("click", async () => {
       const w = this.tab("about:blank"); // opened by the click itself (a page opened later is blocked)
       const r = await this.act("setup_signin");
@@ -1122,6 +1143,16 @@ class NinaSetupCard extends NinaBase {
     q(".check").style.display = c && !c.manual && c.input !== "signin" ? "" : "none";
     q(".short").style.display = c?.shortcut ? "" : "none"; q(".short").textContent = c?.shortcut || "";
     q(".next").textContent = c?.manual ? "Done" : "Next"; // the words she says ("press Next", "press Done")
+    if (c?.input === "services" && !this.svcDirty) { // the Google services: ticked as chosen; Gmail shown, not offered
+      const box = q(".svcs"); box.replaceChildren();
+      for (const sv of v.google_services || []) {
+        const lab = document.createElement("label"); lab.className = "g";
+        const cb = document.createElement("input"); cb.type = "checkbox"; cb.value = sv.id; cb.checked = !!sv.on; cb.disabled = !!sv.off;
+        cb.addEventListener("change", () => { this.svcDirty = true; setTimeout(() => (this.svcDirty = false), 30000); });
+        const t = document.createElement("span"); t.textContent = `${sv.title}: ${sv.off || sv.why}`;
+        lab.append(cb, t); box.appendChild(lab);
+      }
+    }
     if (c?.input === "client") {
       const f = q(".found"); f.replaceChildren();
       for (const n of a.clients || []) { const o = document.createElement("option"); o.value = o.textContent = n; f.appendChild(o); }
