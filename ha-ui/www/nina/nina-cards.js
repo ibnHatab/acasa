@@ -1046,6 +1046,12 @@ class NinaSetupCard extends NinaBase {
       this.act("setup_services", on.join(","));
     });
     q(".signin").addEventListener("click", async () => {
+      if (window.NinaApp?.open) { // her app: the system browser, given the page once known (a blank one first would replace her own page)
+        const r = await this.act("setup_signin");
+        const u = this.v?.active?.signin?.url;
+        if (!r?.error && u) window.NinaApp.open(u);
+        return;
+      }
       const w = this.tab("about:blank"); // opened by the click itself (a page opened later is blocked)
       const r = await this.act("setup_signin");
       const u = this.v?.active?.signin?.url;
