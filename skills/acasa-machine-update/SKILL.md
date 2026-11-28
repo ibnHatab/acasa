@@ -16,7 +16,7 @@ Develop on a desktop, merge to main, push. Then on each machine (over SSH for a 
 What it does, in order — and a failed step stops it **before** any restart, so the running Nina
 stays as she was:
 1. `git pull --ff-only` acasa, then nina-live (so the persona's build script is the current one);
-2. `nina-live/scripts/persona-build.sh --pull` (fsttm-live, Metis repos; metisc if moved; the image
+2. `nina-live/scripts/persona-build.sh --pull`, then `acasa/live/build.sh` (bin/nina, against the nina-live checkout) (fsttm-live, Metis repos; metisc if moved; the image
    check; bin/nina; the radar) — persona only, no Home Assistant;
 3. `go run ./cmd/ha-ui` against `http://127.0.0.1:8123` and `~/homeassistant/config` (needs
    `~/.config/fsttm/hass.token`; the role from `~/.config/nina/role`);
@@ -39,7 +39,7 @@ is gone: the persona's repo no longer calls the deployment.)
 
 | symptom | cause | fix |
 |---|---|---|
-| `activating (auto-restart)`, NRestarts climbing | Nina exits at start | `timeout 8 ~/repo/nina-live/bin/nina -config CONFIG` shows the first error line |
+| `activating (auto-restart)`, NRestarts climbing | Nina exits at start | `timeout 8 ~/repo/acasa/bin/nina -config CONFIG` shows the first error line |
 | "no image.json, and 2 images in build/" | a stale composition image beside the new one | the build removes superseded images now; by hand: keep only `home.image.v-$(cat image.golden)` in `catalog/domains/build/` |
 | "the composition's image (v-X) is not image.golden's" | a rules change without its hash | a nina-live change to commit (nina-persona-build), not a machine fix |
 | `git pull` refuses: local changes | someone edited a tracked file on the machine (a config symlinked into acasa `live/`) | look at the diff first (`git diff`, redact secrets); if it is a duplicate of upstream, `git checkout -- FILE`; else commit it upstream |

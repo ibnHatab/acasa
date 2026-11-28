@@ -59,6 +59,7 @@ step "the repos (GitHub, public: no credentials)"
 clone() { [ -d "$R/$2/.git" ] || git clone -q -b "$3" "$1" "$R/$2"; echo "$2 $(git -C "$R/$2" log --oneline -1 | cut -c1-60)"; }
 mkdir -p "$R/perotheia-packages"
 clone https://github.com/ibnHatab/nina-live.git nina-live main
+clone https://github.com/ibnHatab/nina-narratives.git nina-narratives main   # her rules (nina-live catalog/domains links into it)
 clone https://github.com/ibnHatab/acasa.git acasa main
 clone https://github.com/ibnHatab/fsttm-live.git fsttm-live main
 clone https://github.com/metis-lang-dev/metis-lang.git perotheia-packages/metis-lang master
@@ -99,6 +100,7 @@ echo "searxng: $($D inspect -f '{{.State.Status}}' searxng)"
 
 step "the persona's build: metisc, nina, the radar (nina-live scripts/persona-build.sh; the look and feel waits for Home Assistant's token: install/update.sh applies it)"
 REPO_ROOT=$R bash "$R/nina-live/scripts/persona-build.sh" 2>&1 | grep -v "^go: downloading"
+REPO_ROOT=$R bash "$R/acasa/live/build.sh" 2>&1 | grep -v "^go: downloading"   # bin/nina: the persona with Home Assistant
 
 step "MPD (her radio: a user service on the default output; Home Assistant's MPD integration at 127.0.0.1)"
 sudo systemctl disable --now mpd.service mpd.socket >/dev/null 2>&1 || true # the system-wide one: not hers

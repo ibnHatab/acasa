@@ -3,7 +3,7 @@ Description=acasa: Nina (nina-live: her voice, the home's rules, the world from 
 After=network-online.target paradee-tts.socket
 
 [Service]
-ExecStart=%h/repo/nina-live/bin/nina -config %h/repo/acasa/live/nina.yaml
+ExecStart=%h/repo/acasa/bin/nina -config %h/repo/acasa/live/nina.yaml
 Restart=on-failure
 RestartSec=5
 

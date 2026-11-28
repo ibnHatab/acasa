@@ -18,7 +18,9 @@ elsewhere; acasa is one adaptation (the home, and the office's `secretary` role)
 ## Build and deploy
 
 The persona builds in its own repo: `nina-live/scripts/persona-build.sh [--pull]` (nina-live, fsttm-live,
-Metis; nothing of Home Assistant). acasa deploys it:
+Metis; nothing of Home Assistant: its `app` package is Nina as a library over backends). acasa's
+`cmd/nina` is Nina at home, the persona with Home Assistant behind every backend (`hass/`), built by
+`live/build.sh` into `bin/nina` against the nina-live checkout. acasa deploys it:
 
     ~/repo/acasa/install/update.sh [--kiosk] [--no-pull]   # pull, persona build, look and feel, restart her services
     ~/repo/acasa/install/machine.sh                        # a new Pi (the skill acasa-machine-install)
